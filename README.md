@@ -1,7 +1,7 @@
 ## Infinity OS
 
 - Features:
-  - [x] Simple file system to load second stage and kernel during boot process;
+  - &#9745; Simple file system to load second stage and kernel during boot process;
   - [x] Boot process usign two boot stages in asm;
   - [x] Vga Text mode 80x25;
     - [x] Print text on screen;
