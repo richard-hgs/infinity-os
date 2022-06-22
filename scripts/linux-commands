@@ -1,0 +1,2 @@
+# Get g++ supported languages versions
+$ g++ -v --help 2> /dev/null | sed -n '/^ *-std=\([^<][^ ]\+\).*/ {s//\1/p}'
