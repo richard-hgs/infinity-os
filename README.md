@@ -1,6 +1,7 @@
 ## Infinity OS
 
 - Features:
+<pre>
     &#9745; Simple file system to load second stage and kernel during boot process;
     &#9745; Boot process usign two boot stages in asm;
     &#9745; Vga Text mode 80x25;
@@ -14,3 +15,4 @@
          &#9745; %b = Binary representation of int data type;
          
     &#9744; Process scheduling;
+</pre>
