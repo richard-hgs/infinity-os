@@ -1,17 +1,17 @@
 #include <stdarg.h>
-#include "kstdlib.h"
+#include "stdlib.h"
 #include "vga.h"
-#include "kstdio.h"
+#include "stdio.h"
 
 #define KPRINTF_STR_BUFFER_SIZE 2048
 
 void _kprintf(int foreColor, int bgColor, const char* str, va_list list) {
      char formatedStr[KPRINTF_STR_BUFFER_SIZE];
-     kstdlib::va_stringf(formatedStr, str, list);
+     stdlib::va_stringf(formatedStr, str, list);
      vga::printStr(foreColor, bgColor, formatedStr);
 }
 
-void kstdio::kprintf(const char* str, ...)
+void stdio::kprintf(const char* str, ...)
 {
      va_list list;
      va_start(list, str);
@@ -19,7 +19,7 @@ void kstdio::kprintf(const char* str, ...)
      va_end(list);
 }
 
-void kstdio::kprintf(int foreColor, int bgColor, const char* str, ...)
+void stdio::kprintf(int foreColor, int bgColor, const char* str, ...)
 {
      va_list list;
      va_start(list, str);

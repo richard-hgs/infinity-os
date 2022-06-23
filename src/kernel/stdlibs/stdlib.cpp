@@ -1,13 +1,13 @@
 #include <stdint.h>
 #include "kstring.h"
-#include "kstdlib.h"
+#include "stdlib.h"
 
 #define X86_DIGITS 32
 #define X64_DIGITS 64
 
 #define VA_STR_BUFFER_SIZE 1024
 
-unsigned long kstdlib::ultoa(unsigned long value, unsigned char radix, char* str) 
+unsigned long stdlib::ultoa(unsigned long value, unsigned char radix, char* str) 
 {
 	unsigned long written = 0;
 	unsigned int index;
@@ -35,24 +35,24 @@ unsigned long kstdlib::ultoa(unsigned long value, unsigned char radix, char* str
 	return written;
 }
 
-long kstdlib::ltoa(long value, unsigned char radix, char* str)
+long stdlib::ltoa(long value, unsigned char radix, char* str)
 {
 	if (value < 0 && radix == 10) {
 		*str++ = '-';
 		value = -value;
 	}
 
-	return static_cast<long>(kstdlib::ultoa((unsigned long) value, radix, str));
+	return static_cast<long>(stdlib::ultoa((unsigned long) value, radix, str));
 }
 
-int kstdlib::itoa(int value, unsigned char radix, char *str) 
+int stdlib::itoa(int value, unsigned char radix, char *str) 
 {
-  return static_cast<int>(kstdlib::ltoa(value, radix, str));
+  return static_cast<int>(stdlib::ltoa(value, radix, str));
 }
 
-void kstdlib::uitoa(unsigned int value, unsigned char radix, char *str) 
+void stdlib::uitoa(unsigned int value, unsigned char radix, char *str) 
 {
-  kstdlib::ultoa((unsigned long) value, radix, str);
+  stdlib::ultoa((unsigned long) value, radix, str);
 }
 
 // void u64toa(uint64_t value, char* str, unsigned char radix) {
@@ -78,7 +78,7 @@ void kstdlib::uitoa(unsigned int value, unsigned char radix, char *str)
 //     *str = 0;  /* string terminator */
 // }
 
-int	kstdlib::atoi(char *str) 
+int	stdlib::atoi(char *str) 
 {
 	int neg;
 	int num;
@@ -106,7 +106,7 @@ int	kstdlib::atoi(char *str)
 }
 
 
-int kstdlib::va_stringf(char *strDest, const char* strFormat, va_list list)
+int stdlib::va_stringf(char *strDest, const char* strFormat, va_list list)
 {
 	int i;
 	int size = 0;
@@ -138,7 +138,7 @@ int kstdlib::va_stringf(char *strDest, const char* strFormat, va_list list)
 					break;
 				case 'd':
 					tempint = va_arg(list, int);
-					kstdlib::itoa(tempint, 10, tempstr);
+					stdlib::itoa(tempint, 10, tempstr);
 					for(j = 0; j < kstring::strlen(tempstr); j++)
                     {
                         *(strDest + size) = *(tempstr + j);
@@ -147,7 +147,7 @@ int kstdlib::va_stringf(char *strDest, const char* strFormat, va_list list)
                     break;
 				case 'x':
 					tempint = va_arg(list, int);
-					kstdlib::itoa(tempint, 16, tempstr);
+					stdlib::itoa(tempint, 16, tempstr);
 					for(j = 0; j < kstring::strlen(tempstr); j++)
                     {
                         *(strDest + size) = *(tempstr + j);
@@ -156,7 +156,7 @@ int kstdlib::va_stringf(char *strDest, const char* strFormat, va_list list)
                     break;
 				case 'b':
 					tempint = va_arg(list, int);
-					kstdlib::itoa(tempint, 2, tempstr);
+					stdlib::itoa(tempint, 2, tempstr);
                     for(j = 0; j < kstring::strlen(tempstr); j++)
                         {
                             *(strDest + size) = *(tempstr + j);

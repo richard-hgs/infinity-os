@@ -1,7 +1,7 @@
 #include "vga.h"
 #include "io.h"
 #include "memutils.h"
-#include "kstdlib.h" // debug only
+#include "stdlib.h"     // debug only
 #include <stdint.h>
 
 #define WIDTH 80
@@ -109,7 +109,7 @@ void vga::printStr(int foreColor, int bgColor, const char* str) {
 
     // // USED FOR DEBUG
     // char strCurOffset[33] = {0};
-    // kstdlib::itoa(SCREEN_MAX_OFFSET_POS, 10, strCurOffset);
+    // stdlib::itoa(SCREEN_MAX_OFFSET_POS, 10, strCurOffset);
     // const char* mStrCurOffset = strCurOffset;
 
     // while (*mStrCurOffset != 0) {

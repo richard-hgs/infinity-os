@@ -1,6 +1,6 @@
 #include <stdint.h>
 #include "vga.h"
-#include "kstdio.h"
+#include "stdio.h"
 #include "kernel.h"
 
 extern "C" int kmain()
@@ -11,9 +11,9 @@ extern "C" int kmain()
 
     const char* myPtr = "abc";
 
-    kstdio::kprintf("ABC %d\n123\n456\n789\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nABC\nDEF\nGHI\nJKL\nMNO\nPQR", (int) myPtr);
+    stdio::kprintf("ABC %d\n123\n456\n789\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nABC\nDEF\nGHI\nJKL\nMNO\nPQR", (int) myPtr);
 
-    // kstdio::kprintf("testando %d\nabc", 1);
+    // stdio::kprintf("testando %d\nabc", 1);
 
     // Idle process
     while(1) {}

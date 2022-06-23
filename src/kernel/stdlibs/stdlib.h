@@ -1,6 +1,6 @@
 #pragma once
-#ifndef _KSTDLIB_H_
-#define _KSTDLIB_H_
+#ifndef _STDLIB_H_
+#define _STDLIB_H_
 
 #include <stdarg.h>
 
@@ -13,7 +13,7 @@
  * - atoi
  * - va_stringf
  */
-namespace kstdlib {
+namespace stdlib {
 
     /**
      * @brief Convert unsigned long value to string using radix numeric base
