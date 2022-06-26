@@ -1,5 +1,5 @@
 bootsector:
-	iOEM:			db	"PhilOS  "		; OEM String
+	iOEM:			db	"InfiniOS"		; OEM String
 	iSectSize:		dw	0x200			; Bytes per sector
 	iClustSize:		db	1				; Sectors per cluster
 	iResSect:		dw	1				; Number of reserved sectors

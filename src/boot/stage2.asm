@@ -53,12 +53,15 @@ start:
 	call read_disk
 
 	; switch on protected mode
-	cli
-	lgdt [gdt.pointer]
-	mov eax, cr0
-	or eax, 1
-	mov cr0, eax
+	cli						; Disable interruptions
+	lgdt [gdt.pointer]		; Load GDTR register with start address of Global Descriptor Table
+	mov eax, cr0			; Execute a MOV CR0 instruction that sets the PE flag (and optionally the PG flag) in control register CR0
+	or al, 1				
+	mov cr0, eax			; set PE (Protection Enable) bit in CR0 (Control Register 0)
 
+	; Perform far jump to selector the code segment of the created GDT
+	; The code segment is the first segment right after the Null segment. 
+	; Multiply by eight and we have our segment identifyer! 
 	jmp dword 0x08:INIT_PM
 
 %include "common_extended.inc"
@@ -69,7 +72,7 @@ start:
 
 [bits 32]
 INIT_PM:
-	mov ax, 0x10
+	mov ax, 0x10		; Setup all registers with 10h
 	mov ds, ax
 	mov es, ax
 	mov fs, ax

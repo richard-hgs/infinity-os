@@ -17,6 +17,8 @@ all: $(TARGETS)
 $(BUILD_DIR)$(CURRENT_DIR)/%.bin: %.asm $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(AS) $(AFLAGS) -o $@ $<
+	
+# objdump -drwC -Mintel $< > $($<.dump)
 
 test:
 	$(info $$var is [${INCLUDES}])

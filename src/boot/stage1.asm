@@ -59,11 +59,12 @@ init:
 	xor bx, bx
 	call read_disk
 
-	mov dl, [iBootDrive]
-	xor ax, ax
+	
+	mov dl, [iBootDrive]			; Save the boot driver number that we used
+	xor ax, ax						; Set ax to zero and reset ds(Data Segment) and es(Data Segment) registers
 	mov ds, ax
 	mov es, ax
-	jmp run_segment:run_offset
+	jmp run_segment:run_offset      ; Jump to stage2 address located in memory and continue execution from there
 
 %include "common.inc"
 %include "disk.inc"

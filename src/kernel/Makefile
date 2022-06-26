@@ -41,10 +41,16 @@ CFLAGSPOS=
 # 	-I. -I./drivers -I./common -I./cpu -I./acpi
 LDFLAGS=
 BACKUPS=$(shell find . -iname "*.bak")
-OBJECTS=$(BUILD_DIR)$(CURRENT_DIR)/kernel_main.asm.o
-#	$(BUILD_DIR)$(CURRENT_DIR)/cpu/int.asm.o \
-#	$(BUILD_DIR)$(CURRENT_DIR)/cpu/gen_interrupt.asm.o \
-#	$(BUILD_DIR)$(CURRENT_DIR)/cpu/gdt_flush.asm.o
+# In the objects keep kernel_main.asm.o as the first object in linker to put it at the top of the binary file since it is the entry
+# point of the kernel. To do this we exclude it from asm objects and explicity put at the first position of the objects.
+OBJECTS=$(BUILD_DIR)$(CURRENT_DIR)/kernel_main.asm.o \
+	$(filter-out $(BUILD_DIR)$(CURRENT_DIR)/kernel_main.asm.o,$(KERNEL_ASM_OBJECTS))
+# $(subst $(BUILD_DIR)$(CURRENT_DIR)/kernel_main.asm.o,,$(KERNEL_ASM_OBJECTS)) 
+# OBJECTS=$(BUILD_DIR)$(CURRENT_DIR)/kernel_main.asm.o
+# $(BUILD_DIR)$(CURRENT_DIR)/cpu/gdt_flush.asm.o
+# $(BUILD_DIR)$(CURRENT_DIR)/cpu/int.asm.o
+# $(BUILD_DIR)$(CURRENT_DIR)/cpu/gen_interrupt.asm.o
+
 OBJECTS+=$(KERNEL_C_OBJECTS)
 OBJECTS2=$(OBJECTS) $(LIB_INCLUDE_OBJS)
 # OBJECTS+=\
@@ -76,7 +82,7 @@ $(TARGET_ELF): $(OBJECTS)
 	objdump -drwC -Mintel $^ > $(TARGET_DUMP)
 
 test:
-	$(info $$var is [${KERNEL_INCLUDE_DIRS}])
+	$(info $$var is [${OBJECTS}])
 
 clean:
 	rm -f $(OBJECTS) $(TARGET) *.elf

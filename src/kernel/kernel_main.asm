@@ -1,8 +1,5 @@
 ; ================================================
-; entry.asm - Boot32-Barebones Kernel Entrypoint.
-; ================================================
-; Author: Infinity Technology
-; Date: 12/14/2020
+; entry.asm - Kernel Entrypoint.
 ; ================================================
 
 [bits 32]
