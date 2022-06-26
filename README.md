@@ -8,11 +8,11 @@
     - ✅ Scroll content up on last line reached and is full filed;
     - ✅ Supported Scape sequeces:
       - ✅ \n = Line break;
-      - [ ] \t = Tabulation;
-      - [ ] \r = Carriage return (move cursor position to start of the line);
-      - [ ] \b = Backspace;
-      - [ ] \f = Form feed (clear screen);
-    - ✅ Format strings (kstdlib::kprintf("A String: %s", "My string")):
+       - [ ] \t = Tabulation;
+       - [ ] \r = Carriage return (move cursor position to start of the line);
+       - [ ] \b = Backspace;
+       - [ ] \f = Form feed (clear screen);
+    - ✅ Format strings (stdlib::kprintf("A String: %s", "My string")):
       - ✅ %s = String data type;
       - ✅ %c = Char data type;
       - ✅ %d = Integer data type;
