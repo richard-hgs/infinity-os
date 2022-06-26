@@ -12,7 +12,6 @@
       - [ ] \r = Carriage return (move cursor position to start of the line);
       - [ ] \b = Backspace;
       - [ ] \f = Form feed (clear screen);
-      - 
     - ✅ Format strings (kstdlib::kprintf("A String: %s", "My string")):
       - ✅ %s = String data type;
       - ✅ %c = Char data type;
