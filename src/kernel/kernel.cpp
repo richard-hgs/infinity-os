@@ -17,7 +17,7 @@ extern "C" int kmain()
     gdt::install();
     vga::printStr("GDT         - Install: OK\n");
 
-    // Install isr and idt tables
+    // Install ISR and IDT tables
     isr::install();
     vga::printStr("IDT and ISR - Install: OK\n");
 
