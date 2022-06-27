@@ -5,6 +5,11 @@
 #include <stdarg.h>
 
 /**
+ * @brief If arg1 is not null returns it, else return arg2
+ */
+#define IFNULL(arg1, arg2) (arg1 ? arg1 : arg2)
+
+/**
  * @brief Kernel standard libraries
  * - ultoa
  * - ltoa
