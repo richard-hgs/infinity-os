@@ -20,7 +20,7 @@
       - ✅ %x = Hex representation of int data type;
       - ✅ %b = Binary representation of int data type;
 
-- ✅ GDT - Global Descriptor Table;
-- ✅ IDT - Interrupt Descriptor Table;
-- ⬜ ISR - Interrupt Service Routine;
-- ⬜ Process scheduling;
+  - ✅ GDT - Global Descriptor Table;
+  - ✅ IDT - Interrupt Descriptor Table;
+  - ⬜ ISR - Interrupt Service Routine;
+  - ⬜ Process scheduling;
