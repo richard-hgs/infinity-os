@@ -1,11 +1,12 @@
 ## Infinity OS
 
 - Features:
+  - ✅ Architecture x86;
   - ✅ Simple file system to load second stage and kernel during boot process;
-  - ✅ Boot process usign two boot stages in asm;
+  - ✅ Boot process usign two stages in assembly;
   - ✅ Vga Text mode 80x25;
     - ✅ Print text on screen;
-    - ✅ Scroll content up on last line reached and is full filed;
+    - ✅ Scroll content up on last line reached and is full filled;
     - ✅ Supported Scape sequeces:
       - ✅ \n = Line break;
       - ⬜ \t = Tabulation;
@@ -18,5 +19,8 @@
       - ✅ %d = Integer data type;
       - ✅ %x = Hex representation of int data type;
       - ✅ %b = Binary representation of int data type;
-       
+
+- ✅ GDT - Global Descriptor Table;
+- ✅ IDT - Interrupt Descriptor Table;
+- ⬜ ISR - Interrupt Service Routine;
 - ⬜ Process scheduling;
