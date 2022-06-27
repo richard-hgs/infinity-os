@@ -1,4 +1,3 @@
-
 #include "gdt.h"
 
 struct gdt_ptr {
@@ -39,18 +38,18 @@ void gdt_set_gate(uint32_t i, uint32_t base, uint32_t limit, uint8_t access, uin
 	gdt_entries[i].grand |= gran & 0xf0;			// Discards the low bits of gran since it is used by the segment limit. This is performed by (gran & 0xf0 = 11110000)
 }
 
-/* Install new GDT into system.
- */
-void gdt_install(void)
+
+void gdt::install(void)
 {
 	gdt_ptr.limit = sizeof(gdt_entry_t) * MAX_GDT_ENTRIES - 1;
 	gdt_ptr.base = (uint32_t) &gdt_entries;
 
-	gdt_set_gate(0, 0, 0, 0, 0); 					// Null Descriptor - Required
-	gdt_set_gate(1, 0, 0xffffffff, 0x9a, 0xcf); 	// Kernel - Code segment - (0x9a = 10011010) (0xcf = 11001111)
-	gdt_set_gate(2, 0, 0xffffffff, 0x92, 0xcf); 	// Kernel - Data segment - (0x9b = 10010010) (0xcf = 11001111)
-	gdt_set_gate(3, 0, 0xffffffff, 0xfa, 0xcf); 	// User   - Code segment - (0xfa = 11111010) (0xcf = 11001111)
-	gdt_set_gate(4, 0, 0xffffffff, 0xf2, 0xcf); 	// User   - Data segment - (0xf2 = 11110010) (0xcf = 11001111)
+	gdt_set_gate(0, 0, 0, 0, 0); 						// Null Descriptor - Required
+	gdt_set_gate(1, 0, 0xffffffff, 0x9a, 0xcf); 		// Kernel - Code segment 		- (0x9a = 10011010) (0xcf = 11001111)
+	gdt_set_gate(2, 0, 0xffffffff, 0x92, 0xcf); 		// Kernel - Data segment 		- (0x9b = 10010010) (0xcf = 11001111)
+	gdt_set_gate(3, 0, 0xffffffff, 0xfa, 0xcf); 		// User   - Code segment 		- (0xfa = 11111010) (0xcf = 11001111)
+	gdt_set_gate(4, 0, 0xffffffff, 0xf2, 0xcf); 		// User   - Data segment 		- (0xf2 = 11110010) (0xcf = 11001111)
+	// gdt_set_gate(5, &tss, sizeof(tss), 0xf2, 0xcf); 	// TSS    - Task state segment
 
 	gdt_flush((uint32_t) &gdt_ptr);
 }

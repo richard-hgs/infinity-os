@@ -64,6 +64,7 @@
  *     - User (OS) defined bit
  *
  * - P=Present:
+ *     - Segment Present flag
  *     - If clear, a "segment not present" exception is generated on any reference to this segment.
  *       Descriptor is undefined.
  *     - If 1, descriptor contains a valid base and limit.
@@ -110,6 +111,8 @@
  *
  *     - 110 Code, execute-only, conforming
  *     - 111 Code, execute/read, conforming
+ * 
+ * - In long_mode(x64) the base and limit are ignored
  */
 
 /**
@@ -135,10 +138,12 @@ typedef struct gdt_entry gdt_entry_t;
  */
 extern "C" void gdt_flush(uint32_t gdtr);
 
-/**
- * @brief Install a new GDT into CPU system
- * 
- */
-void gdt_install(void);
+namespace gdt {
+	/**
+	 * @brief Install a new GDT into CPU system
+	 * 
+	 */
+	void install(void);
+}
 
 #endif
