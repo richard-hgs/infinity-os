@@ -4,7 +4,7 @@
     - The first value that a trasistor can represent is the true and false.
     - A transistor with the input(I) output(O) gate_switch(S) can represent a boolean value using the following expression:
         - TRUE: If the gate_switch(S) is on it allows the current to flow from the input to the output gate.
-        ![transistor_true](./images/transistor_true.png){ width: 100px; height: 100px; }
+        ![transistor_true](./images/transistor_true.png = 100x100)
         - FALSE: If the gate_switch(S) is off it dont allows the current to flow from the input to the output gate.
 
 - NOT:
