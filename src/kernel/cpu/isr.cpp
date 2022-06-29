@@ -7,7 +7,9 @@
 #include "stdlib.h"
 #include "isr.h"
 
-const char* idt_messages[32] {                                      // 627 length
+#define IDT_MESSAGES_LEN 32
+
+const char* idt_messages[IDT_MESSAGES_LEN] {                        // 627 length
     "Fault - (DE) Divide Error",                                    // 25 length
     "Fault/Trap - (DB) Intel Debug",                                // 29 length
     "Interrupt - (NMI) Interrupt",                                  // 27 length
@@ -44,14 +46,16 @@ const char* idt_messages[32] {                                      // 627 lengt
 
 extern "C" void* isr_stub_table[];
 
-extern "C" void isr_handler(uint8_t code) {
+extern "C" void isr_handler(registers_t* r) {
     // Print the interruption cause
-    stdio::kprintf("ISR(%d) - %s\n", code, IFNULL(idt_messages[code], "Reserved - (IR) Intel Reserved"));
+    stdio::kprintf("ISR(%d) - ERR_CODE(%d) - %s\n", r->int_no, r->err_code, IFNULL(r->int_no < IDT_MESSAGES_LEN ? idt_messages[r->int_no] : "User - (UI) User interruption", "Reserved - (IR) Intel Reserved"));
+    stdio::kprintf("CPU - eip: %x - cs: %x - ss: %x - ebp: %x\n", r->eip, r->cs, r->ss, r->ebp);
     __asm__ volatile ("cli; hlt");  // Halt the cpu Completely hangs the computer
     return;
 }
 
 void isr::install() {
+    // Setup the interrupt functions that was created in isr_int.asm
     for (uint8_t i = 0; i < 32; i++) {
         idt::setGate(i, (uint32_t) isr_stub_table[i]);
     }

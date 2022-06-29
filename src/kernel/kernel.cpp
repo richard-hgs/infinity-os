@@ -22,6 +22,7 @@ extern "C" int kmain()
     vga::printStr("IDT and ISR - Install: OK\n");
 
     // Throw an exception to test IDT ISR
+    // __asm__ ("mov %eax, %0" :: "r"(1));
     // Division by zero
 	__asm__ ("div %0" :: "r"(0));
 

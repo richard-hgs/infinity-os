@@ -43,27 +43,68 @@
 
 ; ===================================================================================================
 ; MACRO - isr_err_stub:
-; This macro will create isr_stub_%index%: label with a function that calls isr_handler then return
+; This macro will create isr_stub_%index%: label with a function that calls isr_handler
+; This handler receives an error code as last pushed argument
 ; ===================================================================================================
-%macro isr_err_stub 1
+%macro isr_return 1
 isr_stub_%+%1:
-    ; Push the idt index to the isr_handler as a uint8_t parameter
-    push %1
-    call isr_handler
-    iret            ; use iretq instead if targeting 64-bit
+    ; CPU already pushed some registers for us:
+    ; err_code, eip, cs, eflags, useresp, ss
+    push byte %1            ; int_no    : The interruption index
+    jmp isr_dispatcher      ; Jmp to the function that will dispatch the isr to the kernel handler in correct segment descriptor
 %endmacro
 
 ; ===================================================================================================
-; MACRO - isr_no_err_stub:
-; This macro will create isr_stub_%index%: label with a function that calls isr_handler then return
+; MACRO - isr_noret:
+; This macro will create isr_stub_%index%: label with a function that calls isr_handler
+; Error code is always 0 because it's not given by the CPU
 ; ===================================================================================================
-%macro isr_no_err_stub 1
+%macro isr_noret 1
 isr_stub_%+%1:
-    ; Push the idt index to the isr_handler as a uint8_t parameter
-    push byte %1
-    call isr_handler
-    iret
+    ; CPU already pushed some registers for us:
+    ; eip, cs, eflags, useresp, ss
+    push byte 0             ; err_code  : Error code if applicable
+    push byte %1            ; int_no    : The interruption index
+    jmp isr_dispatcher      ; Jmp to the function that will dispatch the isr to the kernel handler in correct segment descriptor
+                            
 %endmacro
+
+; =============================
+; HANDLER DISPATCHER:
+; We created the isr_dispatcher to create a function with common code 
+; =============================
+isr_dispatcher:
+    ; CPU already pushed some registers for us:
+    ; eip, cs, eflags, useresp, ss
+
+    ; The isr_noret and isr_return push 2 parameters the int_no(The index of this handler function) and 
+    ; The error code returned by the handler
+    pusha                   ; ds, edi, esi, ebp, esp, ebx, edx, ecx, eax
+	
+    mov ax, ds              ; lower 16 bits is in the ds register
+	push eax                ; Save the segment descriptor onto stack
+
+	mov ax, 0x10            ; Load the kernel segment descriptor
+	mov ds, ax              ; Set the segment register's
+	mov es, ax              ; Set the segment register's
+	mov fs, ax              ; Set the segment register's
+	mov gs, ax              ; Set the segment register's
+
+	push esp                ; Push the old stack frame to the new kernel stack frame since we changed to kernel code segment
+	cld                     ; Clear the direction flag
+    
+    call isr_handler        ; C function to handle ISR's
+    
+    pop eax                 ; Pop eax that was pushed earlier when we push esp
+	pop eax                 ; Pop the segment descriptor from the stack
+	mov ds, ax              ; Clear segment register's
+	mov es, ax              ; Clear segment register's
+	mov fs, ax              ; Clear segment register's
+	mov gs, ax              ; Clear segment register's
+	popa                    ; pop: ds, edi, esi, ebp, esp, ebx, edx, ecx, eax
+	add esp, 8              ; Clean up error code and push number
+    iret                    ; An ISR has to end with the iret opcode. Use iretq instead if targeting 64-bit. 
+                            ; Concurrent NMIs are delivered to the CPU one by one. IRET signals to the NMI circuitry that another NMI can now be delivered.
 
 ; =============================
 ; LABEL - isr_stub_table
@@ -82,35 +123,38 @@ isr_stub_table:
 ; Here we are invoking the macros created above 
 ; The parameter we are passing is the isr_stub_table vector index
 ; The macro creates isr_stub_%index%: label with a function that calls isr_handler then return
-isr_no_err_stub 0
-isr_no_err_stub 1
-isr_no_err_stub 2
-isr_no_err_stub 3
-isr_no_err_stub 4
-isr_no_err_stub 5
-isr_no_err_stub 6
-isr_no_err_stub 7
-isr_err_stub    8
-isr_no_err_stub 9
-isr_err_stub    10
-isr_err_stub    11
-isr_err_stub    12
-isr_err_stub    13
-isr_err_stub    14
-isr_no_err_stub 15
-isr_no_err_stub 16
-isr_err_stub    17
-isr_no_err_stub 18
-isr_no_err_stub 19
-isr_no_err_stub 20
-isr_no_err_stub 21
-isr_no_err_stub 22
-isr_no_err_stub 23
-isr_no_err_stub 24
-isr_no_err_stub 25
-isr_no_err_stub 26
-isr_no_err_stub 27
-isr_no_err_stub 28
-isr_no_err_stub 29
-isr_err_stub    30
-isr_no_err_stub 31
+;
+; isr_noret:  Dont return an error code
+; isr_return: Returns an error code
+isr_noret 0
+isr_noret 1
+isr_noret 2
+isr_noret 3
+isr_noret 4
+isr_noret 5
+isr_noret 6
+isr_noret 7
+isr_return 8
+isr_noret 9
+isr_return 10
+isr_return 11
+isr_return 12
+isr_return 13
+isr_return 14
+isr_noret 15
+isr_noret 16
+isr_return 17
+isr_noret 18
+isr_noret 19
+isr_noret 20
+isr_noret 21
+isr_noret 22
+isr_noret 23
+isr_noret 24
+isr_noret 25
+isr_noret 26
+isr_noret 27
+isr_noret 28
+isr_noret 29
+isr_return 30
+isr_noret 31
