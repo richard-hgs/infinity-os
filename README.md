@@ -24,6 +24,6 @@
   - ✅ ISR - Interrupt Service Routine;
       - ✅ Handle Interruptions (0-31);
       - ⬜ User Interruptions (syscalls);
-  - ⬜ MMU - Paging;
+  - ⬜ MMU - Memory Mapping Unity or Paging;
   - ⬜ Process scheduling;
       
