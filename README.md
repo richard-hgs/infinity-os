@@ -22,5 +22,9 @@
 
   - ✅ GDT - Global Descriptor Table;
   - ✅ IDT - Interrupt Descriptor Table;
-  - ⬜ ISR - Interrupt Service Routine;
+  - ✅ ISR - Interrupt Service Routine;
+      - ✅ Handle Interruptions (0-31);
+      - ⬜ User Interruptions (syscalls);
+  - ⬜ MMU - Paging;
   - ⬜ Process scheduling;
+      

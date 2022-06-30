@@ -1,12 +1,5 @@
 #include "gdt.h"
 
-struct gdt_ptr {
-	uint16_t limit;
-	uint32_t base;
-} __attribute__((packed));
-
-typedef struct gdt_ptr gdt_ptr_t;
-
 gdt_entry_t gdt_entries[MAX_GDT_ENTRIES];
 gdt_ptr_t gdt_ptr;
 

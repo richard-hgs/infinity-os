@@ -115,6 +115,11 @@
  * - In long_mode(x64) the base and limit are ignored
  */
 
+typedef struct gdt_ptr {
+	uint16_t limit;
+	uint32_t base;
+} __attribute__((packed)) gdt_ptr_t;
+
 /**
  * @brief Global Descriptor Table Representation
  * 

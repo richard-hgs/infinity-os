@@ -79,11 +79,11 @@ for variables.   |      |         |
         - EDI:
     - RESERVED REGISTERS:
         - EBP:
-            - Stack Base: Holds the address of the lower element of the stack.
+            - Stack Base: Holds the address in the memory of the lower element of the stack.
         - ESP:
-            - Stack Pointer: Holds the address of the top element of the stack.
+            - Stack Pointer: Holds the address in the memory of the top element of the stack.
         - EIP: 
-            - Instruction Pointer: Holds the address of the current instruction being executed.
+            - Instruction Pointer: Holds the address in the memory of the current instruction being executed.
 
 - INSTRUCTIONS:
     - 
