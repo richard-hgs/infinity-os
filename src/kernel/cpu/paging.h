@@ -24,8 +24,33 @@ extern unsigned char __MAX_ADDR[];
  *  - Page-Table Base Address:
  *      - The start memory address of the paged memory.
  * 
- *  - Availa - Available:
- *      - Available to software bits 9, 10 and 11.
+ *  - Availa - Reserved and available-to-software bits:
+ *      - For all IA-32 processors. Bits 9, 10, and 11 are available for use by software. 
+ *        (When the present bit is clear, bits 1 through 31 are available to software, see Figure 3-16.)
+ *      - points to a page table, bit 6 is reserved and should be set to 0.
+ *      - When the PSE and PAE flags in control register CR4 are set, the processor generates a page fault 
+ *        if reserved bits are not set to 0.
+ *      - For Pentium II and earlier processors. Bit 7 in a page-table entry is reserved and should be set to 0
+ *      - For a page-directory entry for a 4-MByte page, bits 12 through 21 are reserved and must be set to 0.
+ *      - For Pentium III and later processors. For a page-directory entry for a 4-MByte page, bits 13 through 21 are reserved 
+ *        and must be set to 0
+ * 
+ *  - Global (G) flag, bit 8:
+ *      - (Introduced in the Pentium Pro processor) — Indicates a global page when set.
+ *      - When a page is marked global and the page global enable (PGE) flag in register CR4 is set, 
+ *        the page-table or page-directory entry for the page is not invalidated in the TLB when register CR3 is 
+ *        loaded or a task switch occurs.
+ *      - Only software can set or clear this flag.
+ *      - For page-directory entries that point to page tables, this flag is ignored and the global 
+ *        characteristics of a page are set in the page-table entries.
+ *      - See Section 3.12, “Translation Lookaside Buffers (TLBs)”, for more information about the use of this flag
+ * 
+ *  - Page attribute table index (PAT) flag, bit 7 in page-table entries for 4-KByte 
+ *    pages and bit 12 in page-directory entries for 4-MByte pages:
+ *      - Selects PAT entry. For processors that support the page attribute table (PAT).
+ *      - this flag is used along with the PCD and PWT flags to select an entry in the PAT, 
+ *      which in turn selects the memory type for the page. (see Section 10.12, “Page Attribute Table (PAT)”). 
+ *      - For processors that do not support the PAT, this bit is reserved and should be set to 0
  * 
  *  - Page size (PS) flag, bit 7 page-directory entries for 4-KByte pages:
  *      - Determines the page size. When this flag is clear, the page size is 4 KBytes 
