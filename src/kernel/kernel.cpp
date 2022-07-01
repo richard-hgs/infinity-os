@@ -6,6 +6,7 @@
 // cpu
 #include "gdt.h"
 #include "isr.h"
+#include "paging.h"
 #include "kernel.h"
 
 extern "C" int kmain()
@@ -20,6 +21,10 @@ extern "C" int kmain()
     // Install ISR and IDT tables
     isr::install();
     vga::printStr("IDT and ISR - Install: OK\n");
+
+    // Install MMU - Paging tables
+    paging::install();
+    vga::printStr("MMU Paging  - Install: OK\n");
 
     // Throw an exception to test IDT ISR
     // __asm__ ("mov %eax, %0" :: "r"(1));
