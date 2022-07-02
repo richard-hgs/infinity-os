@@ -4,23 +4,49 @@
 
 #include <stdint.h>
 
+#define PAGES_PER_TABLE 1024
+#define PAGES_PER_DIRECTORY 1024
+#define PAGE_SIZE 4096
+
+#define FRAMES_COUNT 1024*128
+#define FRAMES_START_ADDR 0x100000
+#define FRAME_SIZE 4096 // 4 kB
+
+//all numbers are in frames
+#define PAGE_DIRECTORY_START 0
+#define PAGE_TABLES_START 1
+#define PAGE_TABLE_COUNT 1024
+
+#define USER_PAGES_START PAGE_TABLES_START + PAGE_TABLE_COUNT // frame number where user pages start
+#define KERNEL_START_ADDR 0x00010000 // 64 kb
+#define KERNEL_SOURCE_SIZE 256 // 1 MB = 256 frames
+#define KERNEL_STACK_START_ADDR KERNEL_START_ADDR + 0x100000 + FRAME_SIZE // kernel + 1MB + 4kB
+#define KERNEL_STACK_SIZE 4
+
+#define VIDEO_MEM_START KERNEL_STACK_START_ADDR + (KERNEL_STACK_SIZE + 1) * FRAME_SIZE // kernel stack + kernel stack size + 4kB
+
+#define KERNEL_HEAP_START_ADDR VIDEO_MEM_START + FRAME_SIZE // video mem + 4kB
+#define KERNEL_HEAP_SIZE 1024 * 3 // 1024 * 3 frames = 12 MB
+
 /**
  * @brief MMU - Memory Management Unity - Paging
  *        docs/intel_x86_x64_specification.pdf page 119
  * 
  * Structure that translates linear physical addresses to physical addresses.
- */
-
-// Linker Base Address and Max Address of the kernel
-extern unsigned char __BASE_ADDR[];
-extern unsigned char __MAX_ADDR[];
-
-/**
- * @brief Page dir structure
- *  ______________________________________________________________________________
- * | 31 ------------------ 12 | 11 - 9 | 8 | 7  |  6  | 5 |  4  |  3  |  2  |  1  |
- * | Page-Table Base Address  | Availa | G | PS | AVL | A | PCD | PWT | U/S | R/W |
- *  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+ * 
+ * REGISTERS:
+ *    cr3 - Points to the current page directory
+ *    cr0 - Bit 31 Set to 1=Enable paging mechanism, 0=Disable paging
+ *    
+ * 
+ * PAGE DIRECTORY:
+ *    An array of 32-bit page-directory entries (PDEs) contained in a 4-KByte page. 
+ *    Up to 1024 page-directory entries can be held in a page directory.
+ * 
+ *  __________________________________________________________________________________
+ * | 31 ------------------ 12 | 11 - 9 | 8 | 7  |  6  | 5 |  4  |  3  |  2  |  1  | 0 |
+ * | Page-Table Base Address  | Availa | G | PS | AVL | A | PCD | PWT | U/S | R/W | P |
+ *  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
  *  - Page-Table Base Address:
  *      - The start memory address of the paged memory.
  * 
@@ -110,11 +136,30 @@ extern unsigned char __MAX_ADDR[];
  *        page-fault exception (#PF)
  *      - The processor does not set or clear this flag; it is up to the operating system or executive to maintain the state of the flag.
  */
-typedef struct pagedir {
-    uint8_t access;
-    uint8_t base_low;
-    uint16_t base_high;
-} pagedir_t;
+
+
+typedef struct PageTableEntry {
+    bool present : 1;
+    bool readWrite : 1;
+    bool supervisor : 1;
+    bool writeTrough : 1;
+    bool cacheDisabled : 1;
+    bool accessed : 1;
+    bool dirty : 1;
+    bool size : 1;
+    bool attribute : 1;
+    bool global : 1;
+    uint8_t available : 3;
+    uint32_t baseAddress : 19;
+} __attribute__((packed)) PageTableEntry_t;         // Size 4 bytes (32 bits): Each entry manages 4kb or 4096 bytes of ram wich gives (4gb of ram = 1024 * 1024 * 4096)
+
+typedef struct PageTable {
+    PageTableEntry_t entries[PAGES_PER_TABLE];      // Size 4096 bytes = 1024 * 4 bytes (32 bits)
+} PageTable_t;
+
+typedef struct PageDirectory {
+    PageTableEntry_t entries[PAGES_PER_DIRECTORY];  // Size 4096 bytes = 1024 * 4 bytes (32 bits)
+} PageDirectory_t;
 
 namespace paging {
     void install();

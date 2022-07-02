@@ -49,7 +49,7 @@ extern "C" void* isr_stub_table[];
 extern "C" void isr_handler(registers_t* r) {
     // Print the interruption cause
     stdio::kprintf("ISR(%d) - ERR_CODE(%d) - %s\n", r->int_no, r->err_code, IFNULL(r->int_no < IDT_MESSAGES_LEN ? idt_messages[r->int_no] : "User - (UI) User interruption", "Reserved - (IR) Intel Reserved"));
-    stdio::kprintf("CPU - eip: %x - cs: %x - ss: %x - ebp: %x\n", r->eip, r->cs, r->ss, r->ebp);
+    stdio::kprintf("CPU - eip: %x - cs: %x - ss: %x - ebp: %x - esp: %x\n", r->eip, r->cs, r->ss, r->ebp, r->esp);
     __asm__ volatile ("cli; hlt");  // Halt the cpu Completely hangs the computer
     return;
 }

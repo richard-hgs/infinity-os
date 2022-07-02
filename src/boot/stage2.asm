@@ -78,7 +78,7 @@ INIT_PM:
 	mov fs, ax
 	mov gs, ax
 	mov ss, ax
-	mov ebp, 0x90000
+	mov ebp, 0x90000	; Setup top of the stack
 	mov esp, ebp
 
 	; Jump to kernel entry.asm
