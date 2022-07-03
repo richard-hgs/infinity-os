@@ -122,28 +122,29 @@
 
 
 typedef struct PageTableEntry {
-    bool present         : 1; // Page present in memory
-    bool readWrite       : 1; // Read-only if clear, readwrite if set
-    bool supervisor      : 1; // Supervisor level only if clear
-    bool writeTrough     : 1; // Has the page been accessed since last refresh?
-    bool cacheDisabled   : 1; // Has the page been written to since last refresh?
-    bool accessed        : 1; 
-    bool dirty           : 1;
-    bool size            : 1;
-    bool attribute       : 1;
-    bool global          : 1;
-    uint8_t available    : 3;
-    uint32_t baseAddress : 19;
+    uint32_t present         : 1; // Page present in memory
+    uint32_t readWrite       : 1; // Read-only if clear, readwrite if set
+    uint32_t supervisor      : 1; // Supervisor level only if clear
+    // uint32_t writeTrough     : 1; // Has the page been accessed since last refresh?
+    // uint32_t cacheDisabled   : 1; // Has the page been written to since last refresh?
+    uint32_t accessed        : 1; 
+    uint32_t dirty           : 1;
+    // bool size            : 1;
+    // bool attribute       : 1;
+    // bool global          : 1;
+    // uint8_t available    : 3;
+    uint32_t unused      : 7;
+    uint32_t baseAddress : 20;
 } __attribute__((packed)) PageTableEntry_t;         // Size 4 bytes (32 bits): Each entry manages 4kb or 4096 bytes of ram wich gives (4gb of ram = 1024 * 1024 * 4096)
 
 typedef struct PageTable {
     // Each page table points to 1024 frames and each frame address 4kb of memory
-    PageTableEntry_t* entries[PAGES_PER_TABLE];      // Size 4mb
+    PageTableEntry_t pages[PAGES_PER_TABLE];      // Size 4mb
 } PageTable_t;
 
 typedef struct PageDirectory {
     // The page directory points to 1024 PageTable_t entries
-    PageTable_t entries[PAGES_PER_DIRECTORY];  // Size 4gb
+    PageTable_t* tables[PAGES_PER_DIRECTORY];  // Size 4gb
     /**
      * The physical address of tablesPhysical. This comes into play
      * when we get our kernel heap allocated and the directory

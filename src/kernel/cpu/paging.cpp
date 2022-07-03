@@ -1,18 +1,29 @@
 // stdlibs
 #include "stdio.h"
+// memory
+#include "memutils.h"
+#include "kheap.h"
 #include "paging.h"
 
 // Macros used in the bitset algorithms.
 #define INDEX_FROM_BIT(a) (a / (8 * 4))
 #define OFFSET_FROM_BIT(a) (a % ( 8 * 4))
 
+extern uint32_t __MAX_ADDR; // Max memory address that is used by kernel variables. Created in link.ld
+
 // A bitset of frames - used or free.
 uint32_t *frames;
 uint32_t nframes;
 
+// The kernel's page directory
+PageDirectory_t* kernel_directory = 0;
+
+// The current page directory;
+PageDirectory_t* current_directory = 0;
+
 // Static function to set a bit in the frames bitset
 void set_frame(uint32_t frame_addr) {
-   uint32_t frame = frame_addr/0x1000;
+   uint32_t frame = frame_addr / 0x1000;
    uint32_t idx = INDEX_FROM_BIT(frame);
    uint32_t off = OFFSET_FROM_BIT(frame);
    frames[idx] |= (0x1 << off);
@@ -80,7 +91,78 @@ void free_frame(PageTableEntry_t* page) {
    }
 }
 
-void paging::install() {
+PageTableEntry_t* get_page(uint32_t address, int make, PageDirectory_t* dir) {
+   // Turn the address into an index.
+   address /= 0x1000;
+   // Find the page table containing this address.
+   uint32_t table_idx = address / 1024;
+   if (dir->tables[table_idx]) { // If this table is already assigned
+       return &dir->tables[table_idx]->pages[address % 1024];
+   } else if(make) {
+       uint32_t tmp;
+       dir->tables[table_idx] = (PageTable_t*) kheap::kmalloc_ap(sizeof(PageTable_t), &tmp);
+       memutils::memset(dir->tables[table_idx], 0, 0x1000);
+       dir->tablesPhysical[table_idx] = tmp | 0x7; // PRESENT, RW, US.
+       return &dir->tables[table_idx]->pages[address % 1024];
+   } else {
+       return 0;
+   }
+}
 
-    // stdio::kprintf("pageDirectory: %d", pageDirectory->base);
+void switch_page_directory(PageDirectory_t* dir) {
+   current_directory = dir;
+    asm volatile ("mov %0, %%eax;"
+        "mov %%eax, %%cr3"
+        : : "r" (&dir->tablesPhysical)
+        : "eax"
+    );
+    asm volatile ("mov %%cr0, %%eax;"
+        "or $0x80000000, %%eax;"
+        "mov %%eax, %%cr0"
+        : : : "eax"
+    );
+
+
+   // asm volatile("mov %0, %%cr3":: "r"(&dir->tablesPhysical));
+//    uint32_t cr0;
+//    asm volatile("mov %%cr0, %0": "=r"(cr0));
+//    cr0 |= 0x80000000; // Enable paging!
+//    asm volatile("mov %0, %%cr0":: "r"(cr0));
+}
+
+void paging::install() {
+    uint32_t placement_address = (uint32_t) &__MAX_ADDR; // Get the pointer address of this variable wich is the last address of the kernel in memory;
+
+    nframes = PAGE_MEM_ADDRESS_END / 0x1000;
+    frames = (uint32_t*) kheap::kmalloc(INDEX_FROM_BIT(nframes));
+    memutils::memset(frames, 0, INDEX_FROM_BIT(nframes));
+
+    // Let's make a page directory.
+    kernel_directory = (PageDirectory_t*) kheap::kmalloc_a(sizeof(PageDirectory_t));
+    memutils::memset(kernel_directory, 0, sizeof(PageDirectory_t));
+    current_directory = kernel_directory;
+
+    // We need to identity map (phys addr = virt addr) from
+    // 0x0 to the end of used memory, so we can access this
+    // transparently, as if paging wasn't enabled.
+    // NOTE that we use a while loop here deliberately.
+    // inside the loop body we actually change placement_address
+    // by calling kmalloc(). A while loop causes this to be
+    // computed on-the-fly rather than once at the start.
+    uint32_t i = 0;
+    while (i < placement_address) {
+        // Kernel code is readable but not writeable from userspace.
+        alloc_frame(get_page(i, 1, kernel_directory), 0, 0);
+        i += 0x1000;
+    }
+
+    // stdio::kprintf("pageEntrySize: %x", placement_address);
+    // while(true) {}
+
+    // Now, enable paging!
+    switch_page_directory(kernel_directory);
+    
+    while(true) {}
+
+    // stdio::kprintf("pageDirectory: %x\n", (uint32_t) kernel_directory);
 }

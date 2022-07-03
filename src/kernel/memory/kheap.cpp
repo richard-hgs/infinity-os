@@ -2,10 +2,9 @@
 
 extern uint32_t __MAX_ADDR; // Max memory address that is used by kernel variables. Created in link.ld
 
-uint32_t placement_address = (uint32_t) &__MAX_ADDR; // Get the pointer address of this variable wich is the last address of the kernel in memory;
+uint32_t kheap::kmalloc_int(uint32_t sz, int align, uint32_t *phys) {
+    uint32_t placement_address = (uint32_t) &__MAX_ADDR; // Get the pointer address of this variable wich is the last address of the kernel in memory;
 
-uint32_t kheap::kmalloc_int(uint32_t sz, int align, uint32_t *phys)
-{
     // This will eventually call malloc() on the kernel heap.
     // For now, though, we just assign memory at placement_address
     // and increment it by sz. Even when we've coded our kernel
