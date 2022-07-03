@@ -9,10 +9,15 @@
 #include "paging.h"
 #include "kernel.h"
 
+// extern "C" void _start();
+
 extern "C" int kmain()
 {
     // Clear VGA screen
     vga::clearScreen();
+
+    // Kernel entry point in memory
+    // stdio::kprintf("KERNEL_ENTRY: %x\n", (int) _start);
 
     // Install a new GDT table
     gdt::install();

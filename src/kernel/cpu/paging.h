@@ -8,25 +8,8 @@
 #define PAGES_PER_DIRECTORY 1024
 #define PAGE_SIZE 4096
 
-#define FRAMES_COUNT 1024*128
-#define FRAMES_START_ADDR 0x100000
-#define FRAME_SIZE 4096 // 4 kB
+#define PAGE_MEM_ADDRESS_END 0x1000000 // The size of physical memory. For the moment wE assume it is 16MB big.
 
-//all numbers are in frames
-#define PAGE_DIRECTORY_START 0
-#define PAGE_TABLES_START 1
-#define PAGE_TABLE_COUNT 1024
-
-#define USER_PAGES_START PAGE_TABLES_START + PAGE_TABLE_COUNT // frame number where user pages start
-#define KERNEL_START_ADDR 0x00010000 // 64 kb
-#define KERNEL_SOURCE_SIZE 256 // 1 MB = 256 frames
-#define KERNEL_STACK_START_ADDR KERNEL_START_ADDR + 0x100000 + FRAME_SIZE // kernel + 1MB + 4kB
-#define KERNEL_STACK_SIZE 4
-
-#define VIDEO_MEM_START KERNEL_STACK_START_ADDR + (KERNEL_STACK_SIZE + 1) * FRAME_SIZE // kernel stack + kernel stack size + 4kB
-
-#define KERNEL_HEAP_START_ADDR VIDEO_MEM_START + FRAME_SIZE // video mem + 4kB
-#define KERNEL_HEAP_SIZE 1024 * 3 // 1024 * 3 frames = 12 MB
 
 /**
  * @brief MMU - Memory Management Unity - Paging
@@ -139,29 +122,48 @@
 
 
 typedef struct PageTableEntry {
-    bool present : 1;
-    bool readWrite : 1;
-    bool supervisor : 1;
-    bool writeTrough : 1;
-    bool cacheDisabled : 1;
-    bool accessed : 1;
-    bool dirty : 1;
-    bool size : 1;
-    bool attribute : 1;
-    bool global : 1;
-    uint8_t available : 3;
+    bool present         : 1; // Page present in memory
+    bool readWrite       : 1; // Read-only if clear, readwrite if set
+    bool supervisor      : 1; // Supervisor level only if clear
+    bool writeTrough     : 1; // Has the page been accessed since last refresh?
+    bool cacheDisabled   : 1; // Has the page been written to since last refresh?
+    bool accessed        : 1; 
+    bool dirty           : 1;
+    bool size            : 1;
+    bool attribute       : 1;
+    bool global          : 1;
+    uint8_t available    : 3;
     uint32_t baseAddress : 19;
 } __attribute__((packed)) PageTableEntry_t;         // Size 4 bytes (32 bits): Each entry manages 4kb or 4096 bytes of ram wich gives (4gb of ram = 1024 * 1024 * 4096)
 
 typedef struct PageTable {
-    PageTableEntry_t entries[PAGES_PER_TABLE];      // Size 4096 bytes = 1024 * 4 bytes (32 bits)
+    // Each page table points to 1024 frames and each frame address 4kb of memory
+    PageTableEntry_t* entries[PAGES_PER_TABLE];      // Size 4mb
 } PageTable_t;
 
 typedef struct PageDirectory {
-    PageTableEntry_t entries[PAGES_PER_DIRECTORY];  // Size 4096 bytes = 1024 * 4 bytes (32 bits)
+    // The page directory points to 1024 PageTable_t entries
+    PageTable_t entries[PAGES_PER_DIRECTORY];  // Size 4gb
+    /**
+     * The physical address of tablesPhysical. This comes into play
+     * when we get our kernel heap allocated and the directory
+     * may be in a different location in virtual memory.
+     */
+    uint32_t tablesPhysical[1024];
+
+    /**
+     * The physical address of tablesPhysical. This comes into play
+     * when we get our kernel heap allocated and the directory
+     * may be in a different location in virtual memory.
+     */
+    uint32_t physicalAddr;
 } PageDirectory_t;
 
 namespace paging {
+    /**
+     * @brief Setup the paging environment, page directories and
+     * enable paging in cr0 register
+     */
     void install();
 }
 

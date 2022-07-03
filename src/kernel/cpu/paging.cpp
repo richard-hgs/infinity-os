@@ -1,43 +1,86 @@
+// stdlibs
 #include "stdio.h"
 #include "paging.h"
 
-/*
-    max user memory is 1 MB because virtual addr 0x100000 is where
-    page directory and page tables start
-*/
+// Macros used in the bitset algorithms.
+#define INDEX_FROM_BIT(a) (a / (8 * 4))
+#define OFFSET_FROM_BIT(a) (a % ( 8 * 4))
 
-unsigned char frames[FRAMES_COUNT];
-PageDirectory_t* pageDirectory;
+// A bitset of frames - used or free.
+uint32_t *frames;
+uint32_t nframes;
 
-void frame_setUsage(unsigned int frameNr, int usage)
-{
-    unsigned int byteNr; // byte number in frames buffer
-    unsigned int bitNr;
-    unsigned char mask;
-
-    byteNr = frameNr / 8;
-    bitNr = frameNr % 8;
-    mask = 1 << bitNr;
-    if (usage == 1)
-        frames[byteNr] = frames[byteNr] | mask;
-    if (usage == 0)
-        frames[byteNr] = frames[byteNr] & ~mask;
+// Static function to set a bit in the frames bitset
+void set_frame(uint32_t frame_addr) {
+   uint32_t frame = frame_addr/0x1000;
+   uint32_t idx = INDEX_FROM_BIT(frame);
+   uint32_t off = OFFSET_FROM_BIT(frame);
+   frames[idx] |= (0x1 << off);
 }
 
-// sets frame usage bit to 0
-void frame_free(unsigned int frameNr)
-{
-    frame_setUsage(frameNr, 0);
+// Static function to clear a bit in the frames bitset
+void clear_frame(uint32_t frame_addr) {
+   uint32_t frame = frame_addr / 0x1000;
+   uint32_t idx = INDEX_FROM_BIT(frame);
+   uint32_t off = OFFSET_FROM_BIT(frame);
+   frames[idx] &= ~(0x1 << off);
+}
+
+// Static function to test if a bit is set.
+uint32_t test_frame(uint32_t frame_addr) {
+   uint32_t frame = frame_addr / 0x1000;
+   uint32_t idx = INDEX_FROM_BIT(frame);
+   uint32_t off = OFFSET_FROM_BIT(frame);
+   return (frames[idx] & (0x1 << off));
+}
+
+// Static function to find the first free frame.
+uint32_t first_frame() {
+   uint32_t i, j;
+   for (i = 0; i < INDEX_FROM_BIT(nframes); i++) {
+       if (frames[i] != 0xFFFFFFFF) { // nothing free, exit early.
+           // at least one bit is free here.
+           for (j = 0; j < 32; j++) {
+               uint32_t toTest = 0x1 << j;
+               if (!(frames[i]&toTest)) {
+                   return i*4*8+j;
+               }
+           }
+       }
+   }
+   return -1; // If no free frames found return error
+}
+
+// Function to allocate a frame.
+void alloc_frame(PageTableEntry_t* page, int is_kernel, int is_writeable) {
+   if (page->baseAddress != 0) {
+       return; // Frame was already allocated, return straight away.
+   } else {
+       uint32_t idx = first_frame(); // idx is now the index of the first free frame.
+       if (idx == (uint32_t)-1) {
+           // PANIC is just a macro that prints a message to the screen then hits an infinite loop.
+           PANIC("No free frames!");
+       }
+       set_frame(idx * 0x1000);                  // this frame is now ours!
+       page->present = 1;                        // Mark it as present.
+       page->readWrite = (is_writeable) ? 1 : 0; // Should the page be writeable?
+       page->supervisor = (is_kernel) ? 0 : 1;   // Should the page be user-mode?
+       page->baseAddress = idx;
+   }
+}
+
+// Function to deallocate a frame.
+void free_frame(PageTableEntry_t* page) {
+   uint32_t frame;
+   if (!(frame=page->baseAddress)) {
+       return; // The given page didn't actually have an allocated frame!
+   } else {
+       clear_frame(frame);      // Frame is now free again.
+       page->baseAddress = 0x0; // Page now doesn't have a frame.
+   }
 }
 
 void paging::install() {
-    // stdio::kprintf("pageSize: %d\n", sizeof(PageTableEntry_t));
-    // pagedir_ptr->access = ; // [5=, 4=Set 0 Page has no access yet, 3=Set 1 caching enabled, 2=Set 1 Allow caching, 1=Set 1 Super privilege, 0= Set 1 R/W]
 
-    int i;
-    for (i = 0; i < FRAMES_COUNT; i++) {
-        frames[i] = 0; // unused
-    }
-
-
+    // stdio::kprintf("pageDirectory: %d", pageDirectory->base);
 }

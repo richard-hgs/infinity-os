@@ -29,7 +29,6 @@ SECTIONS
 		*(.bss)
 		*(.bss.*)
 		*(COMMON)
-		__MAX_ADDR = .;
 	}
 	/DISCARD/ :
 	{
@@ -37,4 +36,5 @@ SECTIONS
 		*(.igot.*);
 		*(.eh_frame);
 	}
+	__MAX_ADDR = .;
 }
