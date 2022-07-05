@@ -5,7 +5,7 @@ SET CUR_PATH=%CD%
 SET CUR_DRIVE=%CUR_PATH:~0,2%
 SET OS_FULL_PATH=%CUR_PATH%\build\floppy.img
 SET COPY_OS_TO_EXTERNAL_DRIVE=0
-SET EXTERNAL_DRIVE_PATH=\\?\PhysicalDrive3
+SET EXTERNAL_DRIVE_PATH=\\?\PhysicalDrive2
 SET EXTERNAL_DRIVE_TYPE=2
 SET EXTERNAL_DRIVE_SECTORS_TO_COPY=100
 echo PROJECT_PATH -^> %CUR_PATH%
@@ -25,4 +25,6 @@ If %COPY_OS_TO_EXTERNAL_DRIVE%==1 (
     )
 )
 Rem Run compiled operating system in qemu virtual machine
-qemu-system-i386 -fda ./build/floppy.img -boot a -s -soundhw pcspk
+Rem qemu-system-i386 -fda ./build/floppy.img -boot a -s -soundhw pcspk
+
+qemu-system-i386 -drive format=raw,file=./build/floppy.img -m 1024M

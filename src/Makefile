@@ -24,9 +24,9 @@ all:
 	cd $(SRCDIR)/libs && $(MAKE)
 	cd $(SRCDIR)/boot && $(MAKE)
 	cd $(SRCDIR)/kernel && $(MAKE)
-	cd $(SRCDIR)/tools/imagefs && $(MAKE)
-	cd $(SRCDIR)/tools/prsfs && $(MAKE)
-	cd $(SRCDIR)/tools/imgwrite && $(MAKE)
+# cd $(SRCDIR)/tools/imagefs && $(MAKE)
+# cd $(SRCDIR)/tools/prsfs && $(MAKE)
+# cd $(SRCDIR)/tools/imgwrite && $(MAKE)
 
 run: disk
 	qemu-system-i386 -fda $(BUILD_DIR)floppy.img -boot a -soundhw pcspk
@@ -37,9 +37,10 @@ debug: disk
 
 disk: all
 	echo $(CURDIR)
-	$(IMAGEFS) c $(BUILD_DIR)floppy.img 200
-	$(IMAGEFS) w $(BUILD_DIR)floppy.img $(BUILD_DIR)boot/stage1.bin
-	$(PRSFS) $(BUILD_DIR)floppy.img $(BUILD_DIR)boot/stage2.bin $(BUILD_DIR)kernel/kernel.bin
+	cat $(BUILD_DIR)boot/boot.bin $(BUILD_DIR)kernel/kernel.bin /dev/zero | head -c 1474560 > $(BUILD_DIR)floppy.img
+# $(IMAGEFS) c $(BUILD_DIR)floppy.img 200
+# $(IMAGEFS) w $(BUILD_DIR)floppy.img $(BUILD_DIR)boot/stage1.bin
+# $(PRSFS) $(BUILD_DIR)floppy.img $(BUILD_DIR)boot/stage2.bin $(BUILD_DIR)kernel/kernel.bin
 
 cdrom: disk clean
 	cd .. && mkisofs -pad -b $(BUILD_DIR)floppy.img -R -o ./$(PROJECT_NAME)/infinityOS.iso ./$(PROJECT_NAME)
@@ -49,18 +50,18 @@ clean:
 	cd $(SRCDIR)/libs && $(MAKE) clean
 	cd $(SRCDIR)/boot && $(MAKE) clean
 	cd $(SRCDIR)/kernel && $(MAKE) clean
-	cd $(SRCDIR)/imagefs && $(MAKE) clean
-	cd $(SRCDIR)/prsfs && $(MAKE) clean
-	cd $(SRCDIR)/imgwrite && $(MAKE) clean
+# cd $(SRCDIR)/imagefs && $(MAKE) clean
+# cd $(SRCDIR)/prsfs && $(MAKE) clean
+# cd $(SRCDIR)/imgwrite && $(MAKE) clean
 
 distclean: clean
 	rm -f floppy.img $(CDROM_IMG) *.bak *.log
 	cd $(SRCDIR)/libs && $(MAKE) distclean
 	cd $(SRCDIR)/boot && $(MAKE) distclean
 	cd $(SRCDIR)/kernel && $(MAKE) distclean
-	cd $(SRCDIR)/imagefs && $(MAKE) distclean
-	cd $(SRCDIR)/prsfs && $(MAKE) distclean
-	cd $(SRCDIR)/imgwrite && $(MAKE) distclean
+# cd $(SRCDIR)/imagefs && $(MAKE) distclean
+# cd $(SRCDIR)/prsfs && $(MAKE) distclean
+# cd $(SRCDIR)/imgwrite && $(MAKE) distclean
 
 dist: distclean
 	cd .. && tar -cv --exclude=.git $(SRCDIR)/$(PROJECT_NAME) \

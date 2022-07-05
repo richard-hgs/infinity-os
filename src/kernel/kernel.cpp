@@ -7,9 +7,12 @@
 #include "gdt.h"
 #include "isr.h"
 #include "paging.h"
+// memory
+#include "kheap.h"
 #include "kernel.h"
 
 // extern "C" void _start();
+
 
 extern "C" int kmain()
 {
@@ -27,22 +30,20 @@ extern "C" int kmain()
     isr::install();
     vga::printStr("IDT and ISR - Install: OK\n");
 
+    // Install HEAP - Kernel Heap
+    // kheap::install();
+    // vga::printStr("HEAP - Install: OK\n");
+
     // Install MMU - Paging tables
     paging::install();
     vga::printStr("MMU Paging  - Install: OK\n");
 
+    paging::test();
+
     // Throw an exception to test IDT ISR
     // __asm__ ("mov %eax, %0" :: "r"(1));
     // Division by zero
-	__asm__ ("div %0" :: "r"(0));
-
-    // vga::printStr("kernel loaded");
-
-    // const char* myPtr = "abc";
-
-    // stdio::kprintf("ABC %d\n123\n456\n789\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nABC\nDEF\nGHI\nJKL\nMNO\nPQR", (int) myPtr);
-
-    // stdio::kprintf("testando %d\nabc", 1);
+	// __asm__ ("div %0" :: "r"(0));
 
     // Idle process
     while(1) {}

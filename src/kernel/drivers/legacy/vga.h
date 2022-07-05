@@ -108,5 +108,14 @@ namespace vga {
      * @param col 
      */
     void setCursorPosition(int col, int row);
+
+    /**
+     * @brief Set the Vga Address location.
+     * This method is used when the vga address is mapped to another location in memory
+     * Usually set by the paging.cpp mechanism
+     * 
+     * @param vgaAddress 
+     */
+    void setVgaAddress(int newVgaAddress);
 }
 #endif

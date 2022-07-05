@@ -6,15 +6,15 @@ AS=nasm
 AFLAGS=-f bin
 
 BACKUPS=$(shell find . -iname "*.bak")
-INCLUDES=
+INCLUDES=common.inc common32.inc a20.inc disk.inc disk_extended.inc common_extended.inc
 BOOT_ASM_SOURCES := $(shell find './' -type f -name '*.asm')
 
-TARGETS=$(BUILD_DIR)$(CURRENT_DIR)/boot.bin
+TARGETS=$(BUILD_DIR)$(CURRENT_DIR)/stage1.bin $(BUILD_DIR)$(CURRENT_DIR)/stage2.bin
 
 .PHONY: all test clean distclean
 all: $(TARGETS)
 
-$(BUILD_DIR)$(CURRENT_DIR)/boot.bin: boot.asm $(INCLUDES)
+$(BUILD_DIR)$(CURRENT_DIR)/%.bin: %.asm $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(AS) $(AFLAGS) -o $@ $<
 	

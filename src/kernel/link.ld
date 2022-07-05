@@ -1,13 +1,14 @@
-ENTRY(_start);
+ENTRY(kmain);
 OUTPUT_FORMAT(elf32-i386);
 OUTPUT_ARCH(i386:i386);
-__BASE_ADDR = 0x00010000;
+__BASE_ADDR = 0x6400000;	/* 100mb entry point in ram memory */
 
 SECTIONS
 {
 	.text __BASE_ADDR : AT(__BASE_ADDR)				/* Code section */
 	{
 		code = .;
+		*(.kentry)	/* Set the kmain function as the entry point of the executable */
 		*(.text)
 		*(.text.*)
 	}

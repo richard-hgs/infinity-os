@@ -4,12 +4,25 @@
 
 #include <stdint.h>
 
-#define PAGES_PER_TABLE 1024
-#define PAGES_PER_DIRECTORY 1024
-#define PAGE_SIZE 4096
+#define FRAMES_COUNT 1024*128
+#define FRAMES_START_ADDR 0x100000
+#define FRAME_SIZE 4096 // 4 kB
 
-#define PAGE_MEM_ADDRESS_END 0x1000000 // The size of physical memory. For the moment wE assume it is 16MB big.
+// all numbers are in frames
+#define PAGE_DIRECTORY_START 0
+#define PAGE_TABLES_START 1
+#define PAGE_TABLE_COUNT 1024
 
+#define USER_PAGES_START PAGE_TABLES_START + PAGE_TABLE_COUNT // frame number where user pages start
+#define KERNEL_START_ADDR 0x6400000 // 100 MB
+#define KERNEL_SOURCE_SIZE 256 //1 MB = 256 frames
+#define KERNEL_STACK_START_ADDR KERNEL_START_ADDR + 0x100000 + FRAME_SIZE // kernel + 1MB + 4kB
+#define KERNEL_STACK_SIZE 4
+
+#define VIDEO_MEM_START KERNEL_STACK_START_ADDR + (KERNEL_STACK_SIZE + 1) * FRAME_SIZE // kernel stack + kernel stack size + 4kB
+
+#define KERNEL_HEAP_START_ADDR VIDEO_MEM_START + FRAME_SIZE // video mem + 4kB
+#define KERNEL_HEAP_SIZE 1024 * 3 // 1024 * 3 frames = 12 MB
 
 /**
  * @brief MMU - Memory Management Unity - Paging
@@ -121,44 +134,31 @@
  */
 
 
-typedef struct PageTableEntry {
-    uint32_t present         : 1; // Page present in memory
-    uint32_t readWrite       : 1; // Read-only if clear, readwrite if set
-    uint32_t supervisor      : 1; // Supervisor level only if clear
-    // uint32_t writeTrough     : 1; // Has the page been accessed since last refresh?
-    // uint32_t cacheDisabled   : 1; // Has the page been written to since last refresh?
-    uint32_t accessed        : 1; 
-    uint32_t dirty           : 1;
-    // bool size            : 1;
-    // bool attribute       : 1;
-    // bool global          : 1;
-    // uint8_t available    : 3;
-    uint32_t unused      : 7;
-    uint32_t baseAddress : 20;
-} __attribute__((packed)) PageTableEntry_t;         // Size 4 bytes (32 bits): Each entry manages 4kb or 4096 bytes of ram wich gives (4gb of ram = 1024 * 1024 * 4096)
+typedef struct
+{
+    unsigned int present : 1;
+    unsigned int rw : 1; //set - r/w, unset - read-only
+    unsigned int userMode : 1; //set - user mode, unset - kernel mode
+    unsigned int reserved1 : 2;
+    unsigned int accessed : 1;
+    unsigned int dirty : 1; //Set if the page has been written to (dirty)
+    unsigned int reserved2 : 2;
+    unsigned int unused : 3;
+    unsigned int frameAddress : 20; //physical frame address
 
-typedef struct PageTable {
-    // Each page table points to 1024 frames and each frame address 4kb of memory
-    PageTableEntry_t pages[PAGES_PER_TABLE];      // Size 4mb
-} PageTable_t;
+} __attribute__((packed)) PageTableEntry;
 
-typedef struct PageDirectory {
-    // The page directory points to 1024 PageTable_t entries
-    PageTable_t* tables[PAGES_PER_DIRECTORY];  // Size 4gb
-    /**
-     * The physical address of tablesPhysical. This comes into play
-     * when we get our kernel heap allocated and the directory
-     * may be in a different location in virtual memory.
-     */
-    uint32_t tablesPhysical[1024];
+typedef struct
+{
+    PageTableEntry entry[1024];
+} PageTable;
 
-    /**
-     * The physical address of tablesPhysical. This comes into play
-     * when we get our kernel heap allocated and the directory
-     * may be in a different location in virtual memory.
-     */
-    uint32_t physicalAddr;
-} PageDirectory_t;
+typedef struct
+{
+    PageTableEntry entry[1024];
+} PageDirectory;
+
+
 
 namespace paging {
     /**
@@ -166,6 +166,12 @@ namespace paging {
      * enable paging in cr0 register
      */
     void install();
+
+    /**
+     * @brief Test if paging is working by throwing a page fault
+     * 
+     */
+    void test();
 }
 
 #endif

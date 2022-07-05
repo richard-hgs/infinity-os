@@ -35,16 +35,17 @@ CFLAGSPOS=
 
 # -L/usr/lib/gcc/x86_64-linux-gnu/9/32 -lgcc
 # -L. $(LIB_INCLUDE_DIRS) $(LIB_INCLUDE_NAMES)
-# CFLAGS=-std=c11 -Wall -O -pedantic -g -m32 \
-# 	-ffreestanding -fno-pie -fno-pic -fno-builtin \
-# 	-nostdlib -Wno-multichar -nostartfiles \
+# CFLAGS=-std=c11 -Wall -O -pedantic -g -m32 
+# 	-ffreestanding -fno-pie -fno-pic -fno-builtin 
+# 	-nostdlib -Wno-multichar -nostartfiles 
 # 	-I. -I./drivers -I./common -I./cpu -I./acpi
 LDFLAGS=
 BACKUPS=$(shell find . -iname "*.bak")
+
 # In the objects keep kernel_main.asm.o as the first object in linker to put it at the top of the binary file since it is the entry
 # point of the kernel. To do this we exclude it from asm objects and explicity put at the first position of the objects.
-OBJECTS=$(BUILD_DIR)$(CURRENT_DIR)/kernel_main.asm.o \
-	$(filter-out $(BUILD_DIR)$(CURRENT_DIR)/kernel_main.asm.o,$(KERNEL_ASM_OBJECTS))
+OBJECTS=$(filter-out $(BUILD_DIR)$(CURRENT_DIR)/kernel_main.asm.o,$(KERNEL_ASM_OBJECTS))
+
 # $(subst $(BUILD_DIR)$(CURRENT_DIR)/kernel_main.asm.o,,$(KERNEL_ASM_OBJECTS)) 
 # OBJECTS=$(BUILD_DIR)$(CURRENT_DIR)/kernel_main.asm.o
 # $(BUILD_DIR)$(CURRENT_DIR)/cpu/gdt_flush.asm.o

@@ -24,6 +24,10 @@
   - ✅ ISR - Interrupt Service Routine;
       - ✅ Handle Interruptions (0-31);
       - ⬜ User Interruptions (syscalls);
-  - ⬜ MMU - Memory Management Unity or Paging;
+  - ✅ MMU - Memory Management Unity or Paging;
+      - ✅ PageDirs and PageTables configured;
+      - ✅ Kernel mapped successfully;
+      - ✅ VGA memory mapped successfully;
+      - ⬜ I/O ports mapped successfully;
   - ⬜ Process scheduling;
       

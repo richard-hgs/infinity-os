@@ -1,2 +1,2 @@
 #pragma once
-extern "C" int kmain();
+extern "C" int __attribute__((section(".kentry"))) kmain();

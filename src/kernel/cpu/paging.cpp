@@ -1,168 +1,236 @@
 // stdlibs
 #include "stdio.h"
-// memory
-#include "memutils.h"
-#include "kheap.h"
+// drivers - legacy
+#include "vga.h"
 #include "paging.h"
 
-// Macros used in the bitset algorithms.
-#define INDEX_FROM_BIT(a) (a / (8 * 4))
-#define OFFSET_FROM_BIT(a) (a % ( 8 * 4))
+unsigned char frames[FRAMES_COUNT];
+PageDirectory* pageDirectory;
 
-extern uint32_t __MAX_ADDR; // Max memory address that is used by kernel variables. Created in link.ld
+void paging_test();
 
-// A bitset of frames - used or free.
-uint32_t *frames;
-uint32_t nframes;
+unsigned int frame_alloc();
+void frame_free(unsigned int frameNr);
+void frame_setUsage(unsigned int frameNr, int usage);
+unsigned int frame_address(unsigned int frameNr);
+unsigned int frame_number(unsigned int frameAddress);
+unsigned int size_inFrames(unsigned int size);
 
-// The kernel's page directory
-PageDirectory_t* kernel_directory = 0;
+void paging_enable();
+void paging_disable();
+void set_pageDirectory(PageDirectory *pageDirectory);
+void set_pageTableEntry(PageTableEntry *tableEntry, unsigned int frameAddress, unsigned int present, unsigned int rw, unsigned int userMode);
+void map_page(PageDirectory *pageDir, unsigned int virtualAddr, unsigned int physicalAddr);
+void unmap_page(unsigned int virtualAddr);
+void remote_mapPage(unsigned int virtualAddr, unsigned int physicalAddr);
 
-// The current page directory;
-PageDirectory_t* current_directory = 0;
+/**
+ * Flush page table cache.
+ */
+void pages_refresh();
 
-// Static function to set a bit in the frames bitset
-void set_frame(uint32_t frame_addr) {
-   uint32_t frame = frame_addr / 0x1000;
-   uint32_t idx = INDEX_FROM_BIT(frame);
-   uint32_t off = OFFSET_FROM_BIT(frame);
-   frames[idx] |= (0x1 << off);
+void paging::install() {
+    int i;
+
+    for (i = 0; i < FRAMES_COUNT; i++)
+        frames[i] = 0; //unused
+
+    // frames for page directory and page tables are set as in use
+    frame_setUsage(PAGE_DIRECTORY_START, 1);
+    for (i = 0; i < PAGE_TABLE_COUNT; i++)
+        frame_setUsage(PAGE_TABLES_START + i, 1);
+
+    pageDirectory = (PageDirectory*) frame_address(PAGE_DIRECTORY_START);
+    // all pages are set as not present
+    for (i = 0; i < 1024; i++)
+    {
+        set_pageTableEntry(&pageDirectory->entry[i], 0, 0, 0, 0); //not present
+        // PageTable* pageTable = (PageTable*) frame_address(PAGE_TABLES_START + i);
+        //for (j = 0; j < 1024; j++)
+            //set_pageTableEntry(&pageTable->entry[j], 0, 0, 0, 0); //not present
+    }
+
+    set_pageDirectory(pageDirectory);
+
+    // map kernel source code where virtual addr = physical addr
+    for (i = 0; i < KERNEL_SOURCE_SIZE; i++)
+    {
+        map_page(pageDirectory, KERNEL_START_ADDR + i*FRAME_SIZE, KERNEL_START_ADDR + i*FRAME_SIZE);
+    }
+
+    // map kernel stack where virtual addr = physical addr
+    for (i = 0; i < 4; i++)
+        map_page(pageDirectory, KERNEL_STACK_START_ADDR + i*FRAME_SIZE, KERNEL_STACK_START_ADDR + i*FRAME_SIZE);
+    map_page(pageDirectory, VIDEO_MEM_START, 0xB8000); // mapping virtual video memory
+
+    // mapping kernel heap where virtual addr = physical addr
+    for (i = 0; i < KERNEL_HEAP_SIZE; i++)
+        map_page(pageDirectory, KERNEL_HEAP_START_ADDR + i*FRAME_SIZE, KERNEL_HEAP_START_ADDR + i*FRAME_SIZE);
+
+    // map page directory and page tables
+    map_page(pageDirectory, frame_address(PAGE_DIRECTORY_START), frame_address(PAGE_DIRECTORY_START));
+    for (i = 0; i < PAGE_TABLE_COUNT; i++)
+        map_page(pageDirectory, frame_address(PAGE_TABLES_START + i), frame_address(PAGE_TABLES_START + i));
+
+    // Enable paging in bit 0 of cr0 register
+    paging_enable();
+
+    // Set the new vga address to the new virtual address
+    vga::setVgaAddress(VIDEO_MEM_START);
 }
 
-// Static function to clear a bit in the frames bitset
-void clear_frame(uint32_t frame_addr) {
-   uint32_t frame = frame_addr / 0x1000;
-   uint32_t idx = INDEX_FROM_BIT(frame);
-   uint32_t off = OFFSET_FROM_BIT(frame);
-   frames[idx] &= ~(0x1 << off);
+void paging::test() {
+    // Test if paging fault is ok by reading a paging not present
+    uint32_t *ptr = (uint32_t*) 0xA0000000;
+    uint32_t do_page_fault = *ptr;
 }
 
-// Static function to test if a bit is set.
-uint32_t test_frame(uint32_t frame_addr) {
-   uint32_t frame = frame_addr / 0x1000;
-   uint32_t idx = INDEX_FROM_BIT(frame);
-   uint32_t off = OFFSET_FROM_BIT(frame);
-   return (frames[idx] & (0x1 << off));
+//returns number of a new free frame
+unsigned int frame_alloc()
+{
+    int i, j;
+    unsigned char temp; //bit number in byte
+    unsigned int frameNr;
+
+    for (i = 0; i < FRAMES_COUNT; i++)
+        if (frames[i] != 0xFF)
+        {
+            temp = frames[i];
+            for (j = 0; j < 8; j++)
+            {
+                if ((temp & 1) == 0)
+                {
+                    frameNr = i * 8 + j;
+                    frame_setUsage(frameNr, 1);
+                    return frameNr;
+                }
+                temp >>= 1;
+            }
+        }
+
+    // TODO: this is wrong. Error should be returned. But currently there's
+    // not way to do this.
+    return 0;
 }
 
-// Static function to find the first free frame.
-uint32_t first_frame() {
-   uint32_t i, j;
-   for (i = 0; i < INDEX_FROM_BIT(nframes); i++) {
-       if (frames[i] != 0xFFFFFFFF) { // nothing free, exit early.
-           // at least one bit is free here.
-           for (j = 0; j < 32; j++) {
-               uint32_t toTest = 0x1 << j;
-               if (!(frames[i]&toTest)) {
-                   return i*4*8+j;
-               }
-           }
-       }
-   }
-   return -1; // If no free frames found return error
+//sets frame usage bit to 0
+void frame_free(unsigned int frameNr)
+{
+    frame_setUsage(frameNr, 0);
 }
 
-// Function to allocate a frame.
-void alloc_frame(PageTableEntry_t* page, int is_kernel, int is_writeable) {
-   if (page->baseAddress != 0) {
-       return; // Frame was already allocated, return straight away.
-   } else {
-       uint32_t idx = first_frame(); // idx is now the index of the first free frame.
-       if (idx == (uint32_t)-1) {
-           // PANIC is just a macro that prints a message to the screen then hits an infinite loop.
-           PANIC("No free frames!");
-       }
-       set_frame(idx * 0x1000);                  // this frame is now ours!
-       page->present = 1;                        // Mark it as present.
-       page->readWrite = (is_writeable) ? 1 : 0; // Should the page be writeable?
-       page->supervisor = (is_kernel) ? 0 : 1;   // Should the page be user-mode?
-       page->baseAddress = idx;
-   }
+void frame_setUsage(unsigned int frameNr, int usage)
+{
+    unsigned int byteNr; //byte number in frames buffer
+    unsigned int bitNr;
+    unsigned char mask;
+
+    byteNr = frameNr / 8;
+    bitNr = frameNr % 8;
+    mask = 1 << bitNr;
+    if (usage == 1)
+        frames[byteNr] = frames[byteNr] | mask;
+    if (usage == 0)
+        frames[byteNr] = frames[byteNr] & ~mask;
 }
 
-// Function to deallocate a frame.
-void free_frame(PageTableEntry_t* page) {
-   uint32_t frame;
-   if (!(frame=page->baseAddress)) {
-       return; // The given page didn't actually have an allocated frame!
-   } else {
-       clear_frame(frame);      // Frame is now free again.
-       page->baseAddress = 0x0; // Page now doesn't have a frame.
-   }
+unsigned int frame_address(unsigned int frameNr)
+{
+    return FRAMES_START_ADDR + frameNr * FRAME_SIZE;
 }
 
-PageTableEntry_t* get_page(uint32_t address, int make, PageDirectory_t* dir) {
-   // Turn the address into an index.
-   address /= 0x1000;
-   // Find the page table containing this address.
-   uint32_t table_idx = address / 1024;
-   if (dir->tables[table_idx]) { // If this table is already assigned
-       return &dir->tables[table_idx]->pages[address % 1024];
-   } else if(make) {
-       uint32_t tmp;
-       dir->tables[table_idx] = (PageTable_t*) kheap::kmalloc_ap(sizeof(PageTable_t), &tmp);
-       memutils::memset(dir->tables[table_idx], 0, 0x1000);
-       dir->tablesPhysical[table_idx] = tmp | 0x7; // PRESENT, RW, US.
-       return &dir->tables[table_idx]->pages[address % 1024];
-   } else {
-       return 0;
-   }
+unsigned int frame_number(unsigned int frameAddress)
+{
+    return (frameAddress - FRAMES_START_ADDR) / FRAME_SIZE;
 }
 
-void switch_page_directory(PageDirectory_t* dir) {
-   current_directory = dir;
-    asm volatile ("mov %0, %%eax;"
-        "mov %%eax, %%cr3"
-        : : "r" (&dir->tablesPhysical)
-        : "eax"
-    );
+unsigned int size_inFrames(unsigned int size)
+{
+    unsigned int frameCount;
+
+    frameCount = size / FRAME_SIZE;
+    if (size % FRAME_SIZE > 0)
+        frameCount++;
+    return frameCount;
+}
+
+void set_pageTableEntry(PageTableEntry *tableEntry, unsigned int frameAddress, unsigned int present, unsigned int rw, unsigned int userMode)
+{
+    tableEntry->frameAddress = frameAddress;
+    tableEntry->present = present;
+    tableEntry->rw = rw;
+    tableEntry->userMode = userMode;
+
+    tableEntry->dirty = 0;
+    tableEntry->reserved1 = 0;
+    tableEntry->reserved2 = 0;
+    tableEntry->accessed = 0;
+    tableEntry->unused = 0;
+}
+
+void paging_enable()
+{
     asm volatile ("mov %%cr0, %%eax;"
         "or $0x80000000, %%eax;"
         "mov %%eax, %%cr0"
         : : : "eax"
-    );
-
-
-   // asm volatile("mov %0, %%cr3":: "r"(&dir->tablesPhysical));
-//    uint32_t cr0;
-//    asm volatile("mov %%cr0, %0": "=r"(cr0));
-//    cr0 |= 0x80000000; // Enable paging!
-//    asm volatile("mov %0, %%cr0":: "r"(cr0));
+       );
 }
 
-void paging::install() {
-    uint32_t placement_address = (uint32_t) &__MAX_ADDR; // Get the pointer address of this variable wich is the last address of the kernel in memory;
+void paging_disable()
+{
+    asm volatile ("mov %%cr0, %%eax;"
+        "and $0x7FFFFFFF, %%eax;"
+        "mov %%eax, %%cr0"
+        : : : "eax"
+       );
+}
 
-    nframes = PAGE_MEM_ADDRESS_END / 0x1000;
-    frames = (uint32_t*) kheap::kmalloc(INDEX_FROM_BIT(nframes));
-    memutils::memset(frames, 0, INDEX_FROM_BIT(nframes));
+void set_pageDirectory(PageDirectory *pageDirectory)
+{
+    asm volatile ("mov %0, %%eax;"
+        "mov %%eax, %%cr3"
+        : : "r" (pageDirectory)
+        : "eax"
+        );
+}
 
-    // Let's make a page directory.
-    kernel_directory = (PageDirectory_t*) kheap::kmalloc_a(sizeof(PageDirectory_t));
-    memutils::memset(kernel_directory, 0, sizeof(PageDirectory_t));
-    current_directory = kernel_directory;
+//maps virtual address to physical address
+//virtualAddr should be 0x1000 aligned
+void map_page(PageDirectory *pageDir, unsigned int virtualAddr, unsigned int physicalAddr)
+{
+    int pageTableNr;
+    int pageNr; //page number inside page table
+    PageTable *pageTable;
 
-    // We need to identity map (phys addr = virt addr) from
-    // 0x0 to the end of used memory, so we can access this
-    // transparently, as if paging wasn't enabled.
-    // NOTE that we use a while loop here deliberately.
-    // inside the loop body we actually change placement_address
-    // by calling kmalloc(). A while loop causes this to be
-    // computed on-the-fly rather than once at the start.
-    uint32_t i = 0;
-    while (i < placement_address) {
-        // Kernel code is readable but not writeable from userspace.
-        alloc_frame(get_page(i, 1, kernel_directory), 0, 0);
-        i += 0x1000;
-    }
+    pageTableNr = virtualAddr >> 22;
+    pageNr = (virtualAddr >> 12) & 1023;
+    pageTable = (PageTable*) frame_address(PAGE_TABLES_START + pageTableNr);
+    set_pageTableEntry(&pageDir->entry[pageTableNr], (int)pageTable >> 12, 1, 1, 0);
+    set_pageTableEntry(&pageTable->entry[pageNr], physicalAddr >> 12, 1, 1, 0);
 
-    // stdio::kprintf("pageEntrySize: %x", placement_address);
-    // while(true) {}
+    frame_setUsage(frame_number(physicalAddr), 1);
+}
 
-    // Now, enable paging!
-    switch_page_directory(kernel_directory);
-    
-    while(true) {}
+void unmap_page(unsigned int virtualAddr)
+{
+    int pageTableNr;
+    int pageNr; //page number inside page table
+    PageTable *pageTable;
 
-    // stdio::kprintf("pageDirectory: %x\n", (uint32_t) kernel_directory);
+    pageTableNr = virtualAddr >> 22;
+    pageNr = (virtualAddr >> 12) & 1023;
+
+    pageTable = (PageTable*) frame_address(PAGE_TABLES_START + pageTableNr);
+    set_pageTableEntry(&pageTable->entry[pageNr], 0, 0, 0, 0);
+}
+
+void remote_mapPage(unsigned int virtualAddr, unsigned int physicalAddr)
+{
+    map_page(pageDirectory, virtualAddr, physicalAddr);
+}
+
+void pages_refresh()
+{
+    set_pageDirectory(pageDirectory);
 }

@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"files.associations": {
+			"*.h": "cpp",
+			"*.cpp": "cpp",
+			"compare": "cpp",
+			"*.tcc": "cpp"
+		}
+	}
+}
