@@ -2,8 +2,7 @@
 
 - Features:
   - ✅ Architecture x86;
-  - ✅ Simple file system to load second stage and kernel during boot process;
-  - ✅ Boot process usign two stages in assembly;
+  - ✅ Boot process usign a single stage in assembly;
   - ✅ Vga Text mode 80x25;
     - ✅ Print text on screen;
     - ✅ Scroll content up on last line reached and is full filled;
@@ -30,4 +29,9 @@
       - ✅ VGA memory mapped successfully;
       - ⬜ I/O ports mapped successfully;
   - ⬜ Process scheduling;
+      - ⬜ Idle process creation;
+      - ⬜ VGA process creation;
+          - ⬜ Communicate with kernel using IDT Interruptions to access VGA memory;
+          - ⬜ Hello World Print;
+
       
