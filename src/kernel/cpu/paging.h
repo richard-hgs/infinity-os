@@ -4,7 +4,34 @@
 
 #include <stdint.h>
 
-#define FRAMES_COUNT 1024*128
+/**
+ * @brief RAM MEMORY MAP
+ *  ______________________________________________________________________________________________________________________
+ * |    START   |    END     |         SIZE        | DESCRIPTION                                                          |
+ * | 0x00000000 | 0x000003FF | 1 KiB               | Real Mode IVT (Interrupt Vector Table)                               |
+ * | 0x00000400 | 0x000004FF | 256 bytes           | BDA (BIOS data area)                                                 |
+ * | 0x00000500 | 0x00007BFF | almost 30 KiB       | Conventional memory                                                  |
+ * | 0x00007C00 | 0x00007DFF | 512 bytes           | Your OS BootSector                                                   |
+ * | 0x00007E00 | 0x0007FFFF | 480.5 KiB           | Conventional memory                                                  |
+ * | 0x00080000 | 0x0009FFFF | 128 KiB             | EBDA (Extended BIOS Data Area)                                       |
+ * | 0x000A0000 | 0x000BFFFF | 128 KiB             | Video display memory                                                 |
+ * | 0x000C0000 | 0x000C7FFF | 32 KiB (typically)  | Video BIOS                                                           |
+ * | 0x000C8000 | 0x000EFFFF | 160 KiB (typically) | BIOS Expansions                                                      |
+ * | 0x000F0000 | 0x000FFFFF | 64 KiB              | Motherboard BIOS                                                     |
+ * | 0x00100000 | 0x00EFFFFF | 14 Mb               | RAM -- free for use (if it exists)                                   |
+ * | 0x00F00000 | 0x00FFFFFF | 1 Mb                | Possible memory mapped hardware                                      |
+ * | 0x01000000 | ????????   | ??(whatever exists) | RAM -- free for use                                                  |
+ * | 0xC0000000 | 0xFFFFFFFF | 1 GiB               | Memory mapped PCI devices, PnP NVRAM?, IO APIC/s, local APIC/s, BIOS |
+ *  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+ * 
+ * - KERNEL MEMORY MAP
+ *  ______________________________________________________________________________________________________________________
+ * |    START   |     END     |        SIZE        | DESCRIPTION                                                          |
+ * | 0x6400000  | 0x6500000   | 0x100000(1 Mb)     | O.S. Kernel source memory                                            |
+ * | 0x6501000  | 
+ */
+
+#define FRAMES_COUNT 1024 * 128
 #define FRAMES_START_ADDR 0x100000
 #define FRAME_SIZE 4096 // 4 kB
 
@@ -15,7 +42,7 @@
 
 #define USER_PAGES_START PAGE_TABLES_START + PAGE_TABLE_COUNT // frame number where user pages start
 #define KERNEL_START_ADDR 0x6400000 // 100 MB
-#define KERNEL_SOURCE_SIZE 256 //1 MB = 256 frames
+#define KERNEL_SOURCE_SIZE 256 // 1 MB = 256 frames
 #define KERNEL_STACK_START_ADDR KERNEL_START_ADDR + 0x100000 + FRAME_SIZE // kernel + 1MB + 4kB
 #define KERNEL_STACK_SIZE 4
 
@@ -30,9 +57,60 @@
  * 
  * Structure that translates linear physical addresses to physical addresses.
  * 
+ * 
  * REGISTERS:
- *    cr3 - Points to the current page directory
- *    cr0 - Bit 31 Set to 1=Enable paging mechanism, 0=Disable paging
+ *    cr3 - Points to the current page in memory                 ______________________________
+ *          - The virtual address is a 32 bits splitted between | 31---22 | 21------12 | 11--0 |
+ *                                                              |PAGE_DIR | PAGE_TABLE | OFFSET|
+ *                                                               ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+ *            PAGE_DIR (Has 1024 pageTableNr)   - Bits: 31-22 = 10 bits = 1024 addresses
+ *            PAGE_TABLE (Has 1024 pageNr)      - Bits: 21-12 = 10 bits = 1024 addresses
+ *            OFFSET     (Has 4096 frame size)  - Bits: 0-11  = 12 bits = 4096 addresses
+ * 
+ *    cr0:
+ *      - Bit 0 (PE):
+ *          - Protected mode enabled
+ *          - If 1, system is in protected mode, else system is in real mode
+ * 
+ *      - Bit 1 (MP):
+ *          - Monitor co-processor
+ *          - Controls interaction of WAIT/FWAIT instructions with TS flag in CR0
+ * 
+ *      - Bit 2 (EM):
+ *          - Emulation
+ *          - If set, no x87 floating-point unit present, if clear, x87 FPU present
+ * 
+ *      - Bit 3 (TS):
+ *          - Task switched
+ *          - Allows saving x87 task context upon a task switch only after x87 instruction used
+ * 
+ *      - Bit 4 (ET):
+ *          - Extension type
+ *          - On the 386, it allowed to specify whether the external math coprocessor was an 80287 or 80387
+ * 
+ *      - Bit 5 (NE):
+ *          - Numeric error
+ *          - Enable internal x87 floating point error reporting when set, else enables PC style x87 error detection
+ * 
+ *      - Bit 16 (WP):
+ *          - Write protect
+ *          - When set, the CPU can't write to read-only pages when privilege level is 0
+ * 
+ *      - Bit 18 (AM):
+ *          - Alignment mask
+ *          - Alignment check enabled if AM set, AC flag (in EFLAGS register) set, and privilege level is 3
+ * 
+ *      - Bit 29 (NW):
+ *          - Not-write through
+ *          - Globally enables/disable write-through caching
+ * 
+ *      - Bit 30 (CD):
+ *          - Cache disable
+ *          - Globally enables/disable the memory cache
+ * 
+ *      - Bit 31 (PG):
+ *          - Paging
+ *          - If 1, enable paging and use the CR3 register, else disable paging.
  *    
  * 
  * PAGE DIRECTORY:
@@ -134,18 +212,16 @@
  */
 
 
-typedef struct
-{
-    unsigned int present : 1;
-    unsigned int rw : 1; //set - r/w, unset - read-only
-    unsigned int userMode : 1; //set - user mode, unset - kernel mode
-    unsigned int reserved1 : 2;
-    unsigned int accessed : 1;
-    unsigned int dirty : 1; //Set if the page has been written to (dirty)
-    unsigned int reserved2 : 2;
-    unsigned int unused : 3;
-    unsigned int frameAddress : 20; //physical frame address
-
+typedef struct {
+    unsigned int present        : 1;
+    unsigned int rw             : 1;    // set - r/w, unset - read-only
+    unsigned int userMode       : 1;    // set - user mode, unset - kernel mode
+    unsigned int reserved1      : 2;
+    unsigned int accessed       : 1;
+    unsigned int dirty          : 1;    // Set if the page has been written to (dirty)
+    unsigned int reserved2      : 2;
+    unsigned int unused         : 3;
+    unsigned int frameAddress   : 20;   // physical frame address
 } __attribute__((packed)) PageTableEntry;
 
 typedef struct
