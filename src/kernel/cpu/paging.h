@@ -5,7 +5,9 @@
 #include <stdint.h>
 
 /**
- * @brief RAM MEMORY MAP
+ * @brief MEMORY MAP
+ * 
+ * - RAM HARDWARE MAP
  *  ______________________________________________________________________________________________________________________
  * |    START   |    END     |         SIZE        | DESCRIPTION                                                          |
  * | 0x00000000 | 0x000003FF | 1 KiB               | Real Mode IVT (Interrupt Vector Table)                               |
@@ -27,8 +29,13 @@
  * - KERNEL MEMORY MAP
  *  ______________________________________________________________________________________________________________________
  * |    START   |     END     |        SIZE        | DESCRIPTION                                                          |
- * | 0x6400000  | 0x6500000   | 0x100000(1 Mb)     | O.S. Kernel source memory                                            |
- * | 0x6501000  | 
+ * | 0x0100000  | 0x0101000   | 0x001000 ( 4 Kb)   | O.S. Page Directory 1024 dir entries                                 |
+ * | 0x0101000  | 0x0500000   | 0x3FF000 ( 4 Mb)   | O.S. Page Table 1024 entries                                         |
+ * | 0x6400000  | 0x6500000   | 0x100000 ( 1 Mb)   | O.S. Kernel source memory                                            |
+ * | 0x6501000  | 0x6505000   | 0x004000 (16 kb)   | O.S. Kernel stack memory                                             |
+ * | 0x6506000  | 0x6507000   | 0x001000 ( 4 kb)   | O.S. VGA (0xB8000) video memory                                      |
+ * | 0x6507000  | 0x7107000   | 0xC00000 (12 Mb)   | O.S. Kernel heap memory                                              |
+ * | 
  */
 
 #define FRAMES_COUNT 1024 * 128
@@ -44,7 +51,7 @@
 #define KERNEL_START_ADDR 0x6400000 // 100 MB
 #define KERNEL_SOURCE_SIZE 256 // 1 MB = 256 frames
 #define KERNEL_STACK_START_ADDR KERNEL_START_ADDR + 0x100000 + FRAME_SIZE // kernel + 1MB + 4kB
-#define KERNEL_STACK_SIZE 4
+#define KERNEL_STACK_SIZE 4  // 16 kb = 4 frames
 
 #define VIDEO_MEM_START KERNEL_STACK_START_ADDR + (KERNEL_STACK_SIZE + 1) * FRAME_SIZE // kernel stack + kernel stack size + 4kB
 
@@ -55,8 +62,58 @@
  * @brief MMU - Memory Management Unity - Paging
  *        docs/intel_x86_x64_specification.pdf page 119
  * 
- * Structure that translates linear physical addresses to physical addresses.
+ *  PAGE_DIRECTORY 
+ *    - Starts in RAM at (0x100000)
+ *    - Has 1024 * 4 byte per entry = (0x1000 = 4096 bytes = 4kb)
+ *   _____________________ ____________________________________________
+ *  | PAGE_TBL_ENTRY 1    |                                            | P
+ *  |---------------------|                                            | A
+ *  | PAGE_TBL_ENTRY 2    |                                            | G
+ *  |---------------------|                                            | E
+ *  | PAGE_TBL_ENTRY 3    |                                            | 
+ *  |---------------------|                                            | T
+ *  | PAGE_TBL_ENTRY N    |                                            | B
+ *  |---------------------|                                            | L
+ *  | PAGE_TBL_ENTRY 1024 |                                            | 
+ *   ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾                                             | E
+ *                                                                     | N
+ *  PAGE_TBL_ENTRY_1                                                   | T
+ *   - Starts in RAM at (0x100000 + 0x1000 = 0x0101000)                | R
+ *   - Has 1024 * 4 byte per entry = (0x1000 = 4096 bytes = 4kb)       | Y
+ *   __________________ _______________________________________________|
+ *  | FRAME_ENTRY 1    |                                                 1
+ *  |------------------|
+ *  | FRAME_ENTRY 2    |
+ *  |------------------|
+ *  | FRAME_ENTRY 3    |
+ *  |------------------|
+ *  | FRAME_ENTRY N    |
+ *  |------------------|
+ *  | FRAME_ENTRY 1024 |
+ *   ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+ *  
+ *   ADDITIONAL_INFORMATION:
+ *     - The entire structure of the paging config entries composed by PAGE_DIRECTORY with 1024 PAGE_ENTRIES each PAGE_ENTRY has 1024 PAGE_FRAMES
+ *     - The total size of the paging mapping configuration structures are:
+ *       PAGE_FRAME: 4 Bytes
+ *       PAGE_TABLE: 4 Kb = 1024 * 4 Bytes
+ *       PAGE_DIR  : 4 Mb = 1024 * 4 Kb
  * 
+ *   PAGE_DIRECTORY:
+ *     - Is the top level page structure;
+ *     - Holds an array of 1024 Page Table entries;
+ *     - Those entries can be located in any part of the RAM memory;
+ *     - Each entry holds the physical address of a page frame or in a mutilevel paging the physical PAGE_TABLE address Right shifted by 12 bits;
+ * 
+ *   PAGE_TABLE:
+ *     - Is the second level page structure;
+ *     - Holds an array of 1024 Page Frame entries;
+ *     - Those entries can be located in any part of the RAM memory;
+ *     - Each entry holds the start physical address of the PAGE_FRAME;
+ * 
+ *   PAGE_FRAME:
+ *     - Is the last level page structure;
+ *     - Holds the physical memory offset that is the start of the 4kb PAGE_FRAME in RAM memory;
  * 
  * REGISTERS:
  *    cr3 - Points to the current page in memory                 ______________________________
@@ -122,7 +179,7 @@
  * | Page-Table Base Address  | Availa | G | PS | AVL | A | PCD | PWT | U/S | R/W | P |
  *  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
  *  - Page-Table Base Address:
- *      - The start memory address of the paged memory.
+ *      - Physical memory address.
  * 
  *  - Availa - Reserved and available-to-software bits:
  *      - For all IA-32 processors. Bits 9, 10, and 11 are available for use by software. 
@@ -169,6 +226,11 @@
  *      - Only software can clear this flag.
  *      - The dirty and accessed flags are provided for use by memory management software to manage the transfer of pages 
  *        and page tables into and out of physical memory.
+ *      - A dirty bit is a bit in memory switched on when an update is made to a page by computer hardware.
+ *        When the dirty bit is switched on, the page is modified and can be replaced in memory. 
+ *        If it is off, no replacement is necessary since no updates have been made.
+ *      - When a block of memory is to be replaced, its corresponding dirty bit is checked to see if the block needs to be written back to secondary memory 
+ *        before being replaced or if it can simply be removed. Dirty bits are used by the CPU cache and in the page replacement algorithms of an operating system.
  * 
  *  - Accessed (A) flag, bit 5:
  *      - Indicates whether a page or page table has been accessed (read from or written to) when set

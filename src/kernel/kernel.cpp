@@ -45,8 +45,11 @@ extern "C" int kmain()
     // Division by zero
 	// __asm__ ("div %0" :: "r"(0));
 
-    // Idle process
-    while(1) {}
+    // Dont consume cpu
+    __asm__ volatile ("cli; hlt");  // Halt the cpu Completely hangs the computer
+
+    // Idle process consumes cpu
+    // while(1) {}
 
     return 0;
 }
