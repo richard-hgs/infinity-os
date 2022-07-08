@@ -9,6 +9,8 @@
 // If the bit is set the frame is in use
 // If the bit is unset the frame is free
 unsigned char frames[FRAMES_COUNT];
+
+//
 PageDirectory* pageDirectory;
 
 /**
@@ -49,6 +51,15 @@ unsigned int frame_address(unsigned int frameNr);
  * @return unsigned int     Frame number
  */
 unsigned int frame_number(unsigned int frameAddress);
+
+/**
+ * @brief Retrieve a PageTableEntry address from a PageDirectory PageTable entry number
+ * 
+ * @param pageDir           The directory to get the PageTableEntry address
+ * @param pageTableNr       The PageTableEntry index inside PageDirectory
+ * @return unsigned int     The address of the PageTableEntry
+ */
+unsigned int page_address(PageDirectory* pageDir, unsigned int pageTableNr);
 
 /**
  * @brief Retrieve frame amount for a given size of memory
@@ -270,6 +281,10 @@ unsigned int frame_number(unsigned int frameAddress) {
     return (frameAddress - FRAMES_START_ADDR) / FRAME_SIZE;
 }
 
+unsigned int page_address(PageDirectory* pageDir, unsigned int pageTableNr) {
+    return (int) pageDir | pageDir->entry[pageTableNr].frameAddress << 12;
+}
+
 unsigned int size_inFrames(unsigned int size) {
     unsigned int frameCount;
 
@@ -281,7 +296,7 @@ unsigned int size_inFrames(unsigned int size) {
 }
 
 void set_pageTableEntry(PageTableEntry* tableEntry, unsigned int frameAddress, unsigned int present, unsigned int rw, unsigned int userMode) {
-    tableEntry->frameAddress = frameAddress;  // Physical page address;
+    tableEntry->frameAddress = frameAddress;  // Physical page address offset (in a DIRECTORY the PAGE_TABLE address is right shifted by 12 bits);
     tableEntry->present      = present;       // 0=Page isn't in RAM,               1=Page is in RAM;
     tableEntry->rw           = rw;            // 0=Read Only,                       1=Read/Write;
     tableEntry->userMode     = userMode;      // 0=Supervisor privilege,            1=User privilege

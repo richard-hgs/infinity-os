@@ -46,7 +46,7 @@ extern "C" int kmain()
 	// __asm__ ("div %0" :: "r"(0));
 
     // Dont consume cpu
-    __asm__ volatile ("cli; hlt");  // Halt the cpu Completely hangs the computer
+    __asm__ volatile ("cli; hlt");  // Halt the cpu. Waits until an IRQ occurs
 
     // Idle process consumes cpu
     // while(1) {}

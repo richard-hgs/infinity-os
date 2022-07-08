@@ -62,48 +62,83 @@
  * @brief MMU - Memory Management Unity - Paging
  *        docs/intel_x86_x64_specification.pdf page 119
  * 
+ *  EXAMPLE OF THE PAGING SPECIFICATION FOR 2 LEVEL PAGING 4K FRAME SIZE
  *  PAGE_DIRECTORY 
  *    - Starts in RAM at (0x100000)
  *    - Has 1024 * 4 byte per entry = (0x1000 = 4096 bytes = 4kb)
- *   _____________________ ____________________________________________
- *  | PAGE_TBL_ENTRY 1    |                                            | P
- *  |---------------------|                                            | A
- *  | PAGE_TBL_ENTRY 2    |                                            | G
- *  |---------------------|                                            | E
- *  | PAGE_TBL_ENTRY 3    |                                            | 
- *  |---------------------|                                            | T
- *  | PAGE_TBL_ENTRY N    |                                            | B
- *  |---------------------|                                            | L
- *  | PAGE_TBL_ENTRY 1024 |                                            | 
- *   ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾                                             | E
- *                                                                     | N
- *  PAGE_TBL_ENTRY_1                                                   | T
- *   - Starts in RAM at (0x100000 + 0x1000 = 0x0101000)                | R
- *   - Has 1024 * 4 byte per entry = (0x1000 = 4096 bytes = 4kb)       | Y
- *   __________________ _______________________________________________|
- *  | FRAME_ENTRY 1    |                                                 1
- *  |------------------|
- *  | FRAME_ENTRY 2    |
- *  |------------------|
- *  | FRAME_ENTRY 3    |
- *  |------------------|
- *  | FRAME_ENTRY N    |
- *  |------------------|
- *  | FRAME_ENTRY 1024 |
- *   ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
- *  
+ *   _____________________ 
+ *  | PAGE_TBL_ENTRY 1    |--------------------------------------------]
+ *  |---------------------|                                            |
+ *  | PAGE_TBL_ENTRY 2    |----------------------------------------------------------]
+ *  |---------------------|                                            |             |
+ *  | PAGE_TBL_ENTRY 3    |                                            |             |
+ *  |---------------------|                                            |             |
+ *  | PAGE_TBL_ENTRY N    |                                            |             |
+ *  |---------------------|                                            |             |
+ *  | PAGE_TBL_ENTRY 1024 |                                            |             |
+ *   ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾                                             |             |
+ *                                                                     |             |
+ *  PAGE_TBL_ENTRY_1                                                   |             |
+ *   - Starts in RAM at (0x100000 + 0x1000 = 0x101000)                 |             |
+ *   - Has 1024 * 4 byte per entry = (0x1000 = 4096 bytes = 4kb)       |             |
+ *   __________________                                                |             |
+ *  | FRAME_ENTRY 1    |-----------------------------------------------]             |
+ *  |------------------|                                                             |
+ *  | FRAME_ENTRY 2    |---------------------------------------------------------------------------]
+ *  |------------------|                                                             |             |
+ *  | FRAME_ENTRY 3    |                                                             |             |
+ *  |------------------|                                                             |             |
+ *  | FRAME_ENTRY N    |                                                             |             |
+ *  |------------------|                                                             |             |
+ *  | FRAME_ENTRY 1024 |                                                             |             |
+ *   ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾                                                              |             |
+ *                                                                                   |             |
+ *  PAGE_TBL_ENTRY_2                                                                 |             |
+ *   - Starts in RAM at (0x101000 + 0x1000 = 0x102000)                               |             |
+ *   - Has 1024 * 4 byte per entry = (0x1000 = 4096 bytes = 4kb)                     |             |
+ *   __________________                                                              |             |
+ *  | FRAME_ENTRY 1    |-------------------------------------------------------------]             |
+ *  |------------------|                                                                           |
+ *  | FRAME_ENTRY 2    |                                                                           |
+ *  |------------------|                                                                           |
+ *  | FRAME_ENTRY 3    |------------------------------------------------------------------------------------------]
+ *  |------------------|                                                                           |              |
+ *  | FRAME_ENTRY N    |                                                                           |              |
+ *  |------------------|                                                                           |              |
+ *  | FRAME_ENTRY 1024 |                                                                           |              |
+ *   ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾                                                                            |              |
+ *                                                                                                 |              |
+ *  FRAME_ENTRY_2                                                                                  |              |
+ *   - Has 32 bits or 4 byte of size                                                               |              |
+ *   - Is located at PAGE_TBL_ENTRY_1                                                              |              |
+ *   - Starts in RAM at (0x101000 + 0x4 = 0x101004)                                                |              |
+ *  __________________________________________________________________________________             |              |
+ * | 31 ------------------ 12 | 11 - 9 | 8 | 7  |  6  | 5 |  4  |  3  |  2  |  1  | 0 |------------]              |
+ * | Page-Table Base Address  | Availa | G | PS | AVL | A | PCD | PWT | U/S | R/W | P |                           |
+ *  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾                            |
+ *                                                                                                                |
+ *  FRAME_ENTRY_3                                                                                                 |
+ *   - Has 32 bits or 4 byte of size                                                                              |
+ *   - Is located at PAGE_TBL_ENTRY_2                                                                             |
+ *   - Starts in RAM at (0x102000 + 0x4 + 0x4 = 0x102008)                                                         |
+ *  __________________________________________________________________________________                            |
+ * | 31 ------------------ 12 | 11 - 9 | 8 | 7  |  6  | 5 |  4  |  3  |  2  |  1  | 0 |---------------------------]
+ * | Page-Table Base Address  | Availa | G | PS | AVL | A | PCD | PWT | U/S | R/W | P |
+ *  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+ * 
  *   ADDITIONAL_INFORMATION:
  *     - The entire structure of the paging config entries composed by PAGE_DIRECTORY with 1024 PAGE_ENTRIES each PAGE_ENTRY has 1024 PAGE_FRAMES
  *     - The total size of the paging mapping configuration structures are:
- *       PAGE_FRAME: 4 Bytes
- *       PAGE_TABLE: 4 Kb = 1024 * 4 Bytes
- *       PAGE_DIR  : 4 Mb = 1024 * 4 Kb
+ *        - PAGE_FRAME: 4 Bytes
+ *        - PAGE_TABLE: 4 Kb = 1024 * 4 Bytes
+ *        - PAGE_DIR  : 4 Mb = 1024 * 4 Kb
  * 
  *   PAGE_DIRECTORY:
  *     - Is the top level page structure;
  *     - Holds an array of 1024 Page Table entries;
  *     - Those entries can be located in any part of the RAM memory;
  *     - Each entry holds the physical address of a page frame or in a mutilevel paging the physical PAGE_TABLE address Right shifted by 12 bits;
+ *     - Each process has it's own page directory;
  * 
  *   PAGE_TABLE:
  *     - Is the second level page structure;
