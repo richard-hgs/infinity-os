@@ -27,4 +27,4 @@ If %COPY_OS_TO_EXTERNAL_DRIVE%==1 (
 Rem Run compiled operating system in qemu virtual machine
 Rem qemu-system-i386 -fda ./build/floppy.img -boot a -s -soundhw pcspk
 
-qemu-system-i386 -drive format=raw,file=./build/floppy.img -m 1024M
+qemu-system-i386 -drive format=raw,file=./build/floppy.img -m 1024M 2> NUL

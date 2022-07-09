@@ -10,7 +10,11 @@
 // If the bit is unset the frame is free
 unsigned char frames[FRAMES_COUNT];
 
-//
+/**
+ * @brief Pointer to the start of kernel Paging entry structure 
+ * that maps the kernel source, stack, heap...
+ * 
+ */
 PageDirectory* pageDirectory;
 
 /**
@@ -59,7 +63,18 @@ unsigned int frame_number(unsigned int frameAddress);
  * @param pageTableNr       The PageTableEntry index inside PageDirectory
  * @return unsigned int     The address of the PageTableEntry
  */
-unsigned int page_address(PageDirectory* pageDir, unsigned int pageTableNr);
+unsigned int frame_address(PageDirectory* pageDir, unsigned int pageTableNr);
+
+/**
+ * @brief Retrieve a PageTableEntry address from a PageDirectory PageTable entry number
+ * 
+ * @param pageDir           The directory to get the PageTableEntry address
+ * @param pageTableNr       The PageTableEntry index inside PageDirectory
+ * @param pageNr            The PageTableEntry index inside PageTable wich represents the frame
+ * @param virtualAddress    The VirtualAddress offset to get specific physical address or use 0 instead
+ * @return unsigned int     The address of the PageTableEntry
+ */
+unsigned int frame_physical_address(PageDirectory* pageDir, unsigned int pageTableNr, unsigned int pageNr, unsigned int virtualAddress);
 
 /**
  * @brief Retrieve frame amount for a given size of memory
@@ -112,17 +127,30 @@ void set_pageTableEntry(PageTableEntry* tableEntry, unsigned int frameAddress, u
 void map_page(PageDirectory* pageDir, unsigned int virtualAddr, unsigned int physicalAddr);
 
 /**
- * @brief 
+ * @brief Reset the page to unused, usually when the page is not in memory anymore,
+ * release it to be allocated by another process.
  * 
- * @param virtualAddr 
+ * @param virtualAddr   Virtual address where the page is located
  */
 void unmap_page(unsigned int virtualAddr);
+
+/**
+ * @brief The same as the map_page function but without the need of provide the PageDirectory ptr
+ * 
+ * @param virtualAddr   Virtual address offset of the frame
+ * @param physicalAddr  Physical address offset of the frame
+ */
 void remote_mapPage(unsigned int virtualAddr, unsigned int physicalAddr);
 
 /**
- * Flush page table cache.
+ * @brief Flush page table cache.
+ * Call the set_pageDirectory to set the PageDirectory* in cr3 register 
+ * that points to current PageDirectory
+ * 
  */
 void pages_refresh();
+
+// ====================================================================================================
 
 void paging::install() {
     int i;
@@ -148,6 +176,8 @@ void paging::install() {
 
     // Set the page directory pointer in cr3 register
     set_pageDirectory(pageDirectory);
+
+    map_page(pageDirectory, KERNEL_START_ADDR + i * FRAME_SIZE, 0xFFFFE000);
 
     // Map kernel source code where virtual addr = physical addr
     // from (0x6400000 - 0x6500000) = 0x100000 = 1Mb
@@ -277,12 +307,17 @@ unsigned int frame_address(unsigned int frameNr) {
     return FRAMES_START_ADDR + frameNr * FRAME_SIZE;
 }
 
-unsigned int frame_number(unsigned int frameAddress) {
-    return (frameAddress - FRAMES_START_ADDR) / FRAME_SIZE;
+unsigned int frame_address(PageDirectory* pageDir, unsigned int pageTableNr) {
+    return (int) pageDir | pageDir->entry[pageTableNr].frameAddress << 12;
 }
 
-unsigned int page_address(PageDirectory* pageDir, unsigned int pageTableNr) {
-    return (int) pageDir | pageDir->entry[pageTableNr].frameAddress << 12;
+unsigned int frame_physical_address(PageDirectory* pageDir, unsigned int pageTableNr, unsigned int pageNr, unsigned int virtualAddress) {
+    PageTable* pageTable = (PageTable*) frame_address(pageDir, pageTableNr);
+    return pageDir->entry[pageTableNr].frameAddress << 22 | pageTable->entry[pageNr].frameAddress << 12 | (virtualAddress & 0xFFF); // The low 12 bits remaining are the same from the virtual address
+}
+
+unsigned int frame_number(unsigned int frameAddress) {
+    return (frameAddress - FRAMES_START_ADDR) / FRAME_SIZE;
 }
 
 unsigned int size_inFrames(unsigned int size) {
@@ -367,17 +402,19 @@ void map_page(PageDirectory* pageDir, unsigned int virtualAddr, unsigned int phy
     pageNr = (virtualAddr >> 12) & 1023; // Since the OFFSET = 12 bits. Shift those bits right to extract pageNr (PAGE_TABLE entry).
     pageTable = (PageTable*) frame_address(PAGE_TABLES_START + pageTableNr); // Retrieve the location of this page in physical RAM memory and convert to PageTable
 
-    int mPageTable = (int) pageTable >> 12;
-    int mPageTableAddr = (int) pageDir | mPageTable << 12;
-
-    // stdio::kprintf("pageTableNr: %d - pageNr: %d - pageDir: %x - pageTable: %x - mPageTable: %x\n", pageTableNr, pageNr, (int) pageDir, (int) pageTable, mPageTableAddr);
-
-    // __asm__ volatile ("cli; hlt");  // Halt the cpu Completely hangs the computer
-
+    // int mPageTable = (int) pageTable >> 12;
+    // int mPageTableAddr = (int) pageDir | mPageTable << 12;
+    
     set_pageTableEntry(&pageDir->entry[pageTableNr], (int) pageTable >> 12, 1, 1, 0);
     set_pageTableEntry(&pageTable->entry[pageNr], physicalAddr >> 12, 1, 1, 0);
 
     frame_setUsage(frame_number(physicalAddr), 1);
+
+    unsigned int framePhysicalAddress = frame_physical_address(pageDir, pageTableNr, pageNr, 1);
+
+    stdio::kprintf("pageTableNr: %d - pageNr: %d - virtualAddress: %x - physicalAddress: %x - physicalAddress2: %x\n", pageTableNr, pageNr, virtualAddr, physicalAddr, framePhysicalAddress);
+
+    __asm__ volatile ("cli; hlt");  // Halt the cpu Completely hangs the computer
 }
 
 void unmap_page(unsigned int virtualAddr) {
