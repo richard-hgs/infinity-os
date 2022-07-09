@@ -19,6 +19,25 @@
  *    - Execute the CPUID instruction with EAX equal to 80000000h.
  *    - If CPUID returns EAX greather than or equal to 80000004h the brand string feature is supported.
  *    - If supported use CPUID functions 80000002h through 80000004h to identify the processor.
+ *    - Using the brand string feature, future IA-32 architecture based processors will return their ASCII brand identification and
+ *      maximum operating frequency via an extended CPUID instruction.
+ *    - When CPUID is executed with EAX:
+ *       - 80000000h - Largest Extended Function Supported;
+ *                   - EAX = Largest supported extended function number;
+ *                   - EBX = ECX = EDX = Reserved;
+ * 
+ *       - 80000001h - Extended Processor Signature and Extended Feature Bits;
+ *                   - EDX and ECX contain Extended Feature Flags
+ *                   - EAX = EBX = Reserved;
+ * 
+ *       - 80000002h - Processor Brand String;
+ *                   - EAX, EBX, ECX, EDX contain ASCII brand string
+ * 
+ *       - 80000003h - Processor Brand String;
+ *                   - EAX, EBX, ECX, EDX contain ASCII brand string
+ * 
+ *       - 80000004h - Processor Brand String;
+ *                   - EAX, EBX, ECX, EDX contain ASCII brand string
  * 
  * BRAND_STRING_ID_NOT_SUPPORTED:
  *    - Execute the CPUID instruction with eax equal to 1.

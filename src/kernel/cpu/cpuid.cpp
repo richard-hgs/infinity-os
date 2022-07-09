@@ -13,6 +13,38 @@
  */
 #define cpuid(in, a, b, c, d) __asm__("cpuid": "=a" (a), "=b" (b), "=c" (c), "=d" (d) : "a" (in));
 
+/**
+ * @brief Brand ID (EAX=1) Return Values in EBX (Bits [9:7])
+ * 
+ */
+char* INTEL_BRAND_ID_LIST[] = {
+  /* 00h */ "Unsupported",
+  /* 01h */ "Intel(R) Celeron(R) processor",
+  /* 02h */ "Intel(R) Pentium(R) III processor",
+  /* 03h */ "Intel(R) Pentium(R) III Xeon(R) processor", // If processor signature = 000006B1h, then Intel(R) Celeron(R) processor
+  /* 04h */ "Intel(R) Pentium(R) III processor",
+  /* 05h */ "Reserved",
+  /* 06h */ "Mobile Intel(R) Pentium(R) III processor-M",
+  /* 07h */ "Mobile Intel(R) Celeron(R) processor",
+  /* 08h */ "Intel(R) Pentium(R) 4 processor",
+  /* 09h */ "Intel(R) Pentium(R) 4 processor",
+  /* 0Ah */ "Intel(R) Celeron(R) processor",
+  /* 0Bh */ "Intel(R) Xeon(R) processor", // If processor signature = 00000F13h, then Intel(R) Xeon(R) processor MP
+  /* 0Ch */ "Intel(R) Xeon(R) processor MP",
+  /* 0Dh */ "Reserved",
+  /* 0Eh */ "Mobile Intel(R) Pentium(R) 4 processor-M", // If processor signature = 00000F13h, then Intel(R) Xeon(R) processor
+  /* 0Fh */ "Mobile Intel(R) Celeron(R) processor",
+  /* 10h */ "Reserved",
+  /* 11h */ "Mobile Genuine Intel(R) processor",
+  /* 12h */ "Intel(R) Celeron(R) M processor",
+  /* 13h */ "Mobile Intel(R) Celeron(R) processor",
+  /* 14h */ "Intel(R) Celeron(R) processor",
+  /* 15h */ "Mobile Genuine Intel(R) processor",
+  /* 16h */ "Intel(R) Pentium(R) M processor",
+  /* 17h */ "Mobile Intel(R) Celeron(R) processor"
+  // All other values - Reserved
+};
+
 void getIntelCpuInfo();
 
 void cpuid::detectCpu() {
@@ -64,4 +96,5 @@ void getIntelCpuInfo() {
 
     stdio::kprintf("CPUID - steppingId: %x - model: %x - family: %x - processorType: %x\n", steppingId, model, family, processorType);
     stdio::kprintf("CPUID - extendedModel: %x - extendedFamily: %x\n", extendedModel, extendedFamily);
+    stdio::kprintf("%s\n", INTEL_BRAND_ID_LIST[1]);
 }
