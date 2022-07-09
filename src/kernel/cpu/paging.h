@@ -318,6 +318,16 @@
  *      - When the flag is clear, the page is not in memory and, if the processor attempts to access the page, it generates a 
  *        page-fault exception (#PF)
  *      - The processor does not set or clear this flag; it is up to the operating system or executive to maintain the state of the flag.
+ * 
+ * - QEMU_DEBUGG:
+ *   - Compat monitor:
+ *     - info tlb
+ *         Show virtual to physical memory mappings
+ *     - info mem
+ *         Show the active virtual memory mappings
+ * 
+ *  - SCROLL_UP:
+ *     CTRL + PGUP
  */
 
 

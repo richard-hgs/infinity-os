@@ -7,6 +7,7 @@
 #include "gdt.h"
 #include "isr.h"
 #include "paging.h"
+#include "cpuid.h"
 // memory
 #include "kheap.h"
 #include "kernel.h"
@@ -39,6 +40,16 @@ extern "C" int kmain()
     vga::printStr("MMU Paging  - Install: OK\n");
 
     paging::test();
+
+    // uint32_t eax;
+    // uint32_t ebx;
+    // uint32_t ecx;
+    // uint32_t edx;
+    // cpuid::getCpuid(1, &eax, &ebx, &ecx, &edx);
+
+    cpuid::detectCpu();
+
+    // stdio::kprintf("cpuid - eax: %x - ebx: %x - ecx: %x - edx: %x\n", eax, ebx, ecx, edx);
 
     // Throw an exception to test IDT ISR
     // __asm__ ("mov %eax, %0" :: "r"(1));

@@ -23,6 +23,8 @@
   - ✅ ISR - Interrupt Service Routine;
       - ✅ Handle Interruptions (0-31);
       - ⬜ User Interruptions (syscalls);
+  - ⬜ APIC - Advanced Programmable Interrupt Controller;
+  - ⬜ CPUID - Central Processing Unit Identification;
   - ✅ MMU - Memory Management Unity or Paging;
       - ✅ PageDirs and PageTables configured;
       - ✅ Kernel mapped successfully;

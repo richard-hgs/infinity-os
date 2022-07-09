@@ -410,11 +410,11 @@ void map_page(PageDirectory* pageDir, unsigned int virtualAddr, unsigned int phy
 
     frame_setUsage(frame_number(physicalAddr), 1);
 
-    unsigned int framePhysicalAddress = frame_physical_address(pageDir, pageTableNr, pageNr, 1);
+    // unsigned int framePhysicalAddress = frame_physical_address(pageDir, pageTableNr, pageNr, 1);
 
-    stdio::kprintf("pageTableNr: %d - pageNr: %d - virtualAddress: %x - physicalAddress: %x - physicalAddress2: %x\n", pageTableNr, pageNr, virtualAddr, physicalAddr, framePhysicalAddress);
+    // stdio::kprintf("pageTableNr: %d - pageNr: %d - virtualAddress: %x - physicalAddress: %x - physicalAddress2: %x\n", pageTableNr, pageNr, virtualAddr, physicalAddr, framePhysicalAddress);
 
-    __asm__ volatile ("cli; hlt");  // Halt the cpu Completely hangs the computer
+    // __asm__ volatile ("cli; hlt");  // Halt the cpu Completely hangs the computer
 }
 
 void unmap_page(unsigned int virtualAddr) {
