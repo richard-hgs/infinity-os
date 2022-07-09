@@ -5,9 +5,9 @@ SET CUR_PATH=%CD%
 SET CUR_DRIVE=%CUR_PATH:~0,2%
 SET OS_FULL_PATH=%CUR_PATH%\build\floppy.img
 SET COPY_OS_TO_EXTERNAL_DRIVE=0
-SET EXTERNAL_DRIVE_PATH=\\?\PhysicalDrive2
+SET EXTERNAL_DRIVE_PATH=\\?\PhysicalDrive3
 SET EXTERNAL_DRIVE_TYPE=2
-SET EXTERNAL_DRIVE_SECTORS_TO_COPY=100
+SET EXTERNAL_DRIVE_SECTORS_TO_COPY=2880
 echo PROJECT_PATH -^> %CUR_PATH%
 Rem Compile the operating system
 ubuntu run "cd /mnt/e/Programming/infinity-os/src; make all; make disk"

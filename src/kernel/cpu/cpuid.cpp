@@ -17,7 +17,7 @@
  * @brief Brand ID (EAX=1) Return Values in EBX (Bits [9:7])
  * 
  */
-char* INTEL_BRAND_ID_LIST[] = {
+const char* INTEL_BRAND_ID_LIST[] = {
   /* 00h */ "Unsupported",
   /* 01h */ "Intel(R) Celeron(R) processor",
   /* 02h */ "Intel(R) Pentium(R) III processor",
@@ -55,11 +55,14 @@ void cpuid::detectCpu() {
   // EAX = 0: MAX_EAX, VENDOR_ID
   cpuid(0, maxEax, vendorId[0], vendorId[2], vendorId[1]);
 
+  // Copy ascii chars from vendorId registers into strVendorId
   memutils::memcpy(strVendorId, vendorId, 12);
   strVendorId[12] = '\0';
 
+  // Print vendor id on screen
   stdio::kprintf("CPUID - VENDOR_ID (0x%x - 0x%x - 0x%x): %s\n", vendorId[0], vendorId[1], vendorId[2], strVendorId);
 
+  // Get additional info about the processor using vendor id
   switch(vendorId[0]) {
     case 0x756e6547: // Intel vendor id
       getIntelCpuInfo();
@@ -78,23 +81,62 @@ void getIntelCpuInfo() {
     uint32_t edx;
     uint32_t unused;
 
-    cpuid(0x80000000, eax_max, unused, unused, unused); // Get the eax max input value
+    // EAX 80000000h - Get max EAX function value
+    cpuid(0x80000000, eax_max, unused, unused, unused); 
     
-    cpuid(1, eax, ebx, ecx, edx); // Get Old processors information using table list
+    // EAX 01h - Get Processor Information
+    cpuid(0x01, eax, ebx, ecx, edx); 
 
-    stdio::kprintf("CPUID - eax: %x - ebx: %x - ecx: %x - edx: %x\n", eax, ebx, ecx, edx);
-    
-    // CPUID - EAX Information
-    uint8_t steppingId     = eax & 0xF;        // 4 bits: [3:0]
-    uint8_t model          = eax >> 4 & 0xF;   // 4 bits: [7:4]
-    uint8_t family         = eax >> 8 & 0xF;   // 4 bits: [11:8]
-    uint8_t processorType  = eax >> 12 & 0x3;  // 2 bits: [13:12]
+    // EAX 01h - EAX Processor signature
+    uint8_t steppingId     = eax & 0xF;        // 4 bits: [3:0]             Revision number of the model
+    uint8_t model          = eax >> 4 & 0xF;   // 4 bits: [7:4]             Processor model
+    uint8_t family         = eax >> 8 & 0xF;   // 4 bits: [11:8]            Processor family
+    uint8_t processorType  = eax >> 12 & 0x3;  // 2 bits: [13:12]           Processor Type
                                                // 2 bits: [15:14] reserved
-    uint8_t extendedModel  = eax >> 16 & 0xF;  // 4 bits: [19:16]
-    uint8_t extendedFamily = eax >> 20 & 0xFF; // 8 bits: [27:20]
+    uint8_t extendedModel  = eax >> 16 & 0xF;  // 4 bits: [19:16]           Processor extended model
+    uint8_t extendedFamily = eax >> 20 & 0xFF; // 8 bits: [27:20]           Processor extended family
                                                // 4 bits: [28:31] reserved
 
-    stdio::kprintf("CPUID - steppingId: %x - model: %x - family: %x - processorType: %x\n", steppingId, model, family, processorType);
-    stdio::kprintf("CPUID - extendedModel: %x - extendedFamily: %x\n", extendedModel, extendedFamily);
-    stdio::kprintf("%s\n", INTEL_BRAND_ID_LIST[1]);
+    // EAX 01h - EBX Information [APIC_ID, Count, Chunks, BrandID]
+    uint8_t brand  = ebx & 0xFF;       // 8 bits: [7:0]      Processor brand id
+    uint8_t chunks = ebx >> 8 & 0xFF;  // 8 bits: [15:8]     CFLUSH line size (Value * 8 = cache line size in bytes) 
+    uint8_t count  = ebx >> 16 & 0xFF; // 8 bits: [23:16]    Maximum number of logical processors per package, also the number of APIC IDs reserved fo this package. This value doesn't change when processors core are disabled by software. 
+    uint8_t apicId = ebx >> 24 & 0xFF; // 8 bits: [31:24]    Default APIC ID
+
+    if (eax_max >= 0x80000004) {
+      // Extended Brand string is supported
+      // - Brand has 48 chars long.
+      // - Since each register is 4 bytes long in x86 and we read from 12 registers this gave to us (48 bytes = 4 * 12)
+      uint32_t brandStr[12];
+
+      // Read brand string from registers
+      cpuid(0x80000002, brandStr[0], brandStr[1], brandStr[2], brandStr[3]);
+      cpuid(0x80000003, brandStr[4], brandStr[5], brandStr[6], brandStr[7]);
+      cpuid(0x80000004, brandStr[8], brandStr[9], brandStr[10], brandStr[11]);
+
+      // Print brand string
+      // - Since it's null terminated we can cast directly to char* without checking
+      stdio::kprintf("CPUID - BRAND: %s", (char*) brandStr);
+    } else if (brand > 0) {
+      // Extended Brand string unsupported but Brand id is supported
+      const char* brandStr = INTEL_BRAND_ID_LIST[brand];
+
+      if (brand == 0x03 && eax == 0x000006B1) {
+        // If processor signature = 000006B1h, then Intel(R) Celeron(R) processor
+        brandStr = INTEL_BRAND_ID_LIST[1];
+      } else if (brand == 0x0B && eax == 0x00000F13) {
+        // If processor signature = 00000F13h, then Intel(R) Xeon(R) processor MP
+        brandStr = INTEL_BRAND_ID_LIST[12];
+      } else if (brand == 0x0E && eax == 0x00000F13) {
+        // If processor signature = 00000F13h, then Intel(R) Xeon(R) processor
+        brandStr = INTEL_BRAND_ID_LIST[11];
+      }
+
+      // Print brand string gathered from INTEL_BRAND_ID_LIST
+      stdio::kprintf("CPUID - BRAND: %s - REVISION: %x", INTEL_BRAND_ID_LIST[brand]);
+
+    } /* else { If brand is unsupported should use processor signature in conjunction with cache descriptors to identify the processor */
+    
+    stdio::kprintf(" - REVISION: %x\n", steppingId);
+    stdio::kprintf("CPUID - CACHE: %d bytes - CORES: %d - APIC_ID: %x\n", chunks * 8, count, apicId);
 }
