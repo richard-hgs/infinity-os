@@ -39,7 +39,7 @@ extern "C" int kmain()
     paging::install();
     vga::printStr("MMU Paging  - Install: OK\n");
 
-    paging::test();
+    // paging::test();
 
     // uint32_t eax;
     // uint32_t ebx;

@@ -39,39 +39,53 @@ jmp 0x0000:START
 ; 	ret
 
 a20_enable:
+; A20 Fast Gate
     pusha
-    cli
-
-    call a20_waitInput
-    mov al, 0xAD ;disable keyboard
-    out 0x64, al
-
-    call a20_waitInput
-    mov al, 0xD0 ;copy command byte to 0x60 port
-    out 0x64, al
-
-    ;call a20_waitOutput
-    in al, 0x60
-    push ax ;save command byte
-
-    call a20_waitInput
-    mov al, 0xD1 ;next written port to 0x60 is written to 0x64
-    out 0x64, al
-
-    pop ax
-    or al, 2 ;enable a20
-    call a20_waitInput
-    out 0x64, al
-
-    call a20_waitInput
-    mov al, 0xAE ;enable keyboard
-    out 0x64, al
-
-    call a20_waitInput
-
-    sti
+    in al, 0x92
+    or al, 2
+    out 0x92, al
     popa
-ret
+    ret
+; =====================
+    ; pusha
+	; mov ax, 0x2400
+	; int 0x15
+	; popa
+	; ret
+; =====================
+;     pusha
+;     cli
+
+;     call a20_waitInput
+;     mov al, 0xAD ;disable keyboard
+;     out 0x64, al
+
+;     call a20_waitInput
+;     mov al, 0xD0 ;copy command byte to 0x60 port
+;     out 0x64, al
+
+;     ;call a20_waitOutput
+;     in al, 0x60
+;     push ax ;save command byte
+
+;     call a20_waitInput
+;     mov al, 0xD1 ;next written port to 0x60 is written to 0x64
+;     out 0x64, al
+
+;     pop ax
+;     or al, 2 ;enable a20
+;     call a20_waitInput
+;     out 0x64, al
+
+;     call a20_waitInput
+;     mov al, 0xAE ;enable keyboard
+;     out 0x64, al
+
+;     call a20_waitInput
+
+;     sti
+;     popa
+; ret
 
 a20_waitOutput: ;wait until keyboard output buffer isn't empty
     pusha
@@ -171,7 +185,7 @@ kernel_start_address dd 0x6400000
 [BITS 32]
 protected_modeStart:
     mov edi, [kernel_start_address] ;kernel memory
-    mov esi, 0x7E00   ;kernel source code
+    mov esi, 0x7E00   ; kernel source code
     mov ecx, 0xFE00   ; 127 * 512 bytes
     rep movsb
 
@@ -199,25 +213,25 @@ gdt_null:
     dd 0
 
 gdt_code:
-    dw 0xFFFF ;segment limiter
-    dw 0x0000 ;base
-    db 0x00 ;base
+    dw 0xFFFF ; segment limiter
+    dw 0x0000 ; base
+    db 0x00 ; base
     db 10011010b
     db 11001111b
-    db 0x0 ;base
+    db 0x0 ; base
 
 gdt_data:
-    dw 0xFFFF ;segment limiter
-    dw 0x0000 ;base
-    db 0x00 ;base
+    dw 0xFFFF ; segment limiter
+    dw 0x0000 ; base
+    db 0x00 ; base
     db 10010010b
     db 11001111b
     db 0x0 ;base
 
 gdt_vram:
-    dw 0xFFFF ;segment limiter
-    dw 0x8000 ;base
-    db 0x0B ;base
+    dw 0xFFFF ; segment limiter
+    dw 0x8000 ; base
+    db 0x0B ; base
     db 10010010b
     db 11001111b
     db 0x0 ;base
