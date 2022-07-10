@@ -1,8 +1,8 @@
 #pragma once
-#ifndef _KSTRING_H_
-#define _KSTRING_H_
+#ifndef _STRING_H_
+#define _STRING_H_
 
-namespace kstring {
+namespace string {
 
     /**
      * @brief Strip off new line from string.

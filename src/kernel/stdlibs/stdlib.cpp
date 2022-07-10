@@ -1,5 +1,5 @@
 #include <stdint.h>
-#include "kstring.h"
+#include "string.h"
 #include "stdlib.h"
 
 #define X86_DIGITS 32
@@ -116,7 +116,7 @@ int stdlib::va_stringf(char *strDest, const char* strFormat, va_list list)
 	int tempint;
 	int j;
 
-	for(i = 0; i < kstring::strlen(strFormat); i++)
+	for(i = 0; i < string::strlen(strFormat); i++)
 	{
 		if(*(strFormat+i) == '%')
 		{
@@ -125,7 +125,7 @@ int stdlib::va_stringf(char *strDest, const char* strFormat, va_list list)
 			{
 				case 's':
 					pStr = va_arg(list, char*);
-					for(j = 0; j < kstring::strlen(pStr); j++)
+					for(j = 0; j < string::strlen(pStr); j++)
 					{
 						*(strDest + size) = *(pStr + j);
 						size++;
@@ -139,7 +139,7 @@ int stdlib::va_stringf(char *strDest, const char* strFormat, va_list list)
 				case 'd':
 					tempint = va_arg(list, int);
 					stdlib::itoa(tempint, 10, tempstr);
-					for(j = 0; j < kstring::strlen(tempstr); j++)
+					for(j = 0; j < string::strlen(tempstr); j++)
                     {
                         *(strDest + size) = *(tempstr + j);
                         size++;
@@ -148,7 +148,7 @@ int stdlib::va_stringf(char *strDest, const char* strFormat, va_list list)
 				case 'x':
 					tempint = va_arg(list, int);
 					stdlib::itoa(tempint, 16, tempstr);
-					for(j = 0; j < kstring::strlen(tempstr); j++)
+					for(j = 0; j < string::strlen(tempstr); j++)
                     {
                         *(strDest + size) = *(tempstr + j);
                         size++;
@@ -157,7 +157,7 @@ int stdlib::va_stringf(char *strDest, const char* strFormat, va_list list)
 				case 'b':
 					tempint = va_arg(list, int);
 					stdlib::itoa(tempint, 2, tempstr);
-                    for(j = 0; j < kstring::strlen(tempstr); j++)
+                    for(j = 0; j < string::strlen(tempstr); j++)
                         {
                             *(strDest + size) = *(tempstr + j);
                             size++;

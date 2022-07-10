@@ -132,13 +132,13 @@ read_kernel:
     call print_bios
     jmp fatal_error
 
-    read_kernel_end:
-        popa
-ret
+read_kernel_end:
+    popa
+    ret
 
 fatal_error:
     cli
-    halt
+    hlt
     jmp fatal_error
 
 

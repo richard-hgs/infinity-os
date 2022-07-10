@@ -62,7 +62,8 @@ OBJECTS2=$(OBJECTS) $(LIB_INCLUDE_OBJS)
 TARGET=$(BUILD_DIR)$(CURRENT_DIR)/kernel.bin
 TARGET_ELF=$(BUILD_DIR)$(CURRENT_DIR)/kernel.elf
 TARGET_MAP=$(BUILD_DIR)$(CURRENT_DIR)/kernel.map
-TARGET_DUMP=$(BUILD_DIR)$(CURRENT_DIR)/kernel.dump 
+TARGET_DUMP=$(BUILD_DIR)$(CURRENT_DIR)/kernel.dump
+TARGET_RODATA=$(BUILD_DIR)$(CURRENT_DIR)/kernel.rodata 
 
 .PHONY: all test clean distclean
 all: $(TARGET)
@@ -81,6 +82,7 @@ $(TARGET): $(TARGET_ELF)
 $(TARGET_ELF): $(OBJECTS)
 	$(LD) $(LDFLAGS) -Tlink.ld -Map=$(TARGET_MAP) -o $@ $(OBJECTS2)
 	objdump -drwC -Mintel $^ > $(TARGET_DUMP)
+	objdump -sj.rodata $^ > $(TARGET_RODATA)
 
 test:
 	$(info $$var is [${OBJECTS}])
