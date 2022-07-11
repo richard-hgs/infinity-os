@@ -177,8 +177,6 @@ void paging::install() {
     // Set the page directory pointer in cr3 register
     set_pageDirectory(pageDirectory);
 
-    map_page(pageDirectory, KERNEL_START_ADDR + i * FRAME_SIZE, 0xFFFFE000);
-
     // Map kernel source code where virtual addr = physical addr
     // from (0x6400000 - 0x6500000) = 0x100000 = 1Mb
     for (i = 0; i < KERNEL_SOURCE_SIZE; i++) {
@@ -214,6 +212,10 @@ void paging::install() {
 
     // Set the new vga address to the new virtual address
     vga::setVgaAddress(VIDEO_MEM_START);
+
+    // stdio::kprintf("");
+
+    // __asm__ volatile ("cli; hlt");  // Halt the cpu Completely hangs the computer
 }
 
 void paging::test() {

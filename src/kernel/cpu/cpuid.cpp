@@ -126,38 +126,77 @@ const char* INTEL_ARCH_LIST[] = {
  * 
  */
 const char* INTEL_FEATURE_FLAGS_LIST[] = {
-  /* 00h */ "SSE3",                 // Streaming SIMD Extensions 3                    - The processor supports the Streaming SIMD Extensions 3 instructions.
-  /* 01h */ "PCLMULDQ",             // PCLMULDQ instruction                           - The processor supports PCLMULDQ instruction.
-  /* 02h */ "DTES64",               // 64-Bit Debug Store                             - Indicates that the processor has the ability to write a history of the 64-bit branch to and from addresses into a memory buffer.
-  /* 03h */ "MONITOR",              // MONITOR / WAIT                                 - The processor supports the MONITOR and MWAIT instructions.
-  /* 04h */ "DS-CPL",               // CPL Qualified Debug Store                      - The processor supports the extensions to the Debug Store feature to allow for branch message storage qualified by CPL.
-  /* 05h */ "VMX",                  // Virtual Machine Extensions                     - The processor supports Intel(R) Virtualization Technology.
-  /* 06h */ "SMX",                  // Safer Mode Extensions                          - The processor supports Intel(R) Trusted Execution Technology.
-  /* 07h */ "EIST",                 // Enhanced Intel SpeedStep(R) Technology         - The processor supports Enchanced Intel SpeedStep Technology and implements the IA32_PERFS_STS and IA32_PERF_CTL registers.
-  /* 08h */ "TM2",                  // Thermal Monitor 2                              - The processor implements the Thermal Monitor 2 thermal control circuit (TCC).
-  /* 09h */ "SSSE3",                // Supplemental Streaming SIMD Extensions 3       - The processor supports the the Supplemental Streaming SIMD Extensions 3 instructions.
-  /* 0Ah */ "CNXT-ID",              // L1 Context ID                                  - The L1 data cache mode can be set to either adaptive mode or shared mode by the BIOS.
+  /* 00h */ "SSE3",                 // Streaming SIMD Extensions 3                              - The processor supports the Streaming SIMD Extensions 3 instructions.
+  /* 01h */ "PCLMULDQ",             // PCLMULDQ instruction                                     - The processor supports PCLMULDQ instruction.
+  /* 02h */ "DTES64",               // 64-Bit Debug Store                                       - Indicates that the processor has the ability to write a history of the 64-bit branch to and from addresses into a memory buffer.
+  /* 03h */ "MONITOR",              // MONITOR / WAIT                                           - The processor supports the MONITOR and MWAIT instructions.
+  /* 04h */ "DS-CPL",               // CPL Qualified Debug Store                                - The processor supports the extensions to the Debug Store feature to allow for branch message storage qualified by CPL.
+  /* 05h */ "VMX",                  // Virtual Machine Extensions                               - The processor supports Intel(R) Virtualization Technology.
+  /* 06h */ "SMX",                  // Safer Mode Extensions                                    - The processor supports Intel(R) Trusted Execution Technology.
+  /* 07h */ "EIST",                 // Enhanced Intel SpeedStep(R) Technology                   - The processor supports Enchanced Intel SpeedStep Technology and implements the IA32_PERFS_STS and IA32_PERF_CTL registers.
+  /* 08h */ "TM2",                  // Thermal Monitor 2                                        - The processor implements the Thermal Monitor 2 thermal control circuit (TCC).
+  /* 09h */ "SSSE3",                // Supplemental Streaming SIMD Extensions 3                 - The processor supports the the Supplemental Streaming SIMD Extensions 3 instructions.
+  /* 0Ah */ "CNXT-ID",              // L1 Context ID                                            - The L1 data cache mode can be set to either adaptive mode or shared mode by the BIOS.
   /* 0Bh */ INTEL_RESERVED_STR,     // Reserved
-  /* 0Ch */ "FMA",                  // Fused Multiply Add                             - The processor supports FMA extensions using YMM state.
-  /* 0Dh */ "CX16",                 // CMPXCHG16B                                     - The processor supports the CMPXCHG16B instruction.
-  /* 0Eh */ "xTPR",                 // xTPR Update Control                            - The processor supports the hability to disable sending Task Priority messages. When this feature flag is set, Task Priority messages may be disabled. Bit 23 (Echo TPR disable) in the IA32_MISC_ENABLE MSR controls the sending of Task Priority messages.
-  /* 0Fh */ "PDCM",                 // Perfmon and Debug Capability                   - The processor supports the Performance Capabilities MSR. IA32_PERF_CAPABILITIES register is MSR 345h.
+  /* 0Ch */ "FMA",                  // Fused Multiply Add                                       - The processor supports FMA extensions using YMM state.
+  /* 0Dh */ "CX16",                 // CMPXCHG16B                                               - The processor supports the CMPXCHG16B instruction.
+  /* 0Eh */ "xTPR",                 // xTPR Update Control                                      - The processor supports the hability to disable sending Task Priority messages. When this feature flag is set, Task Priority messages may be disabled. Bit 23 (Echo TPR disable) in the IA32_MISC_ENABLE MSR controls the sending of Task Priority messages.
+  /* 0Fh */ "PDCM",                 // Perfmon and Debug Capability                             - The processor supports the Performance Capabilities MSR. IA32_PERF_CAPABILITIES register is MSR 345h.
   /* 10h */ INTEL_RESERVED_STR,     // Reserved 
-  /* 11h */ "PCID",                 // Processor Context Identifiers                  - The processor supports PCIDs and that software may set CR4.PCIDE to 1.
-  /* 12h */ "DCA",                  // Direct Cache Access                            - The processor supports the ability to prefetch data from a memory mapped device.
-  /* 13h */ "SSE4.1",               // Streaming SIMD Extensions 4.1                  - The processor supports the Streaming SIMD Extensions 4.1 instructions.
-  /* 14h */ "SSE4.2",               // Streaming SIMD Extensions 4.2                  - The processor supports the Streaming SIMD Extensions 4.2 instructions.
-  /* 15h */ "x2APIC",               // Extended xAPIC Support                         - The processor supports x2APIC feature.
-  /* 16h */ "MOVBE",                // MOVBE instruction                              - The processor supports MOVBE instruction.
-  /* 17h */ "POPCNT",               // POPCNT Instruction                             - The processor supports the POPCNT instruction.
-  /* 18h */ "TSC-DEADLINE",         // Time Stamp Counter Deadline                    - The processor's local APIC timer supports one-shot operation using a TSC deadline value.
-  /* 19h */ "AES",                  // AES Instruction Extensions                     - The processor supports the AES instruction extensions.
-  /* 1Ah */ "XSAVE",                // XSAVE / XSTOR States                           - The processor supports XSAVE / XRSTOR processor extended states feature, the XSETBV / XGETBV instructions, and the XFEATURE_ENABLE_MASK register (XCR0).
-  /* 1Bh */ "OSXSAVE",              // OS-Enabled Extended State Management           - A value of 1 indicates that the OS has enabled XSETBV / XGETBV instructions to access the XFEATURE_ENABLED_MASK register (XCR0), and support for processor extended state management using XSAVE / XRSTOR.
-  /* 1Ch */ "AVX",                  // Advanced Vector Extensions                     - The processor supports the AVX instruction extensions.
-  /* 1Dh */ "F16C",                 // 16-bit floating-point conversion instructions  - A value of 1 indicates that the processor supports 16-bit floating-point conversion instructions.
-  /* 1Eh */ "RDRAND",               // RDRAND instruction supported                   - A value of 1 indicates that the processor supports RDRAND instruction.
+  /* 11h */ "PCID",                 // Processor Context Identifiers                            - The processor supports PCIDs and that software may set CR4.PCIDE to 1.
+  /* 12h */ "DCA",                  // Direct Cache Access                                      - The processor supports the ability to prefetch data from a memory mapped device.
+  /* 13h */ "SSE4.1",               // Streaming SIMD Extensions 4.1                            - The processor supports the Streaming SIMD Extensions 4.1 instructions.
+  /* 14h */ "SSE4.2",               // Streaming SIMD Extensions 4.2                            - The processor supports the Streaming SIMD Extensions 4.2 instructions.
+  /* 15h */ "x2APIC",               // Extended xAPIC Support                                   - The processor supports x2APIC feature.
+  /* 16h */ "MOVBE",                // MOVBE instruction                                        - The processor supports MOVBE instruction.
+  /* 17h */ "POPCNT",               // POPCNT Instruction                                       - The processor supports the POPCNT instruction.
+  /* 18h */ "TSC-DEADLINE",         // Time Stamp Counter Deadline                              - The processor's local APIC timer supports one-shot operation using a TSC deadline value.
+  /* 19h */ "AES",                  // AES Instruction Extensions                               - The processor supports the AES instruction extensions.
+  /* 1Ah */ "XSAVE",                // XSAVE / XSTOR States                                     - The processor supports XSAVE / XRSTOR processor extended states feature, the XSETBV / XGETBV instructions, and the XFEATURE_ENABLE_MASK register (XCR0).
+  /* 1Bh */ "OSXSAVE",              // OS-Enabled Extended State Management                     - A value of 1 indicates that the OS has enabled XSETBV / XGETBV instructions to access the XFEATURE_ENABLED_MASK register (XCR0), and support for processor extended state management using XSAVE / XRSTOR.
+  /* 1Ch */ "AVX",                  // Advanced Vector Extensions                               - The processor supports the AVX instruction extensions.
+  /* 1Dh */ "F16C",                 // 16-bit floating-point conversion instructions            - A value of 1 indicates that the processor supports 16-bit floating-point conversion instructions.
+  /* 1Eh */ "RDRAND",               // RDRAND instruction supported                             - A value of 1 indicates that the processor supports RDRAND instruction.
   /* 1Fh */ "NOT USED",             // Always reurns 0
+};
+
+/**
+ * @brief Intel processor feature flags (EAX=1) Return values EDX (Bits [31:0])
+ * 
+ */
+const char* INTEL_FEATURE_FLAGS2_LIST[] = {
+  /* 00h */ "FPU",                  // Floating-point Unit On-Chip                              - The processor contains an FPU that supports the Intel387 floating-point instruction set.  
+  /* 01h */ "VME",                  // Virtual Mode Extension                                   - The processor supports extensions to virtual-8086 mode. 
+  /* 02h */ "DE",                   // Debugging Extension                                      - The processor supports I/O breakpoints, including the CR4.DE bit for enabling debug extensions and optional trapping of access to the DR4 and DR5 registers.
+  /* 03h */ "PSE",                  // Page Size Extension                                      - The processor supports 4-MB pages. 
+  /* 04h */ "TSC",                  // Time Stamp Counter                                       - The RDTSC instruction pointer is supported including the CR4.TSD bit for access/privilege control. 
+  /* 05h */ "MSR",                  // Model Specific Registers                                 - Model Specifc Registers are implemented with the RDMSR, WRMSR instructions.
+  /* 06h */ "PAE",                  // Physical Address Extension                               - Physical addresses greater than 32 bits are supported. 
+  /* 07h */ "MCE",                  // Machine-Check Exception                                  - Machine-Check Exception, INT18, and the CR4.MCE enable bit are supported. 
+  /* 08h */ "CX8",                  // CMPXCHG8 Instruction                                     - The compare and exchane 8-bytes instruction is supported.
+  /* 09h */ "APIC",                 // On-chip APIC Hardware                                    - The processor contains a software-accessible local APIC.
+  /* 0Ah */ INTEL_RESERVED_STR,     // Reserved
+  /* 0Bh */ "SEP",                  // Fast System Call                                         - Indicates whether the processor supports the Fast System Call instructions, SYSENTER and SYSEXIT. NOTE: Refer to Section 5.1.2.5 fo further information regarding SYSENTER/SYSEXIT feature and SEP feature bit. 
+  /* 0Ch */ "MTRR",                 // Memory Type Range Registers                              - The processor supports the Memory Type Range Registers specifically the MTRR_CAP register.
+  /* 0Dh */ "PGE",                  // Page Global Enable                                       - The global bit in the page directory entries (PDEs) and page table entries (PTEs) is supported, indicating TLB entries that are common to different processes and need not be flushed. The CR4.PGE bit controls this feature.  
+  /* 0Eh */ "MCA",                  // Machine-Check Architecture                               - The Machine-Check Architecture is supported, specifically the MCG_CAP register.
+  /* 0Fh */ "CMOV",                 // Conditional Move Instruction                             - The processor supports CMOVcc, and if the FPU feature flag (bit 0) is also set, supports the FCMOVCC and FCOMI instructions. 
+  /* 10h */ "PAT",                  // Page Attribute Table                                     - Indicate whether the processor supports the Page Attribute Table. This feature augments the Memory Type Range Registers (MTRRs), allowing an operating system to specify attributes of memory on 4K granularity through a linear address. 
+  /* 11h */ "PSE-36",               // 36-bit Page Size Extension                               - Indicates whether the processor supports 4-MB pages that are capable of addressing physical memory beyond 4-GB. This feature indicates that the upper four bits of the physical address of the 4-MB page is encoded by bits 13-16 of the page directory entry.
+  /* 12h */ "PSN",                  // Processor serial number is present and enabled           - The processor supports the 96-bit processor serial number feature, and the feature is enabled. Note: The Pentium 4 and subsequent processor families do not support this feature. 
+  /* 13h */ INTEL_RESERVED_STR,     // Reserved
+  /* 14h */ "CLFSH",                // CLFLUSH Instruction                                      - Indicates that the processor supports the CLFLUSH instruction.
+  /* 15h */ "DS",                   // Debug Store                                              - Indicates that the processor supports the ability to write debug information into a memory resident buffer. This feature is used by branch trace store (BTS) and precise event-based sampling (PEBS) facilities.
+  /* 16h */ "ACPI",                 // Thermal Monitor and Software Controlled Clock Facilities - The processor implements internal MSRs that allow processor temperature to be monitored and processor performance to be modulated in predefined duty cycles under software control.
+  /* 17h */ "MMX",                  // MMX technology                                           - The processor supports the MMX technology instruction set extensions to Intel Architecture.
+  /* 18h */ "FXSR",                 // FXSAVE and FXSTOR Instructions                           - The FXSAVE and FXRSTOR instructions are supported for fast save and restore the floating point context. Presence of this bit also indicates that CR4.OSFXSR is available for an operating system to indicate that it supports the FXSAVE and FXRSTOR instructions.
+  /* 19h */ "SSE",                  // Streaming SIMD Extensions                                - The processor supports the Streaming SIMD Extensions to the Intel Architecture. 
+  /* 1Ah */ "SSE2",                 // Streaming SIMD Extensions 2                              - Indicates the processor supports the Streaming SIMD Extensions 2 Instructions.
+  /* 1Bh */ "SS",                   // Self-Snoop                                               - The processor supports the management of conflicting memory types by performing a snoop of its own cache structure for transactions issued to the bus.  
+  /* 1Ch */ "HTT",                  // Multi-Threading                                          - The physical processor package is capable of supporting more than one logical processor. This field does not indicate that Hyper-Threading Technology or Core Multi-Processing (CMP) has been enabled for this specific processor. To determine if Hyper-Threading Technology or CMP is supported, compare value returned in EBX[23:16] after executing CPUID with EAX=1. If the resulting value is > 1, then the processor supports Multi-Threading. 
+  /* 1Dh */ "TM",                   // Thermal Monitor                                          - The processor implements the Thermal Monitor automatic thermal control circuitry (TCC).
+  /* 1Eh */ INTEL_RESERVED_STR,     // Reserved  
+  /* 1Fh */ "PBE",                  // Pending Break Enable                                     - The processor supports the use of the FERR# / PBE# pin when the processor is in the stop-clock state (STPCLK# is asserted) to signal the processor that an interrupt is pending and that the processor should return to normal operation to handle the interrupt. Bit 10 (PBE enable) in the IA32_MISC_ENABLE MSR enable this capability.
 };
 
 /**
@@ -1144,19 +1183,31 @@ void getIntelCpuInfo() {
     stdio::kprintf("CPUID - FAMILY: %d - MODEL: %d - ARCH: %s\n", family, model, processorArchStr);
     stdio::kprintf("CPUID - CACHE: %d bytes - CORES: %d - APIC_ID: %x - TYPE: %s\n", chunks * 8, count, apicId, processorTypeStr);
     stdio::kprintf("CPUID - FEATURE_FLAGS: ");
-    
     // Print ECX feature flags
-    for (i=0; i<31; i++) {
+    for (i=0; i<32; i++) {
       if (i == 11 || i == 16) {
         // Skip reserved or unused bits
         continue;
       }
-
       if (((ecx >> i) & 0x1) == 1) {
         // If current bit is set print the flag name
         stdio::kprintf("%s%s", (i > 0 ? ", " : ""), INTEL_FEATURE_FLAGS_LIST[i]);
       }
     }
+
+    stdio::kprintf("\n - CPUID FEATURE_FLAGS2: ");
+    // Print EDX feature flags
+    for (i=0; i<32; i++) {
+      if (i == 10 || i == 19 || i == 30) {
+        // Skip reserved or unused bits
+        continue;
+      }
+      if (((edx >> i) & 0x1) == 1) {
+        // If current bit is set print the flag name
+        stdio::kprintf("%s%s", (i > 0 ? ", " : ""), INTEL_FEATURE_FLAGS2_LIST[i]);
+      }
+    }
+
     stdio::kprintf("\n");
 }
 
