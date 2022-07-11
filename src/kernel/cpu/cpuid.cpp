@@ -24,6 +24,7 @@ typedef struct {
 } IntelSignature;
 
 const char* DEFAULT_STR = "N/D";
+const char* INTEL_RESERVED_STR = "Intel Reserved";
 
 /**
  * @brief Processor Type (EAX=1) Return values in EAX (Bits [13:12])
@@ -33,7 +34,7 @@ const char* INTEL_PROCESSOR_TYPE_LIST[] = {
   /* 00h */ "Original OEM Processor",
   /* 01h */ "OverDrive(R) Processor",
   /* 02h */ "Dual Processor",
-  /* 03h */ "Intel Reserved",
+  /* 03h */ INTEL_RESERVED_STR,
 };
 
 /**
@@ -46,7 +47,7 @@ const char* INTEL_BRAND_ID_LIST[] = {
   /* 02h */ "Intel(R) Pentium(R) III Processor",
   /* 03h */ "Intel(R) Pentium(R) III Xeon(R) Processor", // If processor signature = 000006B1h, then Intel(R) Celeron(R) processor
   /* 04h */ "Intel(R) Pentium(R) III Processor",
-  /* 05h */ "Reserved",
+  /* 05h */ INTEL_RESERVED_STR,
   /* 06h */ "Mobile Intel(R) Pentium(R) III Processor-M",
   /* 07h */ "Mobile Intel(R) Celeron(R) Processor",
   /* 08h */ "Intel(R) Pentium(R) 4 Processor",
@@ -54,10 +55,10 @@ const char* INTEL_BRAND_ID_LIST[] = {
   /* 0Ah */ "Intel(R) Celeron(R) Processor",
   /* 0Bh */ "Intel(R) Xeon(R) Processor", // If processor signature = 00000F13h, then Intel(R) Xeon(R) processor MP
   /* 0Ch */ "Intel(R) Xeon(R) Processor MP",
-  /* 0Dh */ "Reserved",
+  /* 0Dh */ INTEL_RESERVED_STR,
   /* 0Eh */ "Mobile Intel(R) Pentium(R) 4 Processor-M", // If processor signature = 00000F13h, then Intel(R) Xeon(R) processor
   /* 0Fh */ "Mobile Intel(R) Celeron(R) Processor",
-  /* 10h */ "Reserved",
+  /* 10h */ INTEL_RESERVED_STR,
   /* 11h */ "Mobile Genuine Intel(R) Processor",
   /* 12h */ "Intel(R) Celeron(R) M Processor",
   /* 13h */ "Mobile Intel(R) Celeron(R) Processor",
@@ -68,6 +69,10 @@ const char* INTEL_BRAND_ID_LIST[] = {
   // All other values - Reserved
 };
 
+/**
+ * @brief Microprocessor Architecture (EAX=1) Return values in EAX (Bits [27:16], [13:0])
+ * 
+ */
 const char* INTEL_ARCH_LIST[] = {
   /* 00h */ "i386",                                                                     // Family 3
   /* 01h */ "i486",                                                                     // Family 4
@@ -116,7 +121,50 @@ const char* INTEL_ARCH_LIST[] = {
   /* 2Ch */ "Netburst",                                                                 // Family 15
 };
 
+/**
+ * @brief Intel processor feature flags (EAX=1) Return values ECX (Bits [31:0])
+ * 
+ */
+const char* INTEL_FEATURE_FLAGS_LIST[] = {
+  /* 00h */ "SSE3",                 // Streaming SIMD Extensions 3                    - The processor supports the Streaming SIMD Extensions 3 instructions.
+  /* 01h */ "PCLMULDQ",             // PCLMULDQ instruction                           - The processor supports PCLMULDQ instruction.
+  /* 02h */ "DTES64",               // 64-Bit Debug Store                             - Indicates that the processor has the ability to write a history of the 64-bit branch to and from addresses into a memory buffer.
+  /* 03h */ "MONITOR",              // MONITOR / WAIT                                 - The processor supports the MONITOR and MWAIT instructions.
+  /* 04h */ "DS-CPL",               // CPL Qualified Debug Store                      - The processor supports the extensions to the Debug Store feature to allow for branch message storage qualified by CPL.
+  /* 05h */ "VMX",                  // Virtual Machine Extensions                     - The processor supports Intel(R) Virtualization Technology.
+  /* 06h */ "SMX",                  // Safer Mode Extensions                          - The processor supports Intel(R) Trusted Execution Technology.
+  /* 07h */ "EIST",                 // Enhanced Intel SpeedStep(R) Technology         - The processor supports Enchanced Intel SpeedStep Technology and implements the IA32_PERFS_STS and IA32_PERF_CTL registers.
+  /* 08h */ "TM2",                  // Thermal Monitor 2                              - The processor implements the Thermal Monitor 2 thermal control circuit (TCC).
+  /* 09h */ "SSSE3",                // Supplemental Streaming SIMD Extensions 3       - The processor supports the the Supplemental Streaming SIMD Extensions 3 instructions.
+  /* 0Ah */ "CNXT-ID",              // L1 Context ID                                  - The L1 data cache mode can be set to either adaptive mode or shared mode by the BIOS.
+  /* 0Bh */ INTEL_RESERVED_STR,     // Reserved
+  /* 0Ch */ "FMA",                  // Fused Multiply Add                             - The processor supports FMA extensions using YMM state.
+  /* 0Dh */ "CX16",                 // CMPXCHG16B                                     - The processor supports the CMPXCHG16B instruction.
+  /* 0Eh */ "xTPR",                 // xTPR Update Control                            - The processor supports the hability to disable sending Task Priority messages. When this feature flag is set, Task Priority messages may be disabled. Bit 23 (Echo TPR disable) in the IA32_MISC_ENABLE MSR controls the sending of Task Priority messages.
+  /* 0Fh */ "PDCM",                 // Perfmon and Debug Capability                   - The processor supports the Performance Capabilities MSR. IA32_PERF_CAPABILITIES register is MSR 345h.
+  /* 10h */ INTEL_RESERVED_STR,     // Reserved 
+  /* 11h */ "PCID",                 // Processor Context Identifiers                  - The processor supports PCIDs and that software may set CR4.PCIDE to 1.
+  /* 12h */ "DCA",                  // Direct Cache Access                            - The processor supports the ability to prefetch data from a memory mapped device.
+  /* 13h */ "SSE4.1",               // Streaming SIMD Extensions 4.1                  - The processor supports the Streaming SIMD Extensions 4.1 instructions.
+  /* 14h */ "SSE4.2",               // Streaming SIMD Extensions 4.2                  - The processor supports the Streaming SIMD Extensions 4.2 instructions.
+  /* 15h */ "x2APIC",               // Extended xAPIC Support                         - The processor supports x2APIC feature.
+  /* 16h */ "MOVBE",                // MOVBE instruction                              - The processor supports MOVBE instruction.
+  /* 17h */ "POPCNT",               // POPCNT Instruction                             - The processor supports the POPCNT instruction.
+  /* 18h */ "TSC-DEADLINE",         // Time Stamp Counter Deadline                    - The processor's local APIC timer supports one-shot operation using a TSC deadline value.
+  /* 19h */ "AES",                  // AES Instruction Extensions                     - The processor supports the AES instruction extensions.
+  /* 1Ah */ "XSAVE",                // XSAVE / XSTOR States                           - The processor supports XSAVE / XRSTOR processor extended states feature, the XSETBV / XGETBV instructions, and the XFEATURE_ENABLE_MASK register (XCR0).
+  /* 1Bh */ "OSXSAVE",              // OS-Enabled Extended State Management           - A value of 1 indicates that the OS has enabled XSETBV / XGETBV instructions to access the XFEATURE_ENABLED_MASK register (XCR0), and support for processor extended state management using XSAVE / XRSTOR.
+  /* 1Ch */ "AVX",                  // Advanced Vector Extensions                     - The processor supports the AVX instruction extensions.
+  /* 1Dh */ "F16C",                 // 16-bit floating-point conversion instructions  - A value of 1 indicates that the processor supports 16-bit floating-point conversion instructions.
+  /* 1Eh */ "RDRAND",               // RDRAND instruction supported                   - A value of 1 indicates that the processor supports RDRAND instruction.
+  /* 1Fh */ "NOT USED",             // Always reurns 0
+};
 
+/**
+ * @brief Intel Signatures
+ * Map Processor Architecture to IntelSignatures
+ * 
+ */
 const IntelSignature intelSignatures[] = {
   // ================ Family 4 ================
   IntelSignature {
@@ -1023,6 +1071,8 @@ void getIntelCpuInfo() {
     const char* processorArchStr  = DEFAULT_STR;  // Processor architecture
     IntelSignature intelSignature;
 
+    int i;
+
 
     // EAX 80000000h - Get max EAX function value
     cpuid(0x80000000, eax_max, unused, unused, unused); 
@@ -1088,11 +1138,26 @@ void getIntelCpuInfo() {
       brandStr = const_cast<char*>(mBrandStr);
     } /* else { If brand is unsupported should use processor signature in conjunction with cache descriptors to identify the processor */
     
-    // Print brand string gathered from INTEL_BRAND_ID_LIST
+    
     stdio::kprintf("CPUID - BRAND: %s - REVISION: %x", brandStr);
     stdio::kprintf(" - REVISION: %x\n", steppingId);
     stdio::kprintf("CPUID - FAMILY: %d - MODEL: %d - ARCH: %s\n", family, model, processorArchStr);
     stdio::kprintf("CPUID - CACHE: %d bytes - CORES: %d - APIC_ID: %x - TYPE: %s\n", chunks * 8, count, apicId, processorTypeStr);
+    stdio::kprintf("CPUID - FEATURE_FLAGS: ");
+    
+    // Print ECX feature flags
+    for (i=0; i<31; i++) {
+      if (i == 11 || i == 16) {
+        // Skip reserved or unused bits
+        continue;
+      }
+
+      if (((ecx >> i) & 0x1) == 1) {
+        // If current bit is set print the flag name
+        stdio::kprintf("%s%s", (i > 0 ? ", " : ""), INTEL_FEATURE_FLAGS_LIST[i]);
+      }
+    }
+    stdio::kprintf("\n");
 }
 
 void getIntelSignature(uint8_t extendedFamily, uint8_t extendedModel, uint8_t type, uint8_t family, uint8_t model, uint8_t steppingId, IntelSignature* intelSignature) {
