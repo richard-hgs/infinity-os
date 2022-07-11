@@ -3,6 +3,11 @@
 #define _CPUID_H_
 
 #include <stdint.h>
+#include <stdbool.h>
+
+#define CPUID_UNKNOW_CPU 0
+#define CPUID_INTEL 1
+#define CPUID_AMD 2
 
 /**
  * @brief CPUID - Specification
@@ -55,8 +60,26 @@
  *    - The CPUID instruction can't receive EAX input values greather than the max EAX value.
  */
 namespace cpuid {
+    /**
+     * @brief Detect cpu type and print its information
+     * 
+     */
+    void printCpuInfo();
 
-    void detectCpu();
+    /**
+     * @brief Get current CPU type
+     * 
+     * @return uint8_t 0=CPUID_UNKNOW_CPU, 1=CPUID_INTEL, 2=CPUID_AMD
+     */
+    uint8_t detectCpu();
+
+    /**
+     * @brief Return whether the APIC is present or not in the processor
+     * 
+     * @return true  APIC is present and can be used
+     * @return false APIC is not present and can't be used
+     */
+    bool hasApic();
 }
 
 #endif

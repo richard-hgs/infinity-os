@@ -1071,30 +1071,51 @@ void getIntelCpuInfo();
 
 void getIntelSignature(uint8_t extendedFamily, uint8_t extendedModel, uint8_t type, uint8_t family, uint8_t model, uint8_t steppingId, IntelSignature* IntelSignature);
 
-void cpuid::detectCpu() {
+void cpuid::printCpuInfo() {
+  uint8_t cpuType = detectCpu();
+  if (cpuType == CPUID_INTEL) {
+    getIntelCpuInfo();
+  } else {
+    stdio::kprintf("Unknown x86 CPU detected.\n");
+  }
+}
+
+uint8_t cpuid::detectCpu() {
   uint32_t vendorId[3];
   uint32_t maxEax;
-  char strVendorId[13];
+  // char strVendorId[13];
 
   // EAX = 0: MAX_EAX, VENDOR_ID
   cpuid(0, maxEax, vendorId[0], vendorId[2], vendorId[1]);
 
-  // Copy ascii chars from vendorId registers into strVendorId
-  memutils::memcpy(strVendorId, vendorId, 12);
-  strVendorId[12] = '\0';
+  // // Copy ascii chars from vendorId registers into strVendorId
+  // memutils::memcpy(strVendorId, vendorId, 12);
+  // strVendorId[12] = '\0';
 
   // Print vendor id on screen
-  stdio::kprintf("CPUID - VENDOR_ID (0x%x - 0x%x - 0x%x): %s\n", vendorId[0], vendorId[1], vendorId[2], strVendorId);
+  // stdio::kprintf("CPUID - VENDOR_ID (0x%x - 0x%x - 0x%x): %s\n", vendorId[0], vendorId[1], vendorId[2], strVendorId);
 
   // Get additional info about the processor using vendor id
   switch(vendorId[0]) {
     case 0x756e6547: // Intel vendor id
-      getIntelCpuInfo();
-      break;
+      // getIntelCpuInfo();
+      return CPUID_INTEL;
     default:
-      stdio::kprintf("Unknown x86 CPU detected.\n");
-      break;
+      // stdio::kprintf("Unknown x86 CPU detected.\n");
+      return CPUID_UNKNOW_CPU;
   }
+}
+
+bool cpuid::hasApic() {
+  uint8_t cpuType = detectCpu();
+  if (cpuType == CPUID_INTEL) {
+    // Get APIC information from EAX=1 function in EDX register Bit 9
+    uint32_t edx, unused;
+    cpuid(1, unused, unused, unused, edx);
+
+    return ((edx >> 9) & 0x1) == 1;
+  }
+  return false;
 }
 
 void getIntelCpuInfo() {

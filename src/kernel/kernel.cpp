@@ -7,6 +7,7 @@
 #include "gdt.h"
 #include "isr.h"
 #include "paging.h"
+#include "apic.h"
 #include "cpuid.h"
 // memory
 #include "kheap.h"
@@ -14,9 +15,18 @@
 
 // extern "C" void _start();
 
+void handleError(uint8_t errorCode, const char* errorPrefix) {
+    if (errorCode > 0) {
+        // Some error happend
+        stdio::kprintf("%s - ERROR: %d\n", errorPrefix, errorCode);
+        __asm__ volatile ("cli; hlt");  // Halt the cpu. Waits until an IRQ occurs
+    }
+}
 
 extern "C" int kmain()
 {
+    uint8_t errorCode;
+
     // Clear VGA screen
     vga::clearScreen();
 
@@ -31,6 +41,11 @@ extern "C" int kmain()
     isr::install();
     vga::printStr("IDT and ISR - Install: OK\n");
 
+    // Install APIC
+    errorCode = apic::install();
+    handleError(errorCode, "APIC");
+    vga::printStr("APIC        - Install: OK\n");
+
     // Install HEAP - Kernel Heap
     // kheap::install();
     // vga::printStr("HEAP - Install: OK\n");
@@ -38,7 +53,6 @@ extern "C" int kmain()
     // Install MMU - Paging tables
     paging::install();
     vga::printStr("MMU Paging  - Install: OK\n");
-
     // paging::test();
 
     // uint32_t eax;
@@ -47,7 +61,7 @@ extern "C" int kmain()
     // uint32_t edx;
     // cpuid::getCpuid(1, &eax, &ebx, &ecx, &edx);
 
-    cpuid::detectCpu();
+    cpuid::printCpuInfo();
 
     // stdio::kprintf("cpuid - eax: %x - ebx: %x - ecx: %x - edx: %x\n", eax, ebx, ecx, edx);
 

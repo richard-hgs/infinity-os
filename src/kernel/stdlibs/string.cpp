@@ -1,7 +1,7 @@
 #include "string.h"
 
 int string::strstrip(char* s) {
-    int pos = string::strlen(s);
+    int pos = strlen(s);
     while (--pos >= 0)
         if (s[pos] == '\n')
             s[pos] = 0;
@@ -9,7 +9,7 @@ int string::strstrip(char* s) {
 }
 
 void string::reverse(char* s) {
-    const int len = string::strlen(s) - 1;
+    const int len = strlen(s) - 1;
     int i, j;
     for (i = 0, j = len; s[i] != s[j]; i++, j--) {
         char tmp = s[i];
@@ -26,5 +26,5 @@ int string::strlen(char* s) {
 }
 
 int string::strlen(const char* s) {
-    return string::strlen((char*)s);
+    return strlen((char*)s);
 }

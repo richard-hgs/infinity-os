@@ -2,6 +2,9 @@
 #ifndef _APIC_H_
 #define _APIC_H_
 
+#define APIC_NO_ERROR 0            // No error happend. Same as Success
+#define APIC_ERROR_NOT_PRESENT 1   // Cpu don't have an APIC
+
 /**
  * @brief APIC - Advanced Programmable Interrupt Controller
  * 
@@ -13,7 +16,12 @@
  *     local APIC.
  */
 namespace apic {
-
+    /**
+     * @brief APIC install and configure if present
+     * 
+     * @return int 0=NO_ERROR, >0=ERROR_CODE
+     */
+    int install();
 }
 
 #endif
