@@ -3,6 +3,25 @@
 #define _ISR_H_
 
 #include <stdint.h>
+
+#define IRQ0 32		// Temporizador de intervalos 8253/8254 (temporizador do sistema)
+#define IRQ1 33		// Teclado
+#define IRQ2 34		// Reservada para a 8259B (amarrada ao IRQ 9)
+#define IRQ3 35		// COM2 e COM4
+#define IRQ4 36		// COM1 e COM3
+#define IRQ5 37		// LPT2 ou placa de som
+#define IRQ6 38		// Disquetes
+#define IRQ7 39		// LPT1
+					// ---- PIC secundário ----
+#define IRQ8 40		// Relógio de tempo real (real time clock, RTC)
+#define IRQ9 41		// Amarrada ao IRQ2
+#define IRQ10 42	// Network interface
+#define IRQ11 43    // USB port, sound card
+#define IRQ12 44	// Mouse PS/2
+#define IRQ13 45 	// Co-processador matemático
+#define IRQ14 46	// Drives IDE primários
+#define IRQ15 47	// Drives IDE secundários
+
 /**
  * @brief ISR Behind the scenes
  * 

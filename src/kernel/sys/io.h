@@ -41,5 +41,12 @@ namespace io {
      * @param value Short value to write
      */
     void outw(unsigned short port, unsigned short value);
+
+    /**
+     * @brief IO_WAIT Wait a very small amount of time (1 to 4 microseconds, generally). 
+     * Useful for implementing a small delay for PIC remapping on old hardware or generally as a simple but imprecise wait.
+     * 
+     */
+    void wait();
 }
 #endif

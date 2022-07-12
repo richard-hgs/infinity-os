@@ -2,8 +2,9 @@
 #include <stdint.h>
 // cpu
 #include "idt.h"
+#include "pic.h"
 // stdlibs
-#include "stdio.h"  // Debug only
+#include "stdio.h"      // Debug only
 #include "stdlib.h"
 #include "isr.h"
 
@@ -54,11 +55,31 @@ extern "C" void isr_handler(registers_t* r) {
     return;
 }
 
+extern "C" void irq_handler(registers_t* r) {
+    stdio::kprintf("IRQ(%d) - IRQ_CODE(%d)\n", r->int_no, r->err_code);
+    pic::sendEOI(r->err_code & 0xFF);
+    return;
+}
+
 void isr::install() {
-    // Setup the interrupt functions that was created in isr_int.asm
-    for (uint8_t i = 0; i < 32; i++) {
+    __asm__ __volatile__("cli");
+    uint8_t i;
+
+    // Setup the isr interrupt functions that was created in isr_int.asm
+    for (i = 0; i < 32; i++) {
         idt::setGate(i, (uint32_t) isr_stub_table[i]);
     }
+
+    // Remap Master PIC to offset 0x20 = IDT 32
+    // Remap Slave  PIC to offset 0x28 = IDT 40
+    pic::remap(0x20, 0x28);
+
+    // Setup the irq interrupt functions that was created in isr_int.asm
+    for (; i<48; i++) {
+        idt::setGate(i, (uint32_t) isr_stub_table[i]);
+    }
+
     idt::install();
+    __asm__ __volatile__("sti");
 }
 

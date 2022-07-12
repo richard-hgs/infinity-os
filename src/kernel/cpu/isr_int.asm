@@ -7,6 +7,7 @@
 
 
 [extern isr_handler]        ; Reference isr_handler exported function from isr.cpp file
+[extern irq_handler]        ; Reference irq_handler exported function from isr.cpp file
 [global isr_stub_table]     ; Export isr_stub_table vector to be used in isr.cpp file
 
 ; NASM - Macros
@@ -69,6 +70,18 @@ isr_stub_%+%1:
                             
 %endmacro
 
+; ===================================================================================================
+; MACRO - isr_noret:
+; This macro will create isr_stub_%index%: label with a function that calls isr_handler
+%macro irq_stub 2
+isr_stub_%+%1:
+    ; CPU already pushed some registers for us:
+    ; eip, cs, eflags, useresp, ss
+    push byte %2            ; err_code  : In this case is the IRQs index
+    push byte %1            ; int_no    : The interruption index
+    jmp irq_dispatcher      ; Jmp to the function that will dispatch the irq to the kernel handler in correct segment descriptor
+%endmacro
+
 ; =============================
 ; HANDLER DISPATCHER:
 ; We created the isr_dispatcher to create a function with common code 
@@ -106,13 +119,52 @@ isr_dispatcher:
     iret                    ; An ISR has to end with the iret opcode. Use iretq instead if targeting 64-bit. 
                             ; Concurrent NMIs are delivered to the CPU one by one. IRET signals to the NMI circuitry that another NMI can now be delivered.
 
+
+; =============================
+; HANDLER DISPATCHER:
+; We created the irq_dispatcher to create a function with common code 
+; =============================
+irq_dispatcher:
+    ; CPU already pushed some registers for us:
+    ; eip, cs, eflags, useresp, ss
+
+    ; The irq_stub push 2 parameters the int_no(The index of this handler function) and 
+    ; The error_code in this case is irq index
+    pusha                   ; ds, edi, esi, ebp, esp, ebx, edx, ecx, eax
+	
+    mov ax, ds              ; lower 16 bits is in the ds register
+	push eax                ; Save the segment descriptor onto stack
+
+	mov ax, 0x10            ; Load the kernel segment descriptor
+	mov ds, ax              ; Set the segment register's
+	mov es, ax              ; Set the segment register's
+	mov fs, ax              ; Set the segment register's
+	mov gs, ax              ; Set the segment register's
+
+	push esp                ; Push the old stack frame to the new kernel stack frame since we changed to kernel code segment
+	cld                     ; Clear the direction flag
+    
+    call irq_handler        ; C function to handle ISR's
+    
+    pop ebx                 ; Pop ebx that was pushed earlier when we push esp
+	pop ebx                 ; Pop the segment descriptor from the stack
+	mov ds, bx              ; Clear segment register's
+	mov es, bx              ; Clear segment register's
+	mov fs, bx              ; Clear segment register's
+	mov gs, bx              ; Clear segment register's
+	popa                    ; pop: ds, edi, esi, ebp, esp, ebx, edx, ecx, eax
+	add esp, 8              ; Clean up error code and push number
+    iret                    ; An ISR has to end with the iret opcode. Use iretq instead if targeting 64-bit. 
+                            ; Concurrent NMIs are delivered to the CPU one by one. IRET signals to the NMI circuitry that another NMI can now be delivered.
+
+
 ; =============================
 ; LABEL - isr_stub_table
 ; This label is a vector, created using a NASM macro
 ; =============================
 isr_stub_table:
 %assign i 0
-%rep    32
+%rep    48
     dd isr_stub_%+i ; use DQ instead if targeting 64-bit
 %assign i i+1
 %endrep
@@ -158,3 +210,26 @@ isr_noret 28
 isr_noret 29
 isr_return 30
 isr_noret 31
+
+; =========================
+; IRQs Below
+; =========================
+; Here we are invoking the macros created above
+; The first parameter we are passing is the isr_stub_table vector index
+; The second parameter we are passing is the irq offset index
+irq_stub 32, 0
+irq_stub 33, 1
+irq_stub 34, 2
+irq_stub 35, 3
+irq_stub 36, 4
+irq_stub 37, 5
+irq_stub 38, 6
+irq_stub 39, 7
+irq_stub 40, 8
+irq_stub 41, 9
+irq_stub 42, 10
+irq_stub 43, 11
+irq_stub 44, 12
+irq_stub 45, 13
+irq_stub 46, 14
+irq_stub 47, 15

@@ -14,6 +14,8 @@
  *     executed with a source operand of 1 in the EAX register, bit 9 of the CPUID feature 
  *     flags returned in the EDX register indicates the presence (set) or absence (clear) of a 
  *     local APIC.
+ * 
+ * 
  */
 namespace apic {
     /**

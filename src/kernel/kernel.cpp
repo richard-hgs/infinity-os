@@ -1,6 +1,7 @@
 #include <stdint.h>
 // legacy drivers
 #include "vga.h"
+#include "keyboard.h"
 // stdlibs
 #include "stdio.h"
 // cpu
@@ -11,7 +12,11 @@
 #include "cpuid.h"
 // memory
 #include "kheap.h"
+// sys
+#include "io.h"
 #include "kernel.h"
+
+extern "C" void gen_interrupt(int index);
 
 // extern "C" void _start();
 
@@ -35,33 +40,48 @@ extern "C" int kmain()
 
     // Install a new GDT table
     gdt::install();
-    vga::printStr("GDT         - Install: OK\n");
+    vga::printStr("GDT            - Install: OK\n");
 
     // Install ISR and IDT tables
+    // Remap the PIC offsets into the IDT table 32 and 40 and setup the IRQs
     isr::install();
-    vga::printStr("IDT and ISR - Install: OK\n");
+    vga::printStr("IDT, ISR, IRQ  - Install: OK\n");
 
     // Install APIC
-    errorCode = apic::install();
-    handleError(errorCode, "APIC");
-    vga::printStr("APIC        - Install: OK\n");
+    // errorCode = apic::install();
+    // handleError(errorCode, "APIC");
+    // vga::printStr("APIC        - Install: OK\n");
 
     // Install HEAP - Kernel Heap
     // kheap::install();
     // vga::printStr("HEAP - Install: OK\n");
 
     // Install MMU - Paging tables
-    paging::install();
-    vga::printStr("MMU Paging  - Install: OK\n");
+    // paging::install();
+    // vga::printStr("MMU Paging    - Install: OK\n");
     // paging::test();
 
+    // Install Keyboard - Clear mask in PIC
+    keyboard::install();
+    vga::printStr("PS/2 Keyboard - Install: OK\n");
     // uint32_t eax;
     // uint32_t ebx;
     // uint32_t ecx;
     // uint32_t edx;
     // cpuid::getCpuid(1, &eax, &ebx, &ecx, &edx);
 
-    cpuid::printCpuInfo();
+    // uint32_t divisor = 1193180 / 1193;
+	// uint8_t low = (uint8_t)(divisor & 0xff);
+	// uint8_t high = (uint8_t)((divisor >> 8) & 0xff);
+	// io::outb(0x43, 0x36);
+	// io::outb(0x40, low);
+	// io::outb(0x40, high);
+
+    // gen_interrupt(33);
+
+    // cpuid::printCpuInfo();
+
+
 
     // stdio::kprintf("cpuid - eax: %x - ebx: %x - ecx: %x - edx: %x\n", eax, ebx, ecx, edx);
 
@@ -71,10 +91,10 @@ extern "C" int kmain()
 	// __asm__ ("div %0" :: "r"(0));
 
     // Dont consume cpu
-    __asm__ volatile ("cli; hlt");  // Halt the cpu. Waits until an IRQ occurs
+    // __asm__ volatile ("cli; hlt");  // Halt the cpu. Waits until an IRQ occurs
 
     // Idle process consumes cpu
-    // while(1) {}
+    while(1) {}
 
     return 0;
 }
