@@ -26,7 +26,8 @@
   - ✅ IDT - Interrupt Descriptor Table;
   - ✅ ISR - Interrupt Service Routine;
       - ✅ Handle Interruptions (0-31);
-      - ✅ Kernel Interruptions (Kernel Syscalls);
+      - ✅ PIC Interruptions (32-47);
+      - ✅ Kernel Interruptions (48-255) (Kernel Syscalls);
           - ✅ int 0x30 Syscall test;
   - ✅ PIC 8259 - Programmable Interrupt Controller;
       - ✅ Remaped the Master and Slave PIC IRQs vectors to offsets (Master = 0x20), (Slave = 0x28);
@@ -36,7 +37,7 @@
   - ⬜ APIC - Advanced Programmable Interrupt Controller;
   - ✅ CPUID - Central Processing Unit Identification;
      - ✅ Vendor id implemented to get the CPU vendor, like AMD, INTEL, ARM, etc;
-     - ✅ FUNC EAX=1 Fully implemented to get the CPU capabilities;
+     - ✅ Func EAX=1 Fully implemented to get the CPU capabilities;
      - ⬜ Not fully implemented yet;
   - ✅ MMU - Memory Management Unity or Paging;
       - ✅ PageDirs and PageTables configured;
