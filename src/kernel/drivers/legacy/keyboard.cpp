@@ -1,8 +1,13 @@
 // cpu
-#include "pic.h"
 #include "isr.h"
+// stdio
+#include "stdio.h"
 #include "keyboard.h"
 
+void keyboardInterruptHandler(registers_t* r) {
+    stdio::kprintf("keyboard\n");
+}
+
 void keyboard::install() {
-    pic::clearMask(IRQ1);
+    isr::registerIsrHandler(IRQ1, keyboardInterruptHandler);
 }

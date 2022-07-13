@@ -9,8 +9,11 @@
 #include "isr.h"
 
 #define IDT_MESSAGES_LEN 32
+#define INTERRUPT_HANDLERS_SIZE 256
 
-const char* idt_messages[IDT_MESSAGES_LEN] {                        // 627 length
+isr_t interruptHandlers[INTERRUPT_HANDLERS_SIZE];
+
+const char* idtMessages[IDT_MESSAGES_LEN] {                        // 627 length
     "Fault - (DE) Divide Error",                                    // 25 length
     "Fault/Trap - (DB) Intel Debug",                                // 29 length
     "Interrupt - (NMI) Interrupt",                                  // 27 length
@@ -45,24 +48,33 @@ const char* idt_messages[IDT_MESSAGES_LEN] {                        // 627 lengt
     0  // 31 - (IR) Intel Reserved
 };
 
-extern "C" void* isr_stub_table[];
+extern "C" void* isr_stub_table[];  // Reference to ISR function pointers
 
 extern "C" void isr_handler(registers_t* r) {
     // Print the interruption cause
-    stdio::kprintf("ISR(%d) - ERR_CODE(%d) - %s\n", r->int_no, r->err_code, IFNULL(r->int_no < IDT_MESSAGES_LEN ? idt_messages[r->int_no] : "User - (UI) User interruption", "Reserved - (IR) Intel Reserved"));
+    stdio::kprintf("ISR(%d) - ERR_CODE(%d) - %s\n", r->int_no, r->err_code, IFNULL(r->int_no < IDT_MESSAGES_LEN ? idtMessages[r->int_no] : "User - (UI) User interruption", "Reserved - (IR) Intel Reserved"));
     stdio::kprintf("CPU - eip: %x - cs: %x - ss: %x - ebp: %x - esp: %x\n", r->eip, r->cs, r->ss, r->ebp, r->esp);
     __asm__ volatile ("cli; hlt");  // Halt the cpu Completely hangs the computer
     return;
 }
 
 extern "C" void irq_handler(registers_t* r) {
-    stdio::kprintf("IRQ(%d) - IRQ_CODE(%d)\n", r->int_no, r->err_code);
-    pic::sendEOI(r->err_code & 0xFF);
+    // stdio::kprintf("IRQ(%d) - IRQ_CODE(%d)\n", r->int_no, r->err_code);
+    
+    if (interruptHandlers[r->int_no] != 0) {
+        interruptHandlers[r->int_no](r); // If the handler is not null notify the handler about the interruption
+    }
+
+    pic::sendEOI(r->err_code & 0xFF); // Send the EOI End Of Interruption signal to the PIC IRQ line that was triggered
     return;
 }
 
+extern "C" void isr48_handler(IntRegisters* r) {
+    stdio::kprintf("ISR(48 - 0x30) - Handler\n");
+}
+
 void isr::install() {
-    __asm__ __volatile__("cli");
+    __asm__ __volatile__("cli");  // Clear the interrupt flag in flags CPU Register
     uint8_t i;
 
     // Setup the isr interrupt functions that was created in isr_int.asm
@@ -78,8 +90,18 @@ void isr::install() {
     for (; i<48; i++) {
         idt::setGate(i, (uint32_t) isr_stub_table[i]);
     }
+    
+    // Setup the user interrupt functions that was created in isr_int.asm
+    for (; i<49; i++) {
+        idt::setGate(i, (uint32_t) isr_stub_table[i]);
+    }
 
     idt::install();
-    __asm__ __volatile__("sti");
+    __asm__ __volatile__("sti");  // Set the interrupt flag in flags CPU Register
 }
 
+void isr::registerIsrHandler(uint8_t isrIndex, isr_t handler) {
+    if (isrIndex < INTERRUPT_HANDLERS_SIZE) {
+        interruptHandlers[isrIndex] = handler;
+    }
+}

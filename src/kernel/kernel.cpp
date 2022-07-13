@@ -2,6 +2,7 @@
 // legacy drivers
 #include "vga.h"
 #include "keyboard.h"
+#include "pit.h"
 // stdlibs
 #include "stdio.h"
 // cpu
@@ -61,14 +62,13 @@ extern "C" int kmain()
     // vga::printStr("MMU Paging    - Install: OK\n");
     // paging::test();
 
-    // Install Keyboard - Clear mask in PIC
+    // Install PIT - Programmable Interval Timer
+    pit::install();
+    vga::printStr("PIT           - Install: OK\n");
+
+    // Install PS/2 - Keyboard
     keyboard::install();
     vga::printStr("PS/2 Keyboard - Install: OK\n");
-    // uint32_t eax;
-    // uint32_t ebx;
-    // uint32_t ecx;
-    // uint32_t edx;
-    // cpuid::getCpuid(1, &eax, &ebx, &ecx, &edx);
 
     // uint32_t divisor = 1193180 / 1193;
 	// uint8_t low = (uint8_t)(divisor & 0xff);
@@ -76,11 +76,15 @@ extern "C" int kmain()
 	// io::outb(0x43, 0x36);
 	// io::outb(0x40, low);
 	// io::outb(0x40, high);
+    
+    // Test interruption
+    __asm__ __volatile__("int $0x30");
 
-    // gen_interrupt(33);
+    vga::printStr("teste\n");
+
+    __asm__ __volatile__("int $0x30");
 
     // cpuid::printCpuInfo();
-
 
 
     // stdio::kprintf("cpuid - eax: %x - ebx: %x - ecx: %x - edx: %x\n", eax, ebx, ecx, edx);

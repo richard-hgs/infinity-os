@@ -8,6 +8,7 @@
 
 [extern isr_handler]        ; Reference isr_handler exported function from isr.cpp file
 [extern irq_handler]        ; Reference irq_handler exported function from isr.cpp file
+[extern isr48_handler]      ; Reference isr48_handler exported function from isr.cpp file
 [global isr_stub_table]     ; Export isr_stub_table vector to be used in isr.cpp file
 
 ; NASM - Macros
@@ -164,7 +165,7 @@ irq_dispatcher:
 ; =============================
 isr_stub_table:
 %assign i 0
-%rep    48
+%rep    49
     dd isr_stub_%+i ; use DQ instead if targeting 64-bit
 %assign i i+1
 %endrep
@@ -233,3 +234,25 @@ irq_stub 44, 12
 irq_stub 45, 13
 irq_stub 46, 14
 irq_stub 47, 15
+
+isr_stub_48:
+    cli
+    pusha
+    mov ax, 0x10
+    mov ds, ax
+    mov es, ax
+    mov gs, ax
+    mov fs, ax
+    mov ss, ax
+    
+    call isr48_handler
+    
+    mov eax, 0x10
+    mov ss, ax
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+    popa
+    sti
+    iret 

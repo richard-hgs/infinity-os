@@ -23,7 +23,7 @@
 #define IRQ15 47	// Drives IDE secundários
 
 /**
- * @brief ISR Behind the scenes
+ * @brief ISR - Interrupt Service Routine
  * 
  * If an interrupt occurred in userspace (actually in a different privilege level), CPU does the following:
  *  - Temporarily saves (internally) the current contents of the SS, ESP, EFLAGS, CS and EIP registers.
@@ -50,8 +50,33 @@ typedef struct registers {
 	uint32_t eip, cs, eflags, useresp, ss;
 } __attribute__((packed)) registers_t;
 
+typedef struct
+{
+    unsigned int edi, esi, ebp, esp, ebx, edx, ecx, eax;
+    unsigned int eip, cs, eflags;
+} IntRegisters;
+
+/**
+ * @brief Create an isr_t function type that receives a registers_t* as an argument
+ * 
+ */
+typedef void (*isr_t)(registers_t*);
+
 namespace isr {
+	/**
+	 * @brief Install and configure the ISR
+	 * 
+	 */
     void install();
+
+	/**
+	 * @brief Register an interrupt handler to given ISR Index. 
+	 *        If a handler is assigned to given index it will be replaced.
+	 * 
+	 * @param isrIndex 	ISR Index
+	 * @param handler 	callback handler
+	 */
+	void registerIsrHandler(uint8_t isrIndex, isr_t handler);
 }
 
 #endif
