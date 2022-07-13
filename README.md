@@ -18,13 +18,26 @@
       - ✅ %d = Integer data type;
       - ✅ %x = Hex representation of int data type;
       - ✅ %b = Binary representation of int data type;
+  - ⬜ PS/2 Keyboard;
+      - ⬜ Key code scan read;
+  - ✅ PIT - Programmable Interval Timer;
+      - ✅ Minimum implementation, not used yet;
   - ✅ GDT - Global Descriptor Table;
   - ✅ IDT - Interrupt Descriptor Table;
   - ✅ ISR - Interrupt Service Routine;
       - ✅ Handle Interruptions (0-31);
-      - ⬜ User Interruptions (syscalls);
+      - ✅ Kernel Interruptions (Kernel Syscalls);
+          - ✅ int 0x30 Syscall test;
+  - ✅ PIC 8259 - Programmable Interrupt Controller;
+      - ✅ Remaped the Master and Slave PIC IRQs vectors to offsets (Master = 0x20), (Slave = 0x28);
+      - ✅ Maskable IRQs lines. Mask function implemented to disable/enable IRQs lines from being triggered by hardware and notified to the CPU.
+      - ✅ EOI - End Of Interruption. Implemented to clear the In Service Register (ISR).
+      - ✅ Possibility to disable the PIC to use in it's place the APIC;
   - ⬜ APIC - Advanced Programmable Interrupt Controller;
-  - ⬜ CPUID - Central Processing Unit Identification;
+  - ✅ CPUID - Central Processing Unit Identification;
+     - ✅ Vendor id implemented to get the CPU vendor, like AMD, INTEL, ARM, etc;
+     - ✅ FUNC EAX=1 Fully implemented to get the CPU capabilities;
+     - ⬜ Not fully implemented yet;
   - ✅ MMU - Memory Management Unity or Paging;
       - ✅ PageDirs and PageTables configured;
       - ✅ Kernel mapped successfully;
