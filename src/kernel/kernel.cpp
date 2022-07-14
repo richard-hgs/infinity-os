@@ -15,6 +15,7 @@
 #include "kheap.h"
 // sys
 #include "io.h"
+#include "sysfuncs.h"
 #include "kernel.h"
 
 extern "C" void gen_interrupt(int index);
@@ -78,7 +79,16 @@ extern "C" int kmain()
 	// io::outb(0x40, high);
     
     // Test interruption
-    __asm__ __volatile__("int $0x30");
+    // __asm__ __volatile__("int $0x30");
+
+    // __asm__ __volatile__ (
+    //     "mov %0, %%eax;"
+    //     "mov %1, %%esi;"
+    //     "int $0x30;" 
+    //     : /* output */ 
+    //     : /* input */ "r"(1), "r"("testando123")
+    //     : /* clobbers */ "eax", "esi"
+    // );
 
     // vga::printStr("teste\n");
 

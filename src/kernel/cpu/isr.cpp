@@ -70,8 +70,8 @@ extern "C" void irq_handler(registers_t* r) {
     return;
 }
 
-extern "C" void isr48_handler(IntRegisters* r) {
-    syscalls::syscallHandler(r);
+extern "C" void isr48_handler(IntRegisters r) {
+    syscalls::syscallHandler(&r);
 }
 
 void isr::install() {

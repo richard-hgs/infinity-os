@@ -44,7 +44,13 @@
       - ✅ Kernel mapped successfully;
       - ✅ VGA memory mapped successfully;
       - ⬜ I/O ports mapped successfully;
-  - ⬜ Process scheduling;
+  - ✅ SYSCALLS - System calls that is executed when a SYSFUNCS is called;
+      - ✅ INT 0x30(48) - General Syscall that handle all SYSFUNCS;
+          - ✅ EAX 0x01(1) - VGA - printStr
+  - ⬜ Programs/Processes/Libs;
+      - ✅ SYSFUNCS - System Functions that runs in user mode and perform SYSCALLS;
+          - ✅ VGA - Video Graphics Array;
+              - ✅ TEXT - printStr - Prints raw text with escape sequences only in the screen;
       - ⬜ Idle process creation;
       - ⬜ VGA process creation;
           - ⬜ Communicate with kernel using IDT Interruptions to access VGA memory;
