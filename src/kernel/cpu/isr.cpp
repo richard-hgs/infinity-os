@@ -6,6 +6,7 @@
 // stdlibs
 #include "stdio.h"      // Debug only
 #include "stdlib.h"
+#include "syscalls.h"
 #include "isr.h"
 
 #define IDT_MESSAGES_LEN 32
@@ -70,7 +71,7 @@ extern "C" void irq_handler(registers_t* r) {
 }
 
 extern "C" void isr48_handler(IntRegisters* r) {
-    stdio::kprintf("ISR(48 - 0x30) - Handler\n");
+    syscalls::syscallHandler(r);
 }
 
 void isr::install() {

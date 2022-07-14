@@ -64,11 +64,11 @@ extern "C" int kmain()
 
     // Install PIT - Programmable Interval Timer
     pit::install();
-    vga::printStr("PIT           - Install: OK\n");
+    vga::printStr("PIT Timer      - Install: OK\n");
 
     // Install PS/2 - Keyboard
     keyboard::install();
-    vga::printStr("PS/2 Keyboard - Install: OK\n");
+    vga::printStr("PS/2 Keyboard  - Install: OK\n");
 
     // uint32_t divisor = 1193180 / 1193;
 	// uint8_t low = (uint8_t)(divisor & 0xff);
@@ -80,9 +80,9 @@ extern "C" int kmain()
     // Test interruption
     __asm__ __volatile__("int $0x30");
 
-    vga::printStr("teste\n");
+    // vga::printStr("teste\n");
 
-    __asm__ __volatile__("int $0x30");
+    // __asm__ __volatile__("int $0x30");
 
     // cpuid::printCpuInfo();
 
