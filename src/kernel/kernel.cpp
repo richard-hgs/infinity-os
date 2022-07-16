@@ -79,6 +79,7 @@ extern "C" int kmain()
 	// io::outb(0x40, high);
     
     // Test interruption
+    sysfuncs::printStr("testando123\n");
     // __asm__ __volatile__("int $0x30");
 
     // __asm__ __volatile__ (

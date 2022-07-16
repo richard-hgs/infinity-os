@@ -6,8 +6,12 @@ LIB_INCLUDE_DIRS_OBJ=
 # LIB_INCLUDE_DIRS_OBJ=$(BUILD_DIR)libs/libc/
 # LIB_INCLUDE_NAMES=libc
 
-KERNEL_INCLUDE_DIRS := $(shell find './' -type d)
-KERNEL_INCLUDE_DIRS := $(patsubst %, -I%, $(KERNEL_INCLUDE_DIRS))
+INCLUDE_DIRS=cpu|drivers|memory|stdlibs|sys|programs/libs
+
+# KERNEL_INCLUDE_DIRS := $(shell find './' -type d)
+KERNEL_INCLUDE_DIRS := $(shell find . -type d -regextype posix-egrep -regex ".*/*($(INCLUDE_DIRS)).*")
+KERNEL_INCLUDE_DIRS := ./ $(KERNEL_INCLUDE_DIRS)
+KERNEL_INCLUDE_DIRS := $(patsubst %,-I%, $(KERNEL_INCLUDE_DIRS))
 
 LIB_INCLUDE_DIRS := $(patsubst %, -I%, $(LIB_INCLUDE_DIRS))
 LIB_INCLUDE_OBJS := $(shell find '$(LIB_INCLUDE_DIRS_OBJ)' -type f -name '*.a')
@@ -15,14 +19,16 @@ LIB_INCLUDE_OBJS := $(LIB_INCLUDE_OBJS)
 
 # /usr/lib/gcc/x86_64-linux-gnu/6/32/libgcc.a
 
-KERNEL_INCLUDE_DIRS := $(KERNEL_INCLUDE_DIRS) $(LIB_INCLUDE_DIRS)
+KERNEL_INCLUDE_DIRS := $(KERNEL_INCLUDE_DIRS)$(LIB_INCLUDE_DIRS)
 
 LIB_INCLUDE_NAMES := $(patsubst %, -l%, $(LIB_INCLUDE_NAMES))
 
 KERNEL_ASM_SOURCES := $(shell find './' -type f -name '*.asm')
 KERNEL_ASM_OBJECTS := $(patsubst ./%.asm, $(BUILD_DIR)$(CURRENT_DIR)/%.asm.o, $(KERNEL_ASM_SOURCES))
 
-KERNEL_C_SOURCES := $(shell find './' -type f -name '*.cpp')
+# KERNEL_C_SOURCES := $(shell find './' -type f -name '*.cpp')
+KERNEL_C_SOURCES := $(shell find . -type f -regextype posix-egrep -regex ".*/($(INCLUDE_DIRS)).+(\.cpp)+")
+KERNEL_C_SOURCES := $(shell find ./ -type f -maxdepth 1 -name '*.cpp') $(KERNEL_C_SOURCES)
 KERNEL_C_OBJECTS := $(patsubst ./%.cpp, $(BUILD_DIR)$(CURRENT_DIR)/%.cpp.o, $(KERNEL_C_SOURCES))
 
 AS=nasm
@@ -85,7 +91,8 @@ $(TARGET_ELF): $(OBJECTS)
 	objdump -sj.rodata $^ > $(TARGET_RODATA)
 
 test:
-	$(info $$var is [${OBJECTS}])
+	$(info $$var is [${KERNEL_INCLUDE_DIRS}]) \
+ 	$(info $$var is [${KERNEL_C_SOURCES}])
 
 clean:
 	rm -f $(OBJECTS) $(TARGET) *.elf
