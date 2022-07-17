@@ -3,6 +3,7 @@ BUILD_DIR=../../../../../build/
 CURRENT_DIR=programs/user/$(shell basename $(CURDIR))
 TARGET_DIR=$(BUILD_DIR)$(CURRENT_DIR)
 DEFAULT_LINK=../linkdefault.ld
+HEX_VAR_NAME=shell_bin
 
 # INCLUDE FILES
 SHELL_INCLUDE_DIRS := -I../../libs/sys
@@ -20,7 +21,7 @@ TARGET_ELF=$(BUILD_DIR)$(CURRENT_DIR)/shell.elf
 TARGET_MAP=$(BUILD_DIR)$(CURRENT_DIR)/shell.map
 TARGET_DUMP=$(BUILD_DIR)$(CURRENT_DIR)/shell.dump
 TARGET_RODATA=$(BUILD_DIR)$(CURRENT_DIR)/shell.rodata
-TARGET_HEX=$(BUILD_DIR)$(CURRENT_DIR)/shell.hex
+TARGET_HEX=$(BUILD_DIR)$(CURRENT_DIR)/shell.bin.h
 
 # APP SOURCE FILES AND OBJECTS
 SHELL_C_SOURCES := $(shell find './' -type f -name '*.cpp')
@@ -41,7 +42,7 @@ $(BUILD_DIR)$(CURRENT_DIR)/%.cpp.o : %.cpp
 
 $(TARGET) : $(TARGET_ELF)
 	objcopy -O binary $(TARGET_ELF) $@
-	xxd -i $@ $(TARGET_HEX)
+	xxd -i $(TARGET) | sed -e 's/unsigned char [a-z_]*/unsigned char $(HEX_VAR_NAME)/g' -e 's/unsigned int [a-z_]*/unsigned int $(HEX_VAR_NAME)_len/g' > $(TARGET_HEX)
 
 
 $(TARGET_ELF): $(OBJECTS)
@@ -50,4 +51,4 @@ $(TARGET_ELF): $(OBJECTS)
 	objdump -sj.rodata $^ > $(TARGET_RODATA)
 
 test:
- 	$(info $$var is [${TARGET_DIR}])
+	$(info $$var is [${TARGET_DIR}])
