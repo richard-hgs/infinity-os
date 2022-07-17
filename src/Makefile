@@ -24,6 +24,7 @@ all:
 	cd $(SRCDIR)/libs && $(MAKE)
 	cd $(SRCDIR)/boot && $(MAKE)
 	cd $(SRCDIR)/kernel && $(MAKE)
+	cd $(SRCDIR)/kernel/programs && $(MAKE)
 # cd $(SRCDIR)/tools/imagefs && $(MAKE)
 # cd $(SRCDIR)/tools/prsfs && $(MAKE)
 # cd $(SRCDIR)/tools/imgwrite && $(MAKE)

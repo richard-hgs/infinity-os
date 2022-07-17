@@ -4,6 +4,7 @@ CURRENT_DIR=$(shell basename $(CURDIR))
 .PHONY: all test
 
 all:
+	cd $(CURDIR)/libs && $(MAKE)
 	cd $(CURDIR)/user/shell && $(MAKE)
 
 test:
