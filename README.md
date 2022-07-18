@@ -28,7 +28,7 @@
       - ✅ CPU Interruptions (0-31);
       - ✅ PIC Interruptions (32-47);
       - ✅ Kernel Interruptions (48-255) (Kernel Syscalls);
-          - ✅ int 0x30 Syscall test;
+          - ✅ int 0x30 Syscall that handle all SYSFUNCS;
   - ✅ PIC 8259 - Programmable Interrupt Controller;
       - ✅ Remaped the Master and Slave PIC IRQs vectors to offsets (Master = 0x20), (Slave = 0x28);
       - ✅ Maskable IRQs lines. Mask function implemented to disable/enable IRQs lines from being triggered by hardware and notified to the CPU.
