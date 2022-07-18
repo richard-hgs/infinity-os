@@ -44,6 +44,12 @@
       - ✅ Kernel mapped successfully;
       - ✅ VGA memory mapped successfully;
       - ⬜ I/O ports mapped successfully;
+  - ✅ HEAP - Heap system management mechanism;
+      - ✅ SHARED - For test purpose the user process heaps are allocated inside kernel heap;
+      - ✅ KERNEL - Functions that handle kernel heap. kmalloc and kfree;
+      - ✅ PROCESS - Functions that handle user process heap. malloc and free;
+  - ✅ VFS - Virtual file system. Since we actually don't have a file system;
+      - ✅ findFile - Function to search a file by it's name in virtual file system list;
   - ✅ SYSCALLS - System calls that is executed when a SYSFUNCS is called;
       - ✅ INT 0x30(48) - General Syscall that handle all SYSFUNCS;
           - ✅ EAX 0x01(1) - VGA - printStr

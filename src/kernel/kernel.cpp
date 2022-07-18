@@ -12,7 +12,7 @@
 #include "apic.h"
 #include "cpuid.h"
 // memory
-#include "kheap.h"
+#include "heap.h"
 // sys
 #include "io.h"
 #include "sysfuncs.h"
@@ -59,8 +59,8 @@ extern "C" int kmain()
     // vga::printStr("HEAP - Install: OK\n");
 
     // Install MMU - Paging tables
-    // paging::install();
-    // vga::printStr("MMU Paging    - Install: OK\n");
+    paging::install();
+    vga::printStr("MMU Paging     - Install: OK\n");
     // paging::test();
 
     // Install PIT - Programmable Interval Timer
@@ -70,30 +70,9 @@ extern "C" int kmain()
     // Install PS/2 - Keyboard
     keyboard::install();
     vga::printStr("PS/2 Keyboard  - Install: OK\n");
-
-    // uint32_t divisor = 1193180 / 1193;
-	// uint8_t low = (uint8_t)(divisor & 0xff);
-	// uint8_t high = (uint8_t)((divisor >> 8) & 0xff);
-	// io::outb(0x43, 0x36);
-	// io::outb(0x40, low);
-	// io::outb(0x40, high);
     
     // Test interruption
     sysfuncs::printStr("testando123\n");
-    // __asm__ __volatile__("int $0x30");
-
-    // __asm__ __volatile__ (
-    //     "mov %0, %%eax;"
-    //     "mov %1, %%esi;"
-    //     "int $0x30;" 
-    //     : /* output */ 
-    //     : /* input */ "r"(1), "r"("testando123")
-    //     : /* clobbers */ "eax", "esi"
-    // );
-
-    // vga::printStr("teste\n");
-
-    // __asm__ __volatile__("int $0x30");
 
     // cpuid::printCpuInfo();
 

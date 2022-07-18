@@ -28,3 +28,20 @@ int string::strlen(char* s) {
 int string::strlen(const char* s) {
     return strlen((char*)s);
 }
+
+int string::strcmp(const char* s1, const char* s2) {
+   while (*s1 != '\0' && *s2 != '\0' && *s1 == *s2) {
+      s1++;
+      s2++;
+   }
+   return *s1 - *s2;
+}
+
+int string::strncmp(const char* s1, const char* s2, int size) {
+    while (size != 0 && *s1 != '\0' && *s2 != '\0'  && *s1 == *s2) {
+      s1++;
+      s2++;
+      size--;
+   }
+   return size == 0 ? 0 : (*s1 - *s2);
+}

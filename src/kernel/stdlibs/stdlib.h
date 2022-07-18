@@ -5,6 +5,12 @@
 #include <stdarg.h>
 
 /**
+ * @brief Null definition
+ * 
+ */
+#define NULL 0
+
+/**
  * @brief If arg1 is not null returns it, else return arg2
  */
 #define IFNULL(arg1, arg2) (arg1 ? arg1 : arg2)
