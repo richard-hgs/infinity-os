@@ -25,7 +25,7 @@
   - ✅ GDT - Global Descriptor Table;
   - ✅ IDT - Interrupt Descriptor Table;
   - ✅ ISR - Interrupt Service Routine;
-      - ✅ Handle Interruptions (0-31);
+      - ✅ CPU Interruptions (0-31);
       - ✅ PIC Interruptions (32-47);
       - ✅ Kernel Interruptions (48-255) (Kernel Syscalls);
           - ✅ int 0x30 Syscall test;
