@@ -11,3 +11,6 @@
     - CPU:
        - 50% more instructions to execute
        - Memory usage stays the same
+
+### VSCODE LINKS:
+https://clang.llvm.org/docs/ClangFormatStyleOptions.html

@@ -38,8 +38,31 @@ typedef struct {
     Heap processHeap;                                   // User process heap
 } PCB;
 
-namespace scheduler {
+typedef PCB* PID;
 
+namespace scheduler {
+    /**
+     * @brief Initialize process scheduler
+     *        Initialize allProcesses queue
+     *        Initialize readyProcesses queue
+     *        Initialize waitingProcesses queue
+     */
+    void init();
+
+    /**
+     * @brief 
+     * 
+     * @param pages 
+     * @param processName 
+     * @return unsigned int 
+     */
+    unsigned int loadProcess(unsigned int *pages, const char* processName);
+
+    /**
+     * @brief Create a new process
+     * 
+     */
+    PID createProcess(const char* processName);
 }
 
 #endif

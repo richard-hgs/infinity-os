@@ -367,6 +367,141 @@ namespace paging {
      * 
      */
     void test();
+
+    /**
+     * @brief Returns the frame number of the next free frame
+     *
+     * @return unsigned int   Next free frame number
+     */
+    unsigned int frameAlloc();
+
+    /**
+     * @brief Set the frame number (frameNr) as free to be used by some other process
+     *
+     * @param frameNr The frame number being free
+     */
+    void frameFree(unsigned int frameNr);
+
+    /**
+     * @brief Given a frameNr set if the frame is in use or free
+     *
+     * @param frameNr   The number of the frame being modified
+     * @param usage     1=in_use, 0=free
+     */
+    void frameSetUsage(unsigned int frameNr, int usage);
+
+    /**
+     * @brief Retrieve an address in RAM memory for given frameNr
+     *        Since each frame has 4096 bytes it is used to generate address multiples of 4096 bytes
+     *
+     * @param frameNr           Frame number to calculate offset
+     * @return unsigned int     Frame address
+     */
+    unsigned int frameAddress(unsigned int frameNr);
+
+    /**
+     * @brief Retrieve a PageTableEntry address from a PageDirectory PageTable entry number
+     * 
+     * @param pageDir           The directory to get the PageTableEntry address
+     * @param pageTableNr       The PageTableEntry index inside PageDirectory
+     * @return unsigned int     The address of the PageTableEntry
+     */
+    unsigned int frameAddress(PageDirectory* pageDir, unsigned int pageTableNr);
+
+    /**
+     * @brief Retrieve a PageTableEntry address from a PageDirectory PageTable entry number
+     * 
+     * @param pageDir           The directory to get the PageTableEntry address
+     * @param pageTableNr       The PageTableEntry index inside PageDirectory
+     * @param pageNr            The PageTableEntry index inside PageTable wich represents the frame
+     * @param virtualAddress    The VirtualAddress offset to get specific physical address or use 0 instead
+     * @return unsigned int     The address of the PageTableEntry
+     */
+    unsigned int framePhysicalAddress(PageDirectory* pageDir, unsigned int pageTableNr, unsigned int pageNr, unsigned int virtualAddress);
+
+    /**
+     * @brief Retrieve a frame number given a frameAddress in RAM memory
+     *
+     * @param frameAddress      Frame address in memory to calculate frame number
+     * @return unsigned int     Frame number
+     */
+    unsigned int frameNumber(unsigned int frameAddress);
+
+    /**
+     * @brief Retrieve frame amount for a given size of memory
+     *
+     * @param size              Requested size
+     * @return unsigned int     Frame count for given size
+     */
+    unsigned int sizeInFrames(unsigned int size);
+
+    /**
+     * @brief Set the fields of the given page table entry
+     *
+     * @param tableEntry    The page table entry being configured
+     * @param frameAddress  The physical page address
+     * @param present       0=Page isn't in RAM,    1=Page is in RAM;
+     * @param rw            0=Read Only,            1=Read/Write;
+     * @param userMode      0=Supervisor privilege, 1=User privilege
+     * 
+     */
+    void setPageTableEntry(PageTableEntry* tableEntry, unsigned int frameAddress, unsigned int present, unsigned int rw, unsigned int userMode);
+
+
+    /**
+     * @brief Enable the paging by setting bit 31 of cr0 register to 1
+     *
+     */
+    void pagingEnable();
+
+    /**
+     * @brief Disable the paging by setting bit 31 of cr0 register to 0
+     *
+     */
+    void pagingDisable();
+
+    /**
+     * @brief Set the pageDirectory reference in cr3 register
+     * The cr3 register holds the entry of the page that in this case is our PageDirectory ptr
+     *
+     * @param pageDirectory The start address of page tables entries
+     */
+    void setPageDirectory(PageDirectory* pageDirectory);
+
+    /**
+     * @brief Maps virtual address to physical address
+     *        virtualAddr should be 0x1000 aligned
+     *
+     * @param pageDir       The root structure that holds all PageTables and All Frames
+     * @param virtualAddr   The virtual address that will be assigned a physical address
+     * @param physicalAddr  The physical address that will be assigned to a virtual address
+     */
+    void mapPage(PageDirectory* pageDir, unsigned int virtualAddr, unsigned int physicalAddr);
+
+
+    /**
+     * @brief Reset the page to unused, usually when the page is not in memory anymore,
+     * release it to be allocated by another process.
+     * 
+     * @param virtualAddr   Virtual address where the page is located
+     */
+    void unmapPage(unsigned int virtualAddr);
+
+    /**
+     * @brief The same as the mapPage function but without the need of provide the PageDirectory ptr
+     * 
+     * @param virtualAddr   Virtual address offset of the frame
+     * @param physicalAddr  Physical address offset of the frame
+     */
+    void remoteMapPage(unsigned int virtualAddr, unsigned int physicalAddr);
+
+    /**
+     * @brief Flush page table cache.
+     * Call the setPageDirectory to set the PageDirectory* in cr3 register 
+     * that points to current PageDirectory
+     * 
+     */
+    void pagesRefresh();
 }
 
 #endif

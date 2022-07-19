@@ -1,5 +1,5 @@
 {
-    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: LLVM, UseTab: Never, IndentWidth: 4, TabWidth: 4, BreakBeforeBraces: Attach, AllowShortIfStatementsOnASingleLine: false, IndentCaseLabels: false, ColumnLimit: 0, AccessModifierOffset: -4, PointerAlignment: Left }",
+    "C_Cpp.clang_format_fallbackStyle": "{ BasedOnStyle: LLVM, UseTab: Never, IndentWidth: 4, TabWidth: 4, BreakBeforeBraces: Attach, AllowShortIfStatementsOnASingleLine: false, IndentCaseLabels: false, NamespaceIndentation: All, ColumnLimit: 0, AccessModifierOffset: -4, PointerAlignment: Right, SpaceAfterCStyleCast: true }",
     "files.associations" : {
         "*.h": "cpp",
         "*.cpp": "cpp",
