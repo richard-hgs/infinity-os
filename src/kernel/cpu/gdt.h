@@ -8,6 +8,26 @@
 
 /** 
  * GDT - Global Descriptor Table - Intel x86 and x86_64
+ * 
+ * The global descriptor table maps the memory and provide protection to memory areas.
+ * Those areas are defined with memory segment descriptors wich contains the base address and the limit address.
+ * The first segment is a required NULL SEGMENT DESCRIPTOR wich starts at offset 0x00.
+ * Each segment descriptor holds a structure that is 8 bytes long.
+ *    - 1º Segment starts at offset 0x08
+ *    - 2º Segment starts at offset 0x10
+ *    - ... until all segments you want are fullfilled.
+ * 
+ * Data segment registers (ds) and code segment registers (cs) must be configured with one of the offset of the segments of the GDT.
+ *    - If you want to execute a kernel code for instance since it is in 1º position of GDT:
+ *    		- Jmp far sets the cs segment before executing it.
+ *          - JMP 0x8:0x0001000 will set the   
+ *    - If you want to access the data in kernel data segment since it is in 2º position of GDT:
+ *          - mov ax, 0x10
+ *          - mov ds, ax
+ *          - mov es, ax
+ *          - ... until all data registers are set
+ *          - When data segments are configured we can access memory from the start of the offset base address until its limit address.
+ *    - In our kernel 
  *  __________________________________________________________________
  * |   bits    |    Function   | Description		 			      |
  * |  [ 0-15]  |  Limit 0:15   | First 16 bits in the segment limiter |
@@ -71,7 +91,7 @@
  *
  * - DPL=Descriptor privilege level:
  *     - Privilege level (ring) required to access this descriptor.
- *     - Is the privilege level of a segment. It defines the minimum1 privilege level required to access the segment.
+ *     - Is the privilege level of a segment. It defines the minimum privilege level required to access the segment.
  *     - Privilege levels range from 0-3 * lower numbers are more privileged.
  *
  * - S :

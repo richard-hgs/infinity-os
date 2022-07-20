@@ -16,6 +16,8 @@
 // sys
 #include "io.h"
 #include "sysfuncs.h"
+// scheduler
+#include "scheduler.h"
 #include "kernel.h"
 
 extern "C" void gen_interrupt(int index);
@@ -71,8 +73,19 @@ extern "C" int kmain()
     keyboard::install();
     vga::printStr("PS/2 Keyboard  - Install: OK\n");
     
+    // Install HEAP
+    heap::initKheap();
+    vga::printStr("KERNEL HEAP    - Install: OK\n");
+
+    scheduler::init();
+    PID pidShell = scheduler::createProcess("shell.exe");
+    scheduler::resumeProcess(pidShell);
+    scheduler::processLoadContext(pidShell);
+
+    // stdio::kprintf("pidShell 0x%x\n", (int) pidShell);
+
     // Test interruption
-    sysfuncs::printStr("testando123\n");
+    // sysfuncs::printStr("testando123\n");
 
     // cpuid::printCpuInfo();
 

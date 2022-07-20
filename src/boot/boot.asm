@@ -170,7 +170,7 @@ START:
     mov cr0, eax ;switch to protected mode
     ;sti
 
-    mov ax, 0x10
+    mov ax, 0x10 ; 0x10 is the offset in the GDT to our data segment
     mov ds, ax
     mov es, ax
     mov gs, ax

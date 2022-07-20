@@ -58,8 +58,8 @@
           - ✅ VGA - Video Graphics Array;
               - ✅ TEXT - printStr - Prints raw text with escape sequences only in the screen;
       - ⬜ Idle process creation;
-      - ⬜ VGA process creation;
-          - ⬜ Communicate with kernel using IDT Interruptions to access VGA memory;
-          - ⬜ Hello World Print;
+      - ✅ SHELL process creation;
+          - ✅ Communicate with kernel using IDT Interruptions to access VGA memory;
+          - ✅ Hello World Print;
 
       

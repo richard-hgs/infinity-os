@@ -6,7 +6,7 @@ FileNode fileList[] = {
     { "shell.exe", shell_bin_len, shell_bin }
 };
 
-unsigned int filesCount = sizeof(fileList) / sizeof(FileNode);
+const unsigned int filesCount = sizeof(fileList) / sizeof(FileNode);
 
 FileNode* fs::findFile(const char* fileName) {
     unsigned int i;

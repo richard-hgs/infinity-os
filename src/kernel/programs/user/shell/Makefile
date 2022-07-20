@@ -42,7 +42,7 @@ $(BUILD_DIR)$(CURRENT_DIR)/%.cpp.o : %.cpp
 
 $(TARGET) : $(TARGET_ELF)
 	objcopy -O binary $(TARGET_ELF) $@
-	xxd -i $(TARGET) | sed -e 's/unsigned char [a-z_]*/unsigned char $(HEX_VAR_NAME)/g' -e 's/unsigned int [a-z_]*/unsigned int $(HEX_VAR_NAME)_len/g' > $(TARGET_HEX)
+	xxd -i $(TARGET) | sed -e 's/unsigned char [a-z_]*/unsigned char $(HEX_VAR_NAME)/g' -e 's/unsigned int [a-z_]*/const unsigned int $(HEX_VAR_NAME)_len/g' > $(TARGET_HEX)
 
 
 $(TARGET_ELF): $(OBJECTS)

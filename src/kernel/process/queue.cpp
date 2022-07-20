@@ -31,6 +31,25 @@ int queue::add(Queue *queue, void *data) {
     return 1; // success
 }
 
+void *queue::removeFirst(Queue *queue) {
+    QueueElement_t *temp;
+    void *data;
+
+    temp = queue->front;
+    if (temp == NULL) {
+        return NULL;
+    }
+    queue->front = queue->front->next;
+    data = temp->data;
+    heap::kfree(temp);
+
+    if (queue->front == NULL) {
+        queue->rear = NULL;
+    }
+
+    return data;
+}
+
 bool queue::removeElement(Queue *queue, void *data) {
     QueueElement_t *temp, *prev;
 

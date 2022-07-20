@@ -63,6 +63,20 @@ namespace scheduler {
      * 
      */
     PID createProcess(const char* processName);
+
+    /**
+     * @brief Resume the given Process Control Block
+     * 
+     * @param pid PCB* Process Control Block
+     */
+    void resumeProcess(PID pid);
+
+    /**
+     * @brief Load the register with given Process Control Block information
+     * 
+     * @param pid PCB* Process Control Block
+     */
+    void processLoadContext(PID pid);
 }
 
 #endif

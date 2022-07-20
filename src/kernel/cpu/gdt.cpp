@@ -37,12 +37,12 @@ void gdt::install(void)
 	gdt_ptr.limit = sizeof(gdt_entry_t) * MAX_GDT_ENTRIES - 1;
 	gdt_ptr.base = (uint32_t) &gdt_entries;
 
-	gdt_set_gate(0, 0, 0, 0, 0); 						// Null Descriptor - Required
-	gdt_set_gate(1, 0, 0xffffffff, 0x9a, 0xcf); 		// Kernel - Code segment 		- (0x9a = 10011010) (0xcf = 11001111)
-	gdt_set_gate(2, 0, 0xffffffff, 0x92, 0xcf); 		// Kernel - Data segment 		- (0x9b = 10010010) (0xcf = 11001111)
-	gdt_set_gate(3, 0, 0xffffffff, 0xfa, 0xcf); 		// User   - Code segment 		- (0xfa = 11111010) (0xcf = 11001111)
-	gdt_set_gate(4, 0, 0xffffffff, 0xf2, 0xcf); 		// User   - Data segment 		- (0xf2 = 11110010) (0xcf = 11001111)
-	// gdt_set_gate(5, &tss, sizeof(tss), 0xf2, 0xcf); 	// TSS    - Task state segment
+	gdt_set_gate(0, 0, 0, 0, 0); 						// Null Descriptor - 0x00 - Required
+	gdt_set_gate(1, 0, 0xffffffff, 0x9a, 0xcf); 		// Kernel          - 0x08 - Code segment 		- (0x9a = 10011010) (0xcf = 11001111)
+	gdt_set_gate(2, 0, 0xffffffff, 0x92, 0xcf); 		// Kernel          - 0x10 - Data segment 		- (0x92 = 10010010) (0xcf = 11001111)
+	gdt_set_gate(3, 0, 0xffffffff, 0xfa, 0xcf); 		// User            - 0x18 - Code segment 	    - (0xfa = 11111010) (0xcf = 11001111)
+	gdt_set_gate(4, 0, 0xffffffff, 0xf2, 0xcf); 		// User            - 0x20 - Data segment 		- (0xf2 = 11110010) (0xcf = 11001111)
+	// gdt_set_gate(5, &tss, sizeof(tss), 0xf2, 0xcf); 	// TSS             - 0x28 - Task state segment
 
 	gdt_flush((uint32_t) &gdt_ptr);
 }
