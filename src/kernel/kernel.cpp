@@ -15,7 +15,6 @@
 #include "heap.h"
 // sys
 #include "io.h"
-#include "sysfuncs.h"
 // scheduler
 #include "scheduler.h"
 #include "kernel.h"
@@ -85,7 +84,7 @@ extern "C" int kmain()
     // stdio::kprintf("pidShell 0x%x\n", (int) pidShell);
 
     // Test interruption
-    // sysfuncs::printStr("testando123\n");
+    // sysfuncs::printStr("testando123456\n");
 
     // cpuid::printCpuInfo();
 

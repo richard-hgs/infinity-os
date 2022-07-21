@@ -6,7 +6,7 @@ LIB_INCLUDE_DIRS_OBJ=
 # LIB_INCLUDE_DIRS_OBJ=$(BUILD_DIR)libs/libc/
 # LIB_INCLUDE_NAMES=libc
 
-INCLUDE_DIRS=cpu|drivers|memory|process|stdlibs|sys|programs/libs
+INCLUDE_DIRS=cpu|drivers|memory|process|stdlibs|sys
 
 # KERNEL_INCLUDE_DIRS := $(shell find './' -type d)
 KERNEL_INCLUDE_DIRS := $(shell find . -type d -regextype posix-egrep -regex ".*/*($(INCLUDE_DIRS)).*")

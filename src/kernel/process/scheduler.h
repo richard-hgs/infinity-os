@@ -5,6 +5,8 @@
 #include <stdint.h>
 // memory
 #include "heap.h"
+// cpu
+#include "isr.h"
 
 // Process state
 #define PROC_STATE_NEW 1
@@ -77,6 +79,21 @@ namespace scheduler {
      * @param pid PCB* Process Control Block
      */
     void processLoadContext(PID pid);
+
+    /**
+     * @brief Save the Process Control Block to be resumed later
+     * 
+     * @param pid PCB* Process Control Block
+     * @param regs Registers to be saved
+     */
+    void processSaveContext(PID pid, IntRegisters* regs);
+
+    /**
+     * @brief Get the current Running Process
+     * 
+     * @return PID = PCB* Process Control Block
+     */
+    PID getRunningProcess();
 }
 
 #endif

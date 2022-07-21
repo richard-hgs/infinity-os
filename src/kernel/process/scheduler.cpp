@@ -90,21 +90,29 @@ PID scheduler::createProcess(const char* processName) {
         return NULL;
     }
 
+    int espOffset = 1;
+    int stackOffet = 2;
+    int heapOffset = 3;
+
     // Initializing process stack
-    pcb->memoryPages[PROC_MAX_MEMORY_PAGES - 2] = paging::frameAddress(paging::frameAlloc());
+    pcb->memoryPages[PROC_MAX_MEMORY_PAGES - stackOffet] = paging::frameAddress(paging::frameAlloc());
+
+    // stdio::kprintf("%s - (%d) - STACK: 0x%x\n", processName, PROC_MAX_MEMORY_PAGES - stackOffet, pcb->memoryPages[PROC_MAX_MEMORY_PAGES - stackOffet]);
 
     // Initializing heap
-    for (i = progPageCount; i < PROC_MAX_MEMORY_PAGES - 3; i++) {
+    for (i = progPageCount; i < PROC_MAX_MEMORY_PAGES - heapOffset; i++) {
         pcb->memoryPages[i] = paging::frameAddress(paging::frameAlloc());
     }
-    heap::init(&pcb->processHeap, progPageCount * FRAME_SIZE, (i - progPageCount));
+    // stdio::kprintf("%s - (%d) - HEAP: 0x%x - 0x%x\n", processName, PROC_MAX_MEMORY_PAGES - heapOffset, pcb->memoryPages[progPageCount], pcb->memoryPages[PROC_MAX_MEMORY_PAGES - heapOffset - 1]);
+
+    // heap::init(&pcb->processHeap, progPageCount * FRAME_SIZE, (i - progPageCount));
 
     // Initializing registers
     pcb->registers.EAX = 0;
     pcb->registers.EBX = 0;
     pcb->registers.ECX = 0;
     pcb->registers.EDX = 0;
-    pcb->registers.ESP = (PROC_MAX_MEMORY_PAGES - 1) * FRAME_SIZE - 4;
+    pcb->registers.ESP = (PROC_MAX_MEMORY_PAGES - espOffset) * FRAME_SIZE - 4;
     pcb->registers.EBP = 0;
     pcb->registers.ESI = 0;
     pcb->registers.EDI = 0;
@@ -117,7 +125,13 @@ PID scheduler::createProcess(const char* processName) {
     pcb->registers.FS = 0x10;
     pcb->registers.GS = 0x10;
 
+    // stdio::kprintf("%s - ESP: 0x%x\n", processName, pcb->registers.ESP);
+
     queue::add(&allProcesses, (void*) pcb->pid);
+
+    // Debug only
+    runningProcess = pcb;
+
     return pcb;
 }
 
@@ -182,4 +196,22 @@ void scheduler::processLoadContext(PID pid) {
         "iret;"
         : /* output */ : /* input */
         );
+}
+
+void scheduler::processSaveContext(PID pid, IntRegisters *regs) {
+    pid->registers.EAX = regs->eax;
+    pid->registers.EBX = regs->ebx;
+    pid->registers.ECX = regs->ecx;
+    pid->registers.EDX = regs->edx;
+    pid->registers.ESI = regs->esi;
+    pid->registers.EDI = regs->edi;
+    pid->registers.ESP = regs->esp + 12;
+    pid->registers.EBP = regs->ebp;
+    pid->registers.EFLAGS = regs->eflags;
+    pid->registers.EIP = regs->eip;
+    pid->registers.CS = regs->cs;
+}
+
+PID scheduler::getRunningProcess() {
+    return runningProcess;
 }

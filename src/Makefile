@@ -23,7 +23,7 @@ CDROM_IMG=$(SRCDIR)/boot32-barebones.iso
 all:
 	cd $(SRCDIR)/libs && $(MAKE)
 	cd $(SRCDIR)/boot && $(MAKE)
-	cd $(SRCDIR)/kernel/programs && $(MAKE)
+	cd $(SRCDIR)/programs && $(MAKE)
 	cd $(SRCDIR)/kernel && $(MAKE)
 # cd $(SRCDIR)/tools/imagefs && $(MAKE)
 # cd $(SRCDIR)/tools/prsfs && $(MAKE)

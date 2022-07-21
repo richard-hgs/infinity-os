@@ -1,13 +1,22 @@
 # BUILD THE SHELL APP
-BUILD_DIR=../../../../../build/
+BUILD_DIR=../../../../build/
 CURRENT_DIR=programs/user/$(shell basename $(CURDIR))
 TARGET_DIR=$(BUILD_DIR)$(CURRENT_DIR)
+
+LIBC_SRC_DIR=../../../libs/libc/
+STDLIBS_SRC_DIR=../../../kernel/stdlibs
+LIBSYS_SRC_DIR=../../libs/sys/
+
+STDLIBS_B_DIR=$(BUILD_DIR)kernel/stdlibs
+LIBSYS_B_DIR=$(BUILD_DIR)programs/libs/sys
+
 DEFAULT_LINK=../linkdefault.ld
 HEX_VAR_NAME=shell_bin
 
+
 # INCLUDE FILES
-SHELL_INCLUDE_DIRS := -I../../libs/sys
-SHELL_INCLUDE_OBJS := $(BUILD_DIR)programs/libs/sys/sysfuncs.cpp.o
+SHELL_INCLUDE_DIRS := -I$(LIBSYS_SRC_DIR) -I$(STDLIBS_SRC_DIR)
+SHELL_INCLUDE_OBJS := $(LIBSYS_B_DIR)/sysfuncs.cpp.o $(STDLIBS_B_DIR)/stdlib.cpp.o $(STDLIBS_B_DIR)/string.cpp.o
 
 CCX=g++
 CXXFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
@@ -49,6 +58,8 @@ $(TARGET_ELF): $(OBJECTS)
 	$(LD) $(LDFLAGS) -T$(DEFAULT_LINK) -Map=$(TARGET_MAP) -o $@ $(OBJECTS2)
 	objdump -drwC -Mintel $^ > $(TARGET_DUMP)
 	objdump -sj.rodata $^ > $(TARGET_RODATA)
+	rm -rf $(BUILD_DIR)kernel/sys/fs.cpp.o
 
 test:
-	$(info $$var is [${TARGET_DIR}])
+	ls -l $(STDLIBS_SRC_DIR) \
+	$(info $$var is [${OBJECTS2}])
