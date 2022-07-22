@@ -28,3 +28,17 @@ Rem Run compiled operating system in qemu virtual machine
 Rem qemu-system-i386 -fda ./build/floppy.img -boot a -s -soundhw pcspk
 
 qemu-system-i386 -drive format=raw,file=./build/floppy.img -m 1024M 2> NUL
+
+Rem Debug machine
+Rem qemu-system-i386 -drive format=raw,file=./build/floppy.img -s
+Rem gdb -ex "target remote localhost:1234" -ex "symbol-file ./build/kernel/kernel.elf" -ex "br *0x3d1"
+Rem --------------------- GDB COMMANDS --------------------
+Rem continue - Begin the kernel execution
+
+Rem next  1 - Step program, proceeding through subroutine calls
+Rem nexti 1 - Step one instruction, but proceed through subroutine calls
+Rem stepi 1 - Step program until it reaches a different source line
+Rem stepi 1 - Step one instruction exactly.
+
+Rem Debugging pointers
+Rem isr_48 0x64003b7 = 0x64003c8-38

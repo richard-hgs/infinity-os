@@ -18,6 +18,7 @@
       - ✅ %d = Integer data type;
       - ✅ %x = Hex representation of int data type;
       - ✅ %b = Binary representation of int data type;
+      - ✅ %0d = Leading zeros for above format types %s, %c, %d, $x, %b;
   - ⬜ PS/2 Keyboard;
       - ⬜ Key code scan read;
   - ✅ PIT - Programmable Interval Timer;

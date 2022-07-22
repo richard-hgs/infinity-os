@@ -10,7 +10,7 @@
 // SYSCALLS ARE DEFINED IN ./src/kernel/sys/syscalls.h
 #define SYSCALL_PRINT 1 // output string
 
-#define PRINTF_STR_BUFFER_SIZE 512
+#define PRINTF_STR_BUFFER_SIZE 1512
 
 void sysfuncs::printStr(const char* str) {
     // Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)

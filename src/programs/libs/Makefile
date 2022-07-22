@@ -12,7 +12,7 @@ LIB_INCLUDE_OBJS :=
 
 CCX=g++
 CXXFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
-	-fno-pic -std=c++14 -fno-rtti -fno-exceptions -Wall -Wextra \
+	-fno-pic -std=c++14 -fno-rtti -fno-exceptions -Wall -Wextra -g \
 	-I. $(LIB_INCLUDE_DIRS)
 LDFLAGS = --Ttext 0x0 --oformat binary -m elf_i386
 LD = ld

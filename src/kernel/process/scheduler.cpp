@@ -55,12 +55,16 @@ unsigned int scheduler::loadProcess(unsigned int *pages, const char* processName
         }
 
         for (auto j = 0u; j < bytesToCopy; j++) {
-            programText[j] = program->data[i*FRAME_SIZE + j];
+            programText[j] = program->data[i * FRAME_SIZE + j];
         }
 
         bytesCopied += bytesToCopy;
         paging::unmapPage(pages[i]);
+
+        stdio::kprintf("SCHED - allocatingPages: 0x%x\n", pages[i]);
     }
+
+    stdio::kprintf("SCHED - bytesCopied: %d\n", bytesCopied);
 
     return pageCount;
 }

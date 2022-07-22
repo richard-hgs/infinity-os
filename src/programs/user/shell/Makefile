@@ -20,7 +20,7 @@ SHELL_INCLUDE_OBJS := $(LIBSYS_B_DIR)/sysfuncs.cpp.o $(STDLIBS_B_DIR)/stdlib.cpp
 
 CCX=g++
 CXXFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
-	-fno-pic -std=c++14 -fno-rtti -fno-exceptions -Wall -Wextra \
+	-fno-pic -std=c++14 -fno-rtti -fno-exceptions -Wall -Wextra -g \
 	-I. $(SHELL_INCLUDE_DIRS)
 LDFLAGS = --Ttext 0x0 --oformat elf32-i386 -m elf_i386 -e main
 LD = ld

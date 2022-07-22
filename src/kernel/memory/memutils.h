@@ -100,6 +100,8 @@ namespace memutils
      * @return int {< 0 Value 1 is less than value 2, > 0 Value 1 is greather than value 2, = 0 both values equals}
      */
     int memcmp(const void *s1, const void *s2, uint32_t n);
+
+    void memHexDump(const char *desc, const void *addr, const int len, int perLine);
 }
 
 #endif
