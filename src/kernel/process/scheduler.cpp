@@ -21,6 +21,7 @@ PID runningProcess;
 Stack waitingKeyboardProcesses;
 
 PID idleProcess;
+
 unsigned int kernelESP;
 
 void scheduler::init() {
@@ -160,7 +161,13 @@ void scheduler::processLoadContext(PID pid) {
     paging::pagesRefresh();
     //kprintf("load: %s %x\n", pid->processName, pid->pid);
 
-    kernelESP = 0x6504FE0;
+    if (kernelESP == 0) { // When the first context switch is performed we save the Last Kernel ESP 
+        // kernelESP = 0x6504FE0;
+        int currentEspPtr = 0;
+        kernelESP = (unsigned int) &currentEspPtr;
+    }
+
+
     asm("push %0;"
         "pop %%esp;"
         "push %1;"

@@ -16,24 +16,31 @@ namespace sysfuncs {
      */
     void printStr(const char* str);
 
-    // /**
-    //  * @brief Prints a formatted string text with unlimited arguments
-    //  * 
-    //  * Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)
-    //  * 
-    //  *  FORMATS_SUPPORTED:
-    //  *    - %s -> Put the char* text from a argument variable in formatted string.
-    //  *    - %c -> Put the char from a argument variable in formatted string.
-    //  *    - %d -> Put the int from a argument variable in formatted string.
-    //  *    - %x -> Put the int in hex format from a argument variable in formatted string.
-    //  *    - %b -> Put the int in binary format from a argument variable in formatted string.
-    //  * 
-    //  *  ESCAPE_SEQUENCES: 
-    //  *    - \n Line feed or new line
-    //  * 
-    //  * @param str 
-    //  */
+    /**
+     * @brief Prints a formatted string text with unlimited arguments
+     * 
+     * Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)
+     * 
+     *  FORMATS_SUPPORTED:
+     *    - %s -> Put the char* text from a argument variable in formatted string.
+     *    - %c -> Put the char from a argument variable in formatted string.
+     *    - %d -> Put the int from a argument variable in formatted string.
+     *    - %x -> Put the int in hex format from a argument variable in formatted string.
+     *    - %b -> Put the int in binary format from a argument variable in formatted string.
+     * 
+     *  ESCAPE_SEQUENCES: 
+     *    - \n Line feed or new line
+     * 
+     * @param str 
+     */
     void printf(const char* str, ...);
+
+    /**
+     * @brief Stop proccess execution and return a code if an error happened
+     * 
+     * @param code 0=SUCCESS or ERROR_CODE
+     */
+    void exit(int code);
 }
 
 #endif

@@ -42,6 +42,8 @@ typedef struct {
 
 typedef PCB* PID;
 
+extern "C" unsigned int kernelESP;
+
 namespace scheduler {
     /**
      * @brief Initialize process scheduler

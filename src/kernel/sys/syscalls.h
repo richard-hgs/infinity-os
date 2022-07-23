@@ -4,9 +4,9 @@
 
 #include "isr.h"
 
-// #define SYSCALL_EXIT 100 //exit process
 
-#define SYSCALL_PRINT 1   // output string on screen equivalent to vga::printStr("text\n");
+#define SYSCALL_PRINT     1    // Print text on screen equivalent to vga::printStr("text\n");
+#define SYSCALL_PROC_EXIT 2    // Called when a proccess finish it's execution. Remove from queue and move to the next proccess;
 
 // #define SYSCALL_READLN 102 //read line from console
 // #define SYSCALL_MALLOC 103 //allocate memory in process heap

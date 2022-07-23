@@ -3,11 +3,16 @@
 // cpu
 #include "idt.h"
 #include "pic.h"
+#include "isr.h"
 // stdlibs
 #include "stdio.h"      // Debug only
 #include "stdlib.h"
+// sys
 #include "syscalls.h"
-#include "isr.h"
+// process
+#include "scheduler.h"
+
+extern "C" unsigned int kernelESP; // Imported from scheduler.cpp
 
 #define IDT_MESSAGES_LEN 32
 #define INTERRUPT_HANDLERS_SIZE 256
@@ -51,7 +56,7 @@ const char* idtMessages[IDT_MESSAGES_LEN] {                        // 627 length
 
 extern "C" void* isr_stub_table[];  // Reference to ISR function pointers
 
-extern "C" void isr_handler(registers_t* r) {
+extern "C" void isr_handler(registers_t* r) { // INTEL - ISR Handler
     // Print the interruption cause
     stdio::kprintf("ISR(%d) - ERR_CODE(%d) - %s\n", r->int_no, r->err_code, IFNULL(r->int_no < IDT_MESSAGES_LEN ? idtMessages[r->int_no] : "User - (UI) User interruption", "Reserved - (IR) Intel Reserved"));
     stdio::kprintf("CPU - eip: %x - cs: %x - ss: %x - ebp: %x - esp: %x\n", r->eip, r->cs, r->ss, r->ebp, r->esp);
@@ -59,7 +64,7 @@ extern "C" void isr_handler(registers_t* r) {
     return;
 }
 
-extern "C" void irq_handler(registers_t* r) {
+extern "C" void irq_handler(registers_t* r) { // PIC - IRQs Handler
     // stdio::kprintf("IRQ(%d) - IRQ_CODE(%d)\n", r->int_no, r->err_code);
     
     if (interruptHandlers[r->int_no] != 0) {
@@ -70,8 +75,13 @@ extern "C" void irq_handler(registers_t* r) {
     return;
 }
 
-extern "C" void isr48_handler(IntRegisters r) {
+extern "C" void isr48_handler(IntRegisters r) { // USER - ISR Handler
+    asm("mov %0, %%esp" : : "r" (kernelESP)); // Change context to the kernel stack pointer
+    PID runningProcess = scheduler::getRunningProcess();
+    scheduler::processSaveContext(runningProcess, &r);
     syscalls::syscallHandler(&r);
+    // Switch to process context to keep it's execution from where it stopped
+    scheduler::processLoadContext(runningProcess);
 }
 
 void isr::install() {
@@ -102,7 +112,5 @@ void isr::install() {
 }
 
 void isr::registerIsrHandler(uint8_t isrIndex, isr_t handler) {
-    if (isrIndex < INTERRUPT_HANDLERS_SIZE) {
-        interruptHandlers[isrIndex] = handler;
-    }
+    interruptHandlers[isrIndex] = handler;
 }
