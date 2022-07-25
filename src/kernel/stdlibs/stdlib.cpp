@@ -102,6 +102,16 @@ int	stdlib::atoi(char *str) {
 	return (num * neg);
 }
 
+void appendStr(char* strDest, const char* strSrc, int* size, int length, int leadCount) {
+	int j;
+	if (length < leadCount) {
+		(*size) -= length;
+	}
+	for(j=0; j<length; j++) {
+		*(strDest + *size) = *(strSrc + j);
+		(*size)++;
+	}
+}
 
 int stdlib::va_stringf(char *strDest, const char* strFormat, va_list list) {
 	int i;
@@ -130,13 +140,13 @@ int stdlib::va_stringf(char *strDest, const char* strFormat, va_list list) {
 				tempstr[j] = '\0';
 				leadCount = atoi(tempstr);
 
-				for (; leadCount > 0; leadCount--) { // Adds zeroes to the string before the format
+				for (j=0; j<leadCount; j++) { // Adds zeroes to the string before the format
 					*(strDest + size) = '0';
 					size++;
-					if (leadCount % 10 == 0) {
-						*(strDest + size) = ' ';
-						size++;
-					}
+					// if (j % 10 == 0) {
+					// 	*(strDest + size) = ' ';
+					// 	size++;
+					// }
 				}
 			}
 
@@ -156,27 +166,18 @@ int stdlib::va_stringf(char *strDest, const char* strFormat, va_list list) {
 					break;
 				case 'd':
 					tempint = va_arg(list, int);
-					stdlib::itoa(tempint, 10, tempstr);
-					for(j = 0; j < string::strlen(tempstr); j++) {
-                        *(strDest + size) = *(tempstr + j);
-                        size++;
-                    }
+					j = stdlib::itoa(tempint, 10, tempstr);
+					appendStr(strDest, tempstr, &size, j, leadCount);
                     break;
 				case 'x':
 					tempint = va_arg(list, int);
-					stdlib::itoa(tempint, 16, tempstr);
-					for(j = 0; j < string::strlen(tempstr); j++) {
-                        *(strDest + size) = *(tempstr + j);
-                        size++;
-                    }
+					j = stdlib::itoa(tempint, 16, tempstr);
+					appendStr(strDest, tempstr, &size, j, leadCount);
                     break;
 				case 'b':
 					tempint = va_arg(list, int);
-					stdlib::itoa(tempint, 2, tempstr);
-                    for(j = 0; j < string::strlen(tempstr); j++) {
-						*(strDest + size) = *(tempstr + j);
-						size++;
-					}
+					j = stdlib::itoa(tempint, 2, tempstr);
+					appendStr(strDest, tempstr, &size, j, leadCount);
                     break;
 				default:
 					*(strDest + size) = *(strFormat + i);

@@ -22,7 +22,7 @@ CCX=g++
 CXXFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
 	-fno-pic -std=c++14 -fno-rtti -fno-exceptions -Wall -Wextra -g \
 	-I. $(SHELL_INCLUDE_DIRS)
-LDFLAGS = --Ttext 0x0 --oformat elf32-i386 -m elf_i386 -e main
+LDFLAGS = --Ttext 0x0 --oformat elf32-i386 -m elf_i386
 LD = ld
 
 TARGET=$(BUILD_DIR)$(CURRENT_DIR)/shell.bin
@@ -56,7 +56,7 @@ $(TARGET) : $(TARGET_ELF)
 
 $(TARGET_ELF): $(OBJECTS)
 	$(LD) $(LDFLAGS) -T$(DEFAULT_LINK) -Map=$(TARGET_MAP) -o $@ $(OBJECTS2)
-	objdump -drwC -Mintel $^ > $(TARGET_DUMP)
+	objdump -drwC -Mintel $(OBJECTS2) > $(TARGET_DUMP)
 	objdump -sj.rodata $^ > $(TARGET_RODATA)
 	rm -rf $(BUILD_DIR)kernel/sys/fs.cpp.o
 

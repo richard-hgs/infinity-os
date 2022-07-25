@@ -31,9 +31,12 @@ void handleError(uint8_t errorCode, const char* errorPrefix) {
     }
 }
 
-extern "C" int kmain()
-{
+extern "C" int kmain() {
     uint8_t errorCode;
+
+    const char* OK_MSG = "OK";
+    const char* ERR_MSG = "Failed with error code";
+    const char* PS2_INSTALL_MSG = "PS/2 Keyboard  - Install:";
 
     // Clear VGA screen
     vga::clearScreen();
@@ -43,12 +46,12 @@ extern "C" int kmain()
 
     // Install a new GDT table
     gdt::install();
-    vga::printStr("GDT            - Install: OK\n");
+    stdio::kprintf("GDT            - Install: %s\n", OK_MSG);
 
     // Install ISR and IDT tables
     // Remap the PIC offsets into the IDT table 32 and 40 and setup the IRQs
     isr::install();
-    vga::printStr("IDT, ISR, IRQ  - Install: OK\n");
+    stdio::kprintf("IDT, ISR, IRQ  - Install: %s\n", OK_MSG);
 
     // Install APIC
     // errorCode = apic::install();
@@ -61,25 +64,29 @@ extern "C" int kmain()
 
     // Install MMU - Paging tables
     paging::install();
-    vga::printStr("MMU Paging     - Install: OK\n");
+    stdio::kprintf("MMU Paging     - Install: %s\n", OK_MSG);
     // paging::test();
 
     // Install PIT - Programmable Interval Timer
     pit::install();
-    vga::printStr("PIT Timer      - Install: OK\n");
+    stdio::kprintf("PIT Timer      - Install: %s\n", OK_MSG);
 
     // Install PS/2 - Keyboard
-    keyboard::install();
-    vga::printStr("PS/2 Keyboard  - Install: OK\n");
+    errorCode = keyboard::install();
+    if (errorCode == PS2_NO_ERROR) {
+        stdio::kprintf("%s %s\n", PS2_INSTALL_MSG, OK_MSG);
+    } else {
+        stdio::kprintf("%s %s %d\n", PS2_INSTALL_MSG, ERR_MSG, errorCode);
+    }
     
     // Install HEAP
     heap::initKheap();
     vga::printStr("KERNEL HEAP    - Install: OK\n");
 
-    scheduler::init();
-    PID pidShell = scheduler::createProcess("shell.exe");
-    scheduler::resumeProcess(pidShell);
-    scheduler::processLoadContext(pidShell);
+    // scheduler::init();
+    // PID pidShell = scheduler::createProcess("shell.exe");
+    // scheduler::resumeProcess(pidShell);
+    // scheduler::processLoadContext(pidShell);
 
     // stdio::kprintf("pidShell 0x%x\n", (int) pidShell);
 

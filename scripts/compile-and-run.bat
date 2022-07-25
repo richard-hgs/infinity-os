@@ -31,7 +31,7 @@ qemu-system-i386 -drive format=raw,file=./build/floppy.img -m 1024M 2> NUL
 
 Rem Debug machine
 Rem qemu-system-i386 -drive format=raw,file=./build/floppy.img -s -S
-Rem gdb -ex "target remote localhost:1234" -ex "symbol-file ./build/kernel/kernel.elf" -ex "br *0x6403523"
+Rem gdb -ex "target remote localhost:1234" -ex "symbol-file ./build/kernel/kernel.elf" -ex "br *0x6403586"
 Rem --------------------- GDB COMMANDS --------------------
 Rem continue - Begin the kernel execution
 

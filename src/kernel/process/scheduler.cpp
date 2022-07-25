@@ -7,11 +7,13 @@
 // memory
 #include "heap.h"
 #include "stack.h"
+#include "memutils.h" // Debug only
 // process
 #include "queue.h"
 // sys
 #include "fs.h"
 #include "scheduler.h"
+#include "syscalls.h"
 
 Queue allProcesses;
 Queue readyProcesses;
@@ -37,12 +39,16 @@ unsigned int scheduler::loadProcess(unsigned int *pages, const char* processName
     char *programText;
     unsigned int bytesToCopy;
     unsigned int bytesCopied = 0;
+    unsigned int binMainRetOffset = 0;      // Offset where the main function return instruction is located at program binary data
+    unsigned int binMainRetCodeOffset = 0;  // Offset where the main function return code is saved in EAX register at program binary data
 
     program = fs::findFile(processName);
     if (program == NULL) {
         return 0; // File not found
     }
 
+    // Get amount of pages to be allocated for program code size.
+    // Also appended the size of the binary of the syscall exit injected when main function return is reached.
     pageCount = paging::sizeInFrames(program->size);
 
     for (i = 0; i < pageCount; i++) {

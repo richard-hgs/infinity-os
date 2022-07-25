@@ -1,0 +1,1 @@
+qemu-system-i386 -drive format=raw,file=./build/floppy.img -m 1024M 2> NUL

@@ -13,6 +13,20 @@
 
 #define PRINTF_STR_BUFFER_SIZE 1024
 
+/**
+ * @brief Access the main function of the executable process
+ * 
+ */
+extern "C" int main();
+
+/**
+ * @brief This is the entry point of a process. It creates and access all required parameters to execute a process
+ * 
+ */
+void __attribute__((section("._start"))) _start() {
+    sysfuncs::exit(main());
+}
+
 void sysfuncs::printStr(const char* str) { // Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)
     __asm__ __volatile__ (
         "mov %0, %%eax;"

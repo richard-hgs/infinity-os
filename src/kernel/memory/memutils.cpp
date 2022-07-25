@@ -248,12 +248,12 @@ void memutils::memHexDump(const char *desc, const void *addr, const int len, int
             }
 
             // Output the offset of current line.
-            stdio::kprintf("  %04X ", i & 0xFFFF);
+            stdio::kprintf("  %04x ", i & 0xFFFF);
         }
 
         // Now the hex code for the specific character.
 
-        stdio::kprintf(" %02X", pc[i] & 0xFF);
+        stdio::kprintf(" %02x", pc[i] & 0xFF);
 
         // And buffer a printable ASCII character for later.
 
