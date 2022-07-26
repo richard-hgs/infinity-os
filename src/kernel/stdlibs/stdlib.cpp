@@ -104,8 +104,10 @@ int	stdlib::atoi(char *str) {
 
 void appendStr(char* strDest, const char* strSrc, int* size, int length, int leadCount) {
 	int j;
-	if (length < leadCount) {
+	if (length <= leadCount) {
 		(*size) -= length;
+	} else {
+		(*size) -= leadCount;
 	}
 	for(j=0; j<length; j++) {
 		*(strDest + *size) = *(strSrc + j);

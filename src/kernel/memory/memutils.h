@@ -101,6 +101,25 @@ namespace memutils
      */
     int memcmp(const void *s1, const void *s2, uint32_t n);
 
+    /**
+     * @brief Searches within the first num bytes of the block of memory pointed by ptr for the first occurrence of value 
+     *        (interpreted as an unsigned char), and returns a pointer to it.
+     * 
+     * @param ptr       Pointer to the block of memory where the search is performed.
+     * @param value     Value to be located. The value is passed as an int, but the function performs a byte per byte search using the unsigned char conversion of this value.
+     * @param n         Number of bytes to be analyzed.
+     * @return void*    A pointer to the first occurrence of value in the block of memory pointed by ptr.
+     */
+    void *memchr(const void *ptr, int value, uint32_t n);
+
+    /**
+     * @brief Print a memory dump
+     * 
+     * @param desc      Title of this memory dump
+     * @param addr      Initial address of the memory region being dumped
+     * @param len       Size of the memory dump being performed
+     * @param perLine   The amount of bytes per line. (Min=4, Max=64, Default=16)
+     */
     void memHexDump(const char *desc, const void *addr, const int len, int perLine);
 }
 

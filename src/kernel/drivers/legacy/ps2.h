@@ -1,6 +1,6 @@
 #pragma once
-#ifndef _KEYBOARD_H_
-#define _KEYBOARD_H_
+#ifndef _PS2_H_
+#define _PS2_H_
 
 // libc
 #include <stdint.h>
@@ -15,9 +15,14 @@
 #define PS2_ERROR_PORT2_TEST_CLOCK_LINE_STUCK_HIGH      7
 #define PS2_ERROR_PORT2_TEST_DATA_LINE_STUCK_LOW        8
 #define PS2_ERROR_PORT2_TEST_DATA_LINE_STUCK_HIGH       9
+#define PS2_ERROR_PORT1_RESET_ACK_ERROR                10
+#define PS2_ERROR_PORT1_RESET_SELF_TEST_ERROR          11
+#define PS2_ERROR_PORT2_RESET_ACK_ERROR                12
+#define PS2_ERROR_PORT2_RESET_SELF_TEST_ERROR          13
+
 
 /**
- * @brief 8042 PS/2 Keyboard
+ * @brief 8042 PS/2 Controller
  * 
  * DATA_PORT_0x60:
  *    - Is used for reading data that was received from a PS/2 device or from the PS/2 controller itself 
@@ -95,9 +100,9 @@
  *     | First PS/2 port data (output) | First PS/2 port clock (output) | 2º PS/2 Output buffer full | 1º PS/2 Output buffer full | 2º PS/2 port data | 2º PS/2 port clock | A20 gate (output) | System reset (output) |
  *      ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
  */
-namespace keyboard {
+namespace ps2 {
     /**
-     * @brief Initialize and configure the PS/2 Keyboard with PIC IRQs located at isr.cpp
+     * @brief Initialize and configure the PS/2 Controller with PIC (IRQ1=Port1, IRQ12=Port2) located at isr.cpp
      * 
      */
     uint8_t install();

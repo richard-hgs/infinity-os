@@ -3,10 +3,12 @@
 // cpu
 #include "isr.h"
 // stdio
-#include "stdio.h"
+#include "stdio.h" // Debug
+// memory
+#include "memutils.h"
 // sys
 #include "io.h"
-#include "keyboard.h"
+#include "ps2.h"
 
 /**
  * @brief PS/2 Controller IO Ports
@@ -32,15 +34,18 @@
  * @brief PS/2 Controller Commands
  * 
  */
-#define CTRL_CMD_READ_CONFIGURATION  0x20          // Read "byte 0" from internal RAM Controller Configuration Byte
-#define CTRL_CMD_WRITE_CONFIGURATION 0x60          // Write next byte to "byte 0" of internal RAM
-#define CTRL_CMD_PS2_PORT2_DISABLE   0xA7          // Disable seccond PS/2 port only if supported. If the controller is a "single channel" device, it will ignore the "command 0xA7"
-#define CTRL_CMD_PS2_PORT2_ENABLE    0xA8          // Enable seccond PS/2 port only if supported.
-#define CTRL_CMD_PS2_CTRL_PORT2_TEST 0xA9          // Test PS/2 Port 2
-#define CTRL_CMD_PS2_CTRL_TEST       0xAA          // Test PS/2 Controller
-#define CTRL_CMD_PS2_CTRL_PORT1_TEST 0xAB          // Test PS/2 Port 1
-#define CTRL_CMD_PS2_PORT1_DISABLE   0xAD          // Disable first PS/2 port
-#define CTRL_CMD_PS2_PORT1_ENABLE    0xAE          // Enable first PS/2 port
+#define CTRL_CMD_READ_CONFIGURATION  0x20           // Read "byte 0" from internal RAM Controller Configuration Byte
+#define CTRL_CMD_WRITE_CONFIGURATION 0x60           // Write next byte to "byte 0" of internal RAM
+#define CTRL_CMD_PS2_PORT2_DISABLE   0xA7           // Disable seccond PS/2 port only if supported. If the controller is a "single channel" device, it will ignore the "command 0xA7"
+#define CTRL_CMD_PS2_PORT2_ENABLE    0xA8           // Enable seccond PS/2 port only if supported.
+#define CTRL_CMD_PS2_CTRL_PORT2_TEST 0xA9           // Test PS/2 Port 2
+#define CTRL_CMD_PS2_CTRL_TEST       0xAA           // Test PS/2 Controller
+#define CTRL_CMD_PS2_CTRL_PORT1_TEST 0xAB           // Test PS/2 Port 1
+#define CTRL_CMD_PS2_PORT1_DISABLE   0xAD           // Disable first PS/2 port
+#define CTRL_CMD_PS2_PORT1_ENABLE    0xAE           // Enable first PS/2 port
+#define CTRL_CMD_PS2_PORT1_IN_WRITE  0xD0           // Write next byte to first  PS/2 port input buffer
+#define CTRL_CMD_PS2_PORT2_IN_WRITE  0xD4           // Write next byte to second PS/2 port input buffer (only if 2 PS/2 ports supported)
+#define CTRL_CMD_PS2_RESET           0xFF           // Reset and start self-test 0xAA=(self-test passed), 0xFC or 0xFD=(self test failed), or 0xFE=(Resend)
 
 /**
  * @brief PS/2 Controller Configuration Bits
@@ -68,16 +73,62 @@
 #define PORT_TEST_RESULT_DATA_LINE_STUCK_LOW        0x03    // Test failed - Data line stuck low
 #define PORT_TEST_RESULT_DATA_LINE_STUCK_HIGH       0x04    // Test failed - Data line stuck high
 
-uint8_t lastKbdData;
+#define DEVICE_CMD_DISABLE_SCANNING                 0xF5    // Disable scanning (If Keyboard=won't send scan codes, If Mouse=Disable Data Reporting)
+#define DEVICE_CMD_IDENTIFY                         0xF2    // Identify Device Type
 
-void keyboardInterruptHandler(registers_t* r) {
+#define DEVICE_RESP_ERROR                           0x00    // Error or internal buffer overrun
+#define DEVICE_RESP_ACK                             0xFA    // Command acknowledged (ACK)
+#define DEVICE_RESP_SELF_TEST_SUCCESS               0xAA    // Self test passed (sent after "0xFF (reset)" command or keyboard power up)
+
+/**
+ * @brief PS/2 Device types
+ * 
+ */
+// NONE=Ancient AT keyboard with translation enabled in the PS/Controller (not possible for the second PS/2 port)
+#define DEVICE_TYPE_STANDARD_MOUSE                  0x00    // Standard PS/2 mouse
+#define DEVICE_TYPE_MOUSE_WITH_SCROLL_WHEEL         0x03    // Mouse with scroll wheel
+#define DEVICE_TYPE_5_BUTTON_MOUSE                  0x04    // 5-button mouse
+#define DEVICE_TYPE_MF2_KEYBOARD_1_1                0xAB    // ‾|--> MF2 keyboard with translation enabled in the   
+#define DEVICE_TYPE_MF2_KEYBOARD_1_2                0x41    // _|    PS/Controller (not possible for the second PS/2 port)
+#define DEVICE_TYPE_MF2_KEYBOARD_2_1                0xAB    // ‾|--> MF2 keyboard with translation enabled in the   
+#define DEVICE_TYPE_MF2_KEYBOARD_2_2                0xC1    // _|    PS/Controller (not possible for the second PS/2 port)
+#define DEVICE_TYPE_MF2_KEYBOARD_3_1                0xAB    // ‾|--> MF2 keyboard  
+#define DEVICE_TYPE_MF2_KEYBOARD_3_2                0x83    // _|
+
+
+#define PS2_PORTS_DATA_BUFFER_SIZE 10
+
+unsigned char ps2Port1DataBuffer[PS2_PORTS_DATA_BUFFER_SIZE];
+unsigned char ps2Port2DataBuffer[PS2_PORTS_DATA_BUFFER_SIZE];
+
+uint8_t ps2Port1DataLength = 0;
+uint8_t ps2Port2DataLength = 0;
+
+void ps2Port1IntHandler(registers_t* r) {
+    uint8_t data;
     if (io::inb(IO_CR_STATUS) & STATUS_OUT_BUFFER_STATUS) { // Output buffer status Bit is set means that data buffer is full and we can read it now.
-        lastKbdData = io::inb(IO_DATA);
-        stdio::kprintf("keyboard %x\n", lastKbdData);
+        data = io::inb(IO_DATA);
+        if (ps2Port1DataLength < PS2_PORTS_DATA_BUFFER_SIZE) {
+            ps2Port1DataBuffer[ps2Port1DataLength] = data;
+            ps2Port1DataLength++;
+        }
+        stdio::kprintf("PS/2 port1 %x\n", data);
     }
 }
 
-uint8_t keyboard::install() {
+void ps2Port2IntHandler(registers_t* r) {
+    uint8_t data;
+    if (io::inb(IO_CR_STATUS) & STATUS_OUT_BUFFER_STATUS) { // Output buffer status Bit is set means that data buffer is full and we can read it now.
+        data = io::inb(IO_DATA);
+        if (ps2Port2DataLength < PS2_PORTS_DATA_BUFFER_SIZE) {
+            ps2Port2DataBuffer[ps2Port2DataLength] = data;
+            ps2Port2DataLength++;
+        }
+        stdio::kprintf("PS/2 port2 %x\n", data);
+    }
+}
+
+uint8_t ps2::install() {
     uint8_t data;
     bool isDualChannel; // true=PS/2 Is dual channel, false=Single chanel only
 
@@ -87,7 +138,8 @@ uint8_t keyboard::install() {
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_DISABLE);
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT2_DISABLE);
 
-    isr::registerIsrHandler(IRQ1, keyboardInterruptHandler);  // Register Keyboard IRQ handler
+    isr::registerIsrHandler(IRQ1, ps2Port1IntHandler);   // Register PS/2 Controller port1 IRQ handler
+    isr::registerIsrHandler(IRQ12, ps2Port2IntHandler);  // Register PS/2 Controller port2 IRQ handler
 
     // Flush Controller Output Buffer to avoid data stuck in buffer
     io::inb(IO_DATA);                 // Read/Discard data from buffer
@@ -102,7 +154,7 @@ uint8_t keyboard::install() {
         // stdio::kprintf("PS/2 - old config: %08b\n", data);
 
         // Enable first PS/2 port interrupt bit 0
-        data |= CTRL_CONF_PS2_PORT2_INT_ENABLED | CTRL_CONF_PS2_PORT1_INT_ENABLED;
+        data |= CTRL_CONF_PS2_PORT2_INT_ENABLED + CTRL_CONF_PS2_PORT1_INT_ENABLED;
 
         // Write configuration
         io::outb(IO_CR_STATUS, CTRL_CMD_WRITE_CONFIGURATION);
@@ -165,23 +217,52 @@ uint8_t keyboard::install() {
         io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT2_ENABLE);
     }
 
+    // Clear port1 buffer to be used to receive device reset response data
+    ps2Port1DataLength = 0;
+
     // Reset PS/2 Device 1
-    io::outb(IO_CR_STATUS, 0xD0);
-    io::outb(IO_DATA, 0xFF);
+    io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
+    io::outb(IO_DATA, CTRL_CMD_PS2_RESET);
+
+    // Check if port1 reset succeeded
+    if (!memutils::memchr(ps2Port1DataBuffer, DEVICE_RESP_ACK, ps2Port1DataLength)) { // ACK FAILED
+        return PS2_ERROR_PORT1_RESET_ACK_ERROR;
+    } else if (!memutils::memchr(ps2Port1DataBuffer, DEVICE_RESP_SELF_TEST_SUCCESS, ps2Port1DataLength)) { // SELF TEST FAILED
+        return PS2_ERROR_PORT1_RESET_SELF_TEST_ERROR;
+    }
 
     // PS/2 Device reset
     if (isDualChannel) {
+        // Clear port2 buffer to be used to receive device reset response data
+        ps2Port2DataLength = 0;
+
         // Reset PS/2 Device 2
         // Check if input buffer data needs to be read
-        // io::outb(IO_CR_STATUS, 0xD4);
-        // io::outb(IO_DATA, 0xFF);
-        // data = io::inb(0xD3);
+        io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT2_IN_WRITE);
+        io::outb(IO_DATA, CTRL_CMD_PS2_RESET);
+
+        // Check if port2 reset succeeded
+        if (!memutils::memchr(ps2Port2DataBuffer, DEVICE_RESP_ACK, ps2Port2DataLength)) { // ACK FAILED
+            return PS2_ERROR_PORT2_RESET_ACK_ERROR;
+        } else if (!memutils::memchr(ps2Port1DataBuffer, DEVICE_RESP_SELF_TEST_SUCCESS, ps2Port1DataLength)) { // SELF TEST FAILED
+            return PS2_ERROR_PORT2_RESET_SELF_TEST_ERROR;
+        }
+    }
+
+    // Clear port1 buffer to be used to receive device type data
+    ps2Port1DataLength = 0;
+    // Detect port device types
+    io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
+    io::outb(IO_CR_STATUS, DEVICE_CMD_DISABLE_SCANNING);
+    if (memutils::memchr(ps2Port1DataBuffer, DEVICE_RESP_ACK, ps2Port1DataLength)) { // ACK SUCCESS
+        io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
+        io::outb(IO_CR_STATUS, DEVICE_CMD_IDENTIFY);
     }
 
     return PS2_NO_ERROR;
 }
 
-uint8_t keyboard::testPort(uint8_t port) {
+uint8_t ps2::testPort(uint8_t port) {
     uint8_t data;
     io::outb(IO_CR_STATUS, port);
     if (io::inb(IO_CR_STATUS) & STATUS_OUT_BUFFER_STATUS) { // Output buffer status Bit is set means that data buffer is full and we can read it now.

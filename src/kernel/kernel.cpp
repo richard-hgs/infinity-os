@@ -1,7 +1,7 @@
 #include <stdint.h>
 // legacy drivers
 #include "vga.h"
-#include "keyboard.h"
+#include "ps2.h"
 #include "pit.h"
 // stdlibs
 #include "stdio.h"
@@ -36,7 +36,7 @@ extern "C" int kmain() {
 
     const char* OK_MSG = "OK";
     const char* ERR_MSG = "Failed with error code";
-    const char* PS2_INSTALL_MSG = "PS/2 Keyboard  - Install:";
+    const char* PS2_INSTALL_MSG = "PS/2 Controller - Install:";
 
     // Clear VGA screen
     vga::clearScreen();
@@ -46,12 +46,12 @@ extern "C" int kmain() {
 
     // Install a new GDT table
     gdt::install();
-    stdio::kprintf("GDT            - Install: %s\n", OK_MSG);
+    stdio::kprintf("GDT             - Install: %s\n", OK_MSG);
 
     // Install ISR and IDT tables
     // Remap the PIC offsets into the IDT table 32 and 40 and setup the IRQs
     isr::install();
-    stdio::kprintf("IDT, ISR, IRQ  - Install: %s\n", OK_MSG);
+    stdio::kprintf("IDT, ISR, IRQ   - Install: %s\n", OK_MSG);
 
     // Install APIC
     // errorCode = apic::install();
@@ -64,15 +64,15 @@ extern "C" int kmain() {
 
     // Install MMU - Paging tables
     paging::install();
-    stdio::kprintf("MMU Paging     - Install: %s\n", OK_MSG);
+    stdio::kprintf("MMU Paging      - Install: %s\n", OK_MSG);
     // paging::test();
 
     // Install PIT - Programmable Interval Timer
     pit::install();
-    stdio::kprintf("PIT Timer      - Install: %s\n", OK_MSG);
+    stdio::kprintf("PIT Timer       - Install: %s\n", OK_MSG);
 
-    // Install PS/2 - Keyboard
-    errorCode = keyboard::install();
+    // Install PS/2 - Controller
+    errorCode = ps2::install();
     if (errorCode == PS2_NO_ERROR) {
         stdio::kprintf("%s %s\n", PS2_INSTALL_MSG, OK_MSG);
     } else {
@@ -81,7 +81,7 @@ extern "C" int kmain() {
     
     // Install HEAP
     heap::initKheap();
-    vga::printStr("KERNEL HEAP    - Install: OK\n");
+    vga::printStr("KERNEL HEAP     - Install: OK\n");
 
     // scheduler::init();
     // PID pidShell = scheduler::createProcess("shell.exe");
