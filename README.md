@@ -18,8 +18,11 @@
       - ✅ %d = Integer data type;
       - ✅ %x = Hex representation of int data type;
       - ✅ %b = Binary representation of int data type;
-      - ✅ %0d = Leading zeros for above format types %s, %c, %d, $x, %b;
+      - ✅ %0d = Leading zeros for above format types %d, $x, %b;
+  - ⬜ PS/2 8042 - Controller:
+      - ⬜ Self Tests and Configuration;
   - ⬜ PS/2 Keyboard;
+      - ⬜ Self Tests and Configuration;
       - ⬜ Key code scan read;
   - ✅ PIT - Programmable Interval Timer;
       - ✅ Minimum implementation, not used yet;
@@ -53,11 +56,14 @@
       - ✅ findFile - Function to search a file by it's name in virtual file system list;
   - ✅ SYSCALLS - System calls that is executed when a SYSFUNCS is called;
       - ✅ INT 0x30(48) - General Syscall that handle all SYSFUNCS;
-          - ✅ EAX 0x01(1) - VGA - printStr
+          - ✅ EAX 0x01(1) - VGA - printStr;
+          - ✅ EAX 0x02(2) - SCHEDULER - exit;
   - ⬜ Programs/Processes/Libs;
       - ✅ SYSFUNCS - System Functions that runs in user mode and perform SYSCALLS;
           - ✅ VGA - Video Graphics Array;
               - ✅ TEXT - printStr - Prints raw text with escape sequences only in the screen;
+          - ✅ SCHEDULER - Process Scheduler;
+              - ✅ EXIT - exit - Terminate current process and return a result code, then move to the next process;
       - ⬜ Idle process creation;
       - ✅ SHELL process creation;
           - ✅ Communicate with kernel using IDT Interruptions to access VGA memory;
