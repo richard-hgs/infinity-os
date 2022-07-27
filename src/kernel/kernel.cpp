@@ -72,12 +72,12 @@ extern "C" int kmain() {
     stdio::kprintf("PIT Timer       - Install: %s\n", OK_MSG);
 
     // Install PS/2 - Controller
-    errorCode = ps2::install();
-    if (errorCode == PS2_NO_ERROR) {
-        stdio::kprintf("%s %s\n", PS2_INSTALL_MSG, OK_MSG);
-    } else {
-        stdio::kprintf("%s %s %d\n", PS2_INSTALL_MSG, ERR_MSG, errorCode);
-    }
+    // errorCode = ps2::install();
+    // if (errorCode == PS2_NO_ERROR) {
+    //     stdio::kprintf("%s %s\n", PS2_INSTALL_MSG, OK_MSG);
+    // } else {
+    //     stdio::kprintf("%s %s %d\n", PS2_INSTALL_MSG, ERR_MSG, errorCode);
+    // }
     
     // Install HEAP
     heap::initKheap();

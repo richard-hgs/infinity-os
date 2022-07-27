@@ -249,14 +249,16 @@ uint8_t ps2::install() {
         }
     }
 
+    stdio::kprintf("PS/2 - port0 identify\n");
+
     // Clear port1 buffer to be used to receive device type data
     ps2Port1DataLength = 0;
     // Detect port device types
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
-    io::outb(IO_CR_STATUS, DEVICE_CMD_DISABLE_SCANNING);
+    io::outb(IO_DATA, DEVICE_CMD_DISABLE_SCANNING);
     if (memutils::memchr(ps2Port1DataBuffer, DEVICE_RESP_ACK, ps2Port1DataLength)) { // ACK SUCCESS
         io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
-        io::outb(IO_CR_STATUS, DEVICE_CMD_IDENTIFY);
+        io::outb(IO_DATA, DEVICE_CMD_IDENTIFY);
     }
 
     return PS2_NO_ERROR;
