@@ -19,8 +19,8 @@
       - ✅ %x = Hex representation of int data type;
       - ✅ %b = Binary representation of int data type;
       - ✅ %0d = Leading zeros for above format types %d, $x, %b;
-  - ⬜ PS/2 8042 - Controller:
-      - ⬜ Self Tests and Configuration;
+  - ✅ PS/2 8042 - Controller:
+      - ✅ Self Tests and Configuration;
   - ⬜ PS/2 Keyboard;
       - ⬜ Self Tests and Configuration;
       - ⬜ Key code scan read;
