@@ -77,6 +77,7 @@
 #define PORT_TEST_RESULT_DATA_LINE_STUCK_LOW        0x03    // Test failed - Data line stuck low
 #define PORT_TEST_RESULT_DATA_LINE_STUCK_HIGH       0x04    // Test failed - Data line stuck high
 
+#define DEVICE_CMD_ENABLE_SCANNING                  0xF4    // Enable scanning  (If Keyboard=will send scan codes, If Mouse=Enable Data Reporting)
 #define DEVICE_CMD_DISABLE_SCANNING                 0xF5    // Disable scanning (If Keyboard=won't send scan codes, If Mouse=Disable Data Reporting)
 #define DEVICE_CMD_IDENTIFY                         0xF2    // Identify Device Type
 
@@ -166,9 +167,8 @@ void ps2Port2IntHandler(registers_t* r) {
 uint8_t waitUntilBufferContainsOrdered(uint8_t port, BufferContains_t* values, uint8_t valuesLen) {
     uint8_t i;
     uint8_t lastFoundIndex = 0;
-    uint32_t countdownTimeout = 10000; // Microsseconds = 10 Millis approximately
+    uint32_t countdownTimeout = 18; // 1 = 56 Millis
     while(countdownTimeout > 0 && lastFoundIndex < valuesLen) {
-        io::wait();
         countdownTimeout--;
 
         // Check if buffer contains all the required values in the same order
@@ -180,27 +180,26 @@ uint8_t waitUntilBufferContainsOrdered(uint8_t port, BufferContains_t* values, u
                 lastFoundIndex++;
             }
         }
+        pit::ksleep(56);
     }
 
-    return (lastFoundIndex == valuesLen ? 0 : values[lastFoundIndex].error);
+    return (lastFoundIndex == valuesLen ? PS2_NO_ERROR : values[lastFoundIndex].error);
 }
 
 uint8_t waitUntilStatusBitEquals(uint8_t bitOffset, uint8_t bitValue) {
-    uint32_t countdownTimeout = 10000; // Microsseconds = 10 Millis approximately
+    uint32_t countdownTimeout = 2147483646; // Max Int
     while(countdownTimeout > 0 && ((io::inb(IO_CR_STATUS) >> bitOffset) & 0x1) != (bitValue & 0x1)) {
-        io::wait();
         countdownTimeout--;
     }
 
-    return countdownTimeout > 0 ? 0 : PS2_ERROR_STATUS_BIT_EQUALS_TIMEOUT;
+    return countdownTimeout > 0 ? PS2_NO_ERROR : PS2_ERROR_STATUS_BIT_EQUALS_TIMEOUT;
 }
 
 uint8_t waitDeviceIdentifierResponse(uint8_t port) {
-    uint32_t countdownTimeout = 10000; // Microsseconds = 10 Millis approximately
+    uint32_t countdownTimeout = 18; // 1 = 56 Millis
     uint8_t ackIndex = 255;
     uint8_t i;
     while(countdownTimeout > 0) {
-        io::wait();
         countdownTimeout--;
         unsigned char* ptr = port == 1 ? ps2Port1DataBuffer : ps2Port2DataBuffer;
         uint32_t bufferLen = port == 1 ? ps2Port1DataLength : ps2Port2DataLength;
@@ -245,6 +244,7 @@ uint8_t waitDeviceIdentifierResponse(uint8_t port) {
                 }
             }
         }
+        pit::ksleep(56);
     }
 
     return PS2_DEVICE_TYPE_KEYBOARD_ANCIENT_AT;
@@ -260,7 +260,7 @@ uint8_t ps2::install() {
     // Disable PS/2 port 1 to avoid PS/2 devices from sending data during Controller configuration
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_DISABLE);
 
-    // Wait until Input bit satus cleared
+    // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
     if (data) {
         // Input status bit not cleared
@@ -270,7 +270,7 @@ uint8_t ps2::install() {
     // Disable PS/2 port 2 to avoid PS/2 devices from sending data during Controller configuration
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT2_DISABLE);
 
-    // Wait until Input bit satus cleared
+    // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
     if (data) {
         // Input status bit not cleared
@@ -283,7 +283,7 @@ uint8_t ps2::install() {
     // Flush Controller Output Buffer to avoid data stuck in buffer
     io::inb(IO_DATA);                 // Read/Discard data from buffer
 
-    // Wait until Input bit satus cleared
+    // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
     if (data) {
         // Input status bit not cleared
@@ -294,7 +294,7 @@ uint8_t ps2::install() {
     io::outb(IO_CR_STATUS, CTRL_CMD_READ_CONFIGURATION);    // Request to controller to send controller configuration to data buffer
 
 
-    // Wait until Output bit satus cleared
+    // Wait until Output bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_OUT_BUFFER_STATUS), 1);
     if (data) {
         // Output status bit not cleared
@@ -309,7 +309,7 @@ uint8_t ps2::install() {
     // Enable first PS/2 port interrupt bit 0
     data |= CTRL_CONF_PS2_PORT2_INT_ENABLED + CTRL_CONF_PS2_PORT1_INT_ENABLED;
 
-    // Wait until Input bit satus cleared
+    // Wait until Input bit status cleared
     data2 = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
     if (data2) {
         // Input status bit not cleared
@@ -318,7 +318,7 @@ uint8_t ps2::install() {
 
     // Cmd to Write configuration
     io::outb(IO_CR_STATUS, CTRL_CMD_WRITE_CONFIGURATION);
-    // Wait until Input bit satus cleared
+    // Wait until Input bit status cleared
     data2 = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
     if (data2) {
         // Input status bit not cleared
@@ -327,7 +327,7 @@ uint8_t ps2::install() {
     // Write configuration
     io::outb(IO_DATA, data);
 
-    // Wait until Input bit satus cleared
+    // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
     if (data) {
         // Input status bit not cleared
@@ -337,7 +337,7 @@ uint8_t ps2::install() {
     // Read PS/2 Controller configuration to check the new configuration
     io::outb(IO_CR_STATUS, CTRL_CMD_READ_CONFIGURATION);    // Request to controller to send controller configuration to data buffer
     
-    // Wait until Output bit satus cleared
+    // Wait until Output bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_OUT_BUFFER_STATUS), 1);
     if (data) {
         // Output status bit not cleared
@@ -348,7 +348,7 @@ uint8_t ps2::install() {
     data = io::inb(IO_DATA);
     stdio::kprintf("PS/2 - new config: %08b\n", data);
     
-    // Wait until Input bit satus cleared
+    // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
     if (data) {
         // Input status bit not cleared
@@ -370,22 +370,48 @@ uint8_t ps2::install() {
         return PS2_ERROR_CONTROLLER_TEST;
     }
 
+    // Wait until Input bit status cleared
+    data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+    if (data) {
+        // Input status bit not cleared
+        return data;
+    }
+
     // Check if PS/2 is dual channel by enabling port 2
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT2_ENABLE);      // Enalbe PS/2 Second port controller
 
+    // Wait until Input bit status cleared
+    data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+    if (data) {
+        // Input status bit not cleared
+        return data;
+    }
+
     io::outb(IO_CR_STATUS, CTRL_CMD_READ_CONFIGURATION);    // Request to controller to send controller configuration to data buffer
-    // Read status byte               
-    if (io::inb(IO_CR_STATUS) & STATUS_OUT_BUFFER_STATUS) { // Output buffer status Bit is set means that data buffer is full and we can read it now.
-        // Read configuration sent by controller to data buffer
-        data = io::inb(IO_DATA);
+    
+    // Wait until Output bit status set
+    data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_OUT_BUFFER_STATUS), 1);
+    if (data) {
+        // Output status bit not set
+        return data;
+    }
+    
+    // Read configuration sent by controller to data buffer
+    data = io::inb(IO_DATA);
 
-        // stdio::kprintf("PS/2 - config: %08b\n", data);
+    // stdio::kprintf("PS/2 - config: %08b\n", data);
 
-        if (!(data & CTRL_CONF_PS2_PORT2_CLOCK_ENABLED)) { // If this bit is clear it's a dual channel, if set isn't dual channel
-            // Is dual channel
-            isDualChannel = true;
-            // stdio::kprintf("PS/2 - Is dual channel\n", data);
-        }
+    if (!(data & CTRL_CONF_PS2_PORT2_CLOCK_ENABLED)) { // If this bit is clear it's a dual channel, if set isn't dual channel
+        // Is dual channel
+        isDualChannel = true;
+        // stdio::kprintf("PS/2 - Is dual channel\n", data);
+    }
+    
+    // Wait until Input bit status cleared
+    data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+    if (data) {
+        // Input status bit not cleared
+        return data;
     }
 
     // Disable PS/2 port 2 again to prevent interruptions
@@ -405,10 +431,31 @@ uint8_t ps2::install() {
         }
     }
 
+    // Wait until Input bit status cleared
+    data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+    if (data) {
+        // Input status bit not cleared
+        return data;
+    }
+
     // Enable all PS/2 ports that exists
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_ENABLE);
+
     if (isDualChannel) {
+        // Wait until Input bit status cleared
+        data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+        if (data) {
+            // Input status bit not cleared
+            return data;
+        }
         io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT2_ENABLE);
+    }
+
+    // Wait until Input bit status cleared
+    data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+    if (data) {
+        // Input status bit not cleared
+        return data;
     }
 
     // Clear port1 buffer to be used to receive device reset response data
@@ -416,6 +463,12 @@ uint8_t ps2::install() {
 
     // Reset PS/2 Device 1
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
+    // Wait until Input bit status cleared
+    data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+    if (data) {
+        // Input status bit not cleared
+        return data;
+    }
     io::outb(IO_DATA, CTRL_CMD_PS2_RESET);
 
     // Check if port1 reset succeeded
@@ -432,9 +485,22 @@ uint8_t ps2::install() {
         // Clear port2 buffer to be used to receive device reset response data
         ps2Port2DataLength = 0;
 
+        // Wait until Input bit status cleared
+        data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+        if (data) {
+            // Input status bit not cleared
+            return data;
+        }
+
         // Reset PS/2 Device 2
         // Check if input buffer data needs to be read
         io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT2_IN_WRITE);
+        // Wait until Input bit status cleared
+        data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+        if (data) {
+            // Input status bit not cleared
+            return data;
+        }
         io::outb(IO_DATA, CTRL_CMD_PS2_RESET);
 
         // Check if port2 reset succeeded
@@ -455,12 +521,25 @@ uint8_t ps2::install() {
         // Clear port1 buffer to be used to receive device type data
         ps2Port1DataLength = 0;
 
+        // Wait until Input bit status cleared
+        data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+        if (data) {
+            // Input status bit not cleared
+            return data;
+        }
+
         // Detect port device types
         io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
+        // Wait until Input bit status cleared
+        data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+        if (data) {
+            // Input status bit not cleared
+            return data;
+        }
         io::outb(IO_DATA, DEVICE_CMD_DISABLE_SCANNING);
 
-        // Check if port2 Disable scanning succeeded
-        bufferContains[0] = {DEVICE_RESP_ACK, PS2_ERROR_PORT1_IDENT_DISABLE_SCANNING_ERROR};
+        // Check if port1 Disable scanning succeeded
+        bufferContains[0] = {DEVICE_RESP_ACK, PS2_ERROR_PORT1_DISABLE_SCANNING_ERROR};
         data = waitUntilBufferContainsOrdered(1, bufferContains, 1);
         if (data) {
             // Timeout error. Device doesn't returned the required data.
@@ -470,14 +549,59 @@ uint8_t ps2::install() {
         // Clear port1 buffer to be used to receive device type data
         ps2Port1DataLength = 0;
 
-        stdio::kprintf("PS/2 port1 identify device\n");
+        // Wait until Input bit status cleared
+        data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+        if (data) {
+            // Input status bit not cleared
+            return data;
+        }
 
         // Request device in port 1 to identify yourself
         io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
+        // Wait until Input bit status cleared
+        data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+        if (data) {
+            // Input status bit not cleared
+            return data;
+        }
         io::outb(IO_DATA, DEVICE_CMD_IDENTIFY);
 
-        data = waitDeviceIdentifierResponse(1);
-        stdio::kprintf("PS/2 port1 device type: %d\n", data);
+        ps2Port1DeviceType = waitDeviceIdentifierResponse(1);
+
+        // Wait until Input bit status cleared
+        data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+        if (data) {
+            // Input status bit not cleared
+            return data;
+        }
+        
+        // Enable device scanning codes or report
+        io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
+        // Wait until Input bit status cleared
+        data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+        if (data) {
+            // Input status bit not cleared
+            return data;
+        }
+
+        // Clear port1 buffer to be used to receive device enable scanning response
+        ps2Port1DataLength = 0;
+
+        io::outb(IO_DATA, DEVICE_CMD_ENABLE_SCANNING);
+
+        // Wait until buffer contains
+        bufferContains[0] = {DEVICE_RESP_ACK, PS2_ERROR_PORT1_ENABLE_SCANNING_ERROR};
+        data = waitUntilBufferContainsOrdered(1, bufferContains, 1);
+        if (data) {
+            // Timeout error. Device doesn't returned the required data.
+            return data;
+        }
+
+        stdio::kprintf("PS/2 port1 device type: %d\n", ps2Port1DeviceType);
+    }
+
+    if (isPort2DevicePresent) {
+        // stdio::kprintf("port2 device present\n");
     }
 
     return PS2_NO_ERROR;
@@ -485,20 +609,36 @@ uint8_t ps2::install() {
 
 uint8_t ps2::testPort(uint8_t port) {
     uint8_t data;
+
+    // Wait until Input bit status cleared
+    data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+    if (data) {
+        // Input status bit not cleared
+        return data;
+    }
+
+    // Send the test command to the port
     io::outb(IO_CR_STATUS, port);
-    if (io::inb(IO_CR_STATUS) & STATUS_OUT_BUFFER_STATUS) { // Output buffer status Bit is set means that data buffer is full and we can read it now.
-        data = io::inb(IO_DATA);
-        if (data != PORT_TEST_RESULT_SUCCESS) {
-            if (data == PORT_TEST_RESULT_CLOCK_LINE_STUCK_LOW) {
-                return port == CTRL_CMD_PS2_CTRL_PORT1_TEST ? PS2_ERROR_PORT1_TEST_CLOCK_LINE_STUCK_LOW : PS2_ERROR_PORT2_TEST_CLOCK_LINE_STUCK_LOW;
-            } else if (data == PORT_TEST_RESULT_CLOCK_LINE_STUCK_HIGH) {
-                return port == CTRL_CMD_PS2_CTRL_PORT1_TEST ? PS2_ERROR_PORT1_TEST_CLOCK_LINE_STUCK_HIGH : PS2_ERROR_PORT2_TEST_CLOCK_LINE_STUCK_HIGH;
-            } else if (data == PORT_TEST_RESULT_DATA_LINE_STUCK_LOW) {
-                return port == CTRL_CMD_PS2_CTRL_PORT1_TEST ? PS2_ERROR_PORT1_TEST_DATA_LINE_STUCK_LOW : PS2_ERROR_PORT2_TEST_DATA_LINE_STUCK_LOW;
-            } else if (data == PORT_TEST_RESULT_DATA_LINE_STUCK_HIGH) {
-                return port == CTRL_CMD_PS2_CTRL_PORT1_TEST ? PS2_ERROR_PORT1_TEST_DATA_LINE_STUCK_HIGH : PS2_ERROR_PORT2_TEST_DATA_LINE_STUCK_HIGH;
-            }
+
+    // Wait until Output bit status set
+    data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_OUT_BUFFER_STATUS), 1);
+    if (data) {
+        // Output status bit not set
+        return data;
+    }
+    
+    data = io::inb(IO_DATA);
+    if (data != PORT_TEST_RESULT_SUCCESS) {
+        if (data == PORT_TEST_RESULT_CLOCK_LINE_STUCK_LOW) {
+            return port == CTRL_CMD_PS2_CTRL_PORT1_TEST ? PS2_ERROR_PORT1_TEST_CLOCK_LINE_STUCK_LOW : PS2_ERROR_PORT2_TEST_CLOCK_LINE_STUCK_LOW;
+        } else if (data == PORT_TEST_RESULT_CLOCK_LINE_STUCK_HIGH) {
+            return port == CTRL_CMD_PS2_CTRL_PORT1_TEST ? PS2_ERROR_PORT1_TEST_CLOCK_LINE_STUCK_HIGH : PS2_ERROR_PORT2_TEST_CLOCK_LINE_STUCK_HIGH;
+        } else if (data == PORT_TEST_RESULT_DATA_LINE_STUCK_LOW) {
+            return port == CTRL_CMD_PS2_CTRL_PORT1_TEST ? PS2_ERROR_PORT1_TEST_DATA_LINE_STUCK_LOW : PS2_ERROR_PORT2_TEST_DATA_LINE_STUCK_LOW;
+        } else if (data == PORT_TEST_RESULT_DATA_LINE_STUCK_HIGH) {
+            return port == CTRL_CMD_PS2_CTRL_PORT1_TEST ? PS2_ERROR_PORT1_TEST_DATA_LINE_STUCK_HIGH : PS2_ERROR_PORT2_TEST_DATA_LINE_STUCK_HIGH;
         }
     }
+
     return PS2_NO_ERROR;
 }

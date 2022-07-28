@@ -70,7 +70,6 @@ uint32_t kCountdownTimer; // Kernel countdown timer
 void timerInterruptHandler(registers_t* r) {
     // On each tick exchange the user process
     // In case of one countdown timer finishes change to this process instead
-    
     if (kCountdownTimer > 0) {  // Decrement kernel countdown timer until reaches 0.
         kCountdownTimer--;
     }
@@ -81,7 +80,7 @@ void pit::install() {
     isr::registerIsrHandler(IRQ0, timerInterruptHandler);
 
     // Configure pit channel to lowest frequency possible
-    configureChannel(CMD_CHANNEL_0, CMD_AM_LO_HI_BYTE, CMD_OPMODE_SQUARE_WAVE, CMD_BCD_16_BIT, 0);
+    configureChannel(IO_CHANNEL_0, CMD_AM_LO_HI_BYTE, CMD_OPMODE_SQUARE_WAVE, CMD_BCD_16_BIT, 0);
 }
 
 void pit::enable() {
@@ -111,6 +110,8 @@ void pit::configureChannel(uint16_t channel, uint8_t accessMode, uint8_t opMode,
     command = (command << 2) | (accessMode & 0x3);
     command = (command << 3) | (opMode & 0x7);
     command = (command << 1) | (bcdBinMode & 0x1);
+    
+    stdio::kprintf("");
 
     // Issue the commands
     io::outb(IO_CR, command);
