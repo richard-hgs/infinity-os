@@ -282,6 +282,24 @@ namespace pit {
      *                      This sets the Reload value of the PIT timer.
      */
     void configureChannel(uint16_t channel, uint8_t accessMode, uint8_t opMode, uint8_t bcdBinMode, uint16_t divisor);
+
+    /**
+     * @brief Thread sleep function
+     * 
+     * @param millis Milliseconds to wait until continue thread execution. 
+     *               The accuracy will depend on the divisor frequency of the PIT Channel 0. The higher is divisor the better is accuracy.
+     *               The minimum millis depend on the divisor frequency of the PIT Channel 0. For a 0 divisor the minimum millis is 56.
+     */
+    void sleep(uint32_t millis);
+
+    /**
+     * @brief Kernel sleep function
+     * 
+     * @param millis Milliseconds to wait until continue kernel execution
+     *               The accuracy will depend on the divisor frequency of the PIT Channel 0. The higher is divisor the better is accuracy.
+     *               The minimum millis depend on the divisor frequency of the PIT Channel 0. For a 0 divisor the minimum millis is 56.
+     */
+    void ksleep(uint32_t millis);
 } 
 
 #endif

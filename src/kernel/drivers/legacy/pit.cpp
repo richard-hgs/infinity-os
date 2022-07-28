@@ -3,6 +3,7 @@
 #include "isr.h"
 // stdlib
 #include "stdio.h"
+#include "stdlib.h"
 // sys
 #include "io.h"
 #include "pit.h"
@@ -55,9 +56,24 @@
 #define CMD_BCD_16_BIT                   0x0       // 16 Bit (Min=0, Max=65535)
 #define CMD_BCD_4_DIGIT                  0x1       // 4 decimal digits (Min=0, Max=9999)
 
+#define TIMER_BLOCK_BUF_SIZE 2                     // Amount of countdown timers available to user and driver threads
+
+uint32_t channel0Divisor;
+
+struct TimerBlock {
+    uint8_t id;
+    uint32_t countdown;
+} timerBlocks[TIMER_BLOCK_BUF_SIZE];
+
+uint32_t kCountdownTimer; // Kernel countdown timer
+
 void timerInterruptHandler(registers_t* r) {
     // On each tick exchange the user process
-    stdio::kprintf("PIT\n");
+    // In case of one countdown timer finishes change to this process instead
+    
+    if (kCountdownTimer > 0) {  // Decrement kernel countdown timer until reaches 0.
+        kCountdownTimer--;
+    }
 }
 
 void pit::install() {
@@ -86,6 +102,9 @@ void pit::configureChannel(uint16_t channel, uint8_t accessMode, uint8_t opMode,
         mDivisor = PIT_CRYSTAL_FREQUENCY / divisor;
         low  = (uint8_t)(mDivisor & 0xff);
         high = (uint8_t)((mDivisor >> 8) & 0xff);
+        channel0Divisor = mDivisor;
+    } else {
+        channel0Divisor = 18; // 0=18hz
     }
 
     command = channel & 0x3;
@@ -93,10 +112,40 @@ void pit::configureChannel(uint16_t channel, uint8_t accessMode, uint8_t opMode,
     command = (command << 3) | (opMode & 0x7);
     command = (command << 1) | (bcdBinMode & 0x1);
 
-    stdio::kprintf("PIT - configChannel - command: %08b - divisor: %d - high: %d - low: %d\n", command, mDivisor, high, low);
-
     // Issue the commands
     io::outb(IO_CR, command);
 	io::outb(channel, low);
 	io::outb(channel, high);
+}
+
+TimerBlock* findTimerBlock() {
+    int i;
+    for (i=0; i<TIMER_BLOCK_BUF_SIZE; i++) {
+        if (timerBlocks[i].id == NULL) {
+            timerBlocks->id = i + 1;    // Id - index of this timer
+            return &timerBlocks[i];
+        }
+    }
+    return NULL;
+}
+
+void pit::sleep(uint32_t millis) {
+    struct TimerBlock* t;
+    if ((t = findTimerBlock()) == NULL) { // All timer blocks in use by the processes
+        return;
+    }
+
+    // We need to perform a rule of 3 to know how many ticks are necessary to decrement a given amount of milliseconds.
+    // channel0Divisor ----> 1000 millis
+    // kCountdownTimer ----> millis
+    t->countdown = millis * channel0Divisor / 1000;
+
+}
+
+void pit::ksleep(uint32_t millis) {
+    // We need to perform a rule of 3 to know how many ticks are necessary to decrement a given amount of milliseconds.
+    // channel0Divisor ----> 1000 millis
+    // kCountdownTimer ----> millis
+    kCountdownTimer = millis * channel0Divisor / 1000;
+    while(kCountdownTimer > 0) {} // Wait until countdown timer reaches 0 then continue execution.
 }

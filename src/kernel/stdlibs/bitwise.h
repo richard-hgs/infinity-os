@@ -3,6 +3,8 @@
 #ifndef _BITWISE_H_
 #define _BITWISE_H_
 
+#include <stdint.h>
+
 /**
  * @brief Comma Operator
  * 
@@ -100,5 +102,11 @@
  * It's an operation that limit the max value and return lower values.
  */
 #define high_16(addr) (uint16_t)(((addr) >> 16) & 0xFFFF)
+
+#define first_bit_set_index(value) ({ \
+    uint8_t offset = 0; \
+    if (value > 0) { while(offset < 32 && ((value >> offset) & 0x1) == 0) { offset++; } } \
+    offset; \
+}) \
 
 #endif
