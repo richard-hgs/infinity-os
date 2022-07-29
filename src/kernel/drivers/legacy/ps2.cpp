@@ -12,6 +12,7 @@
 #include "io.h"
 // drivers
 #include "pit.h"
+#include "keyboard.h"
 #include "ps2.h"
 
 /**
@@ -127,6 +128,9 @@ bool isPort2DevicePresent; // true=Device is connected, false=Device not connect
 uint8_t ps2Port1DeviceType; // PS/2 Port 1 device type PS2_DEVICE_TYPE_...
 uint8_t ps2Port2DeviceType; // PS/2 Port 2 device type PS2_DEVICE_TYPE_...
 
+// uint8_t ps2KeybordDevicePort; // PS/2 Port of the keyboard device
+// uint8_t ps2MouseDevicePort;   // PS/2 Port of the mouse device
+
 typedef struct BufferContains {
     uint8_t required;
     uint8_t error;
@@ -140,7 +144,7 @@ void ps2Port1IntHandler(registers_t* r) {
             ps2Port1DataBuffer[ps2Port1DataLength] = data;
             ps2Port1DataLength++;
         }
-        stdio::kprintf("PS/2 port1 %x\n", data);
+        // stdio::kprintf("PS/2 port1 %x\n", data);
     }
 }
 
@@ -152,7 +156,7 @@ void ps2Port2IntHandler(registers_t* r) {
             ps2Port2DataBuffer[ps2Port2DataLength] = data;
             ps2Port2DataLength++;
         }
-        stdio::kprintf("PS/2 port2 %x\n", data);
+        // stdio::kprintf("PS/2 port2 %x\n", data);
     }
 }
 
@@ -346,7 +350,7 @@ uint8_t ps2::install() {
     
     // Read configuration sent by controller to data buffer
     data = io::inb(IO_DATA);
-    stdio::kprintf("PS/2 - new config: %08b\n", data);
+    // stdio::kprintf("PS/2 - new config: %08b\n", data);
     
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
@@ -596,13 +600,22 @@ uint8_t ps2::install() {
             // Timeout error. Device doesn't returned the required data.
             return data;
         }
+        
+        if (
+            ps2Port2DeviceType == PS2_DEVICE_TYPE_KEYBOARD_ANCIENT_AT ||
+            ps2Port2DeviceType == PS2_DEVICE_TYPE_KEYBOARD_1 ||
+            ps2Port2DeviceType == PS2_DEVICE_TYPE_KEYBOARD_2 ||
+            ps2Port2DeviceType == PS2_DEVICE_TYPE_KEYBOARD_3
+        ) { // Port1 is the keyboard device. Register keyboard int handler in port 1 to handle keyboard interruptions.
+            isr::registerIsrHandler(IRQ1, kbd::keyboardIntHandler);   // Register PS/2 Controller port1 IRQ handler
+        }
 
-        stdio::kprintf("PS/2 port1 device type: %d\n", ps2Port1DeviceType);
+        // stdio::kprintf("PS/2 port1 device type: %d\n", ps2Port1DeviceType);
     }
 
-    if (isPort2DevicePresent) {
-        // stdio::kprintf("port2 device present\n");
-    }
+    // if (isPort2DevicePresent) {
+    //     // stdio::kprintf("port2 device present\n");
+    // }
 
     return PS2_NO_ERROR;
 }
@@ -641,4 +654,12 @@ uint8_t ps2::testPort(uint8_t port) {
     }
 
     return PS2_NO_ERROR;
+}
+
+void ps2::readData(uint8_t* data) {
+    if (io::inb(IO_CR_STATUS) & STATUS_OUT_BUFFER_STATUS) { // Output buffer status Bit is set means that data buffer is full and we can read it now.
+        *data = io::inb(IO_DATA);
+    } else {
+        *data = 0; // Error
+    }
 }

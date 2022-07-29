@@ -5,6 +5,10 @@
 // libc
 #include <stdint.h>
 
+/**
+ * @brief PS/2 Error Codes
+ * 
+ */
 #define PS2_NO_ERROR                                    0
 #define PS2_ERROR_CONTROLLER_TEST                       1
 #define PS2_ERROR_PORT1_TEST_CLOCK_LINE_STUCK_LOW       2
@@ -23,7 +27,6 @@
 #define PS2_ERROR_STATUS_BIT_EQUALS_TIMEOUT            15
 #define PS2_ERROR_NO_DEVICE_CONNECTED                  16
 #define PS2_ERROR_PORT1_ENABLE_SCANNING_ERROR          17
-
 
 /**
  * @brief 8042 PS/2 Controller
@@ -126,6 +129,13 @@ namespace ps2 {
      *                  - PS2_ERROR_PORT2_TEST_DATA_LINE_STUCK_HIGH       9
      */
     uint8_t testPort(uint8_t port);
+
+    /**
+     * @brief Read data on the given PS/2 Controller port of the specified device
+     * 
+     * @param data Ptr where to store the data received. 0=Error or device not found, or the Data received    
+     */
+    void readData(uint8_t* data);
 }
 
 #endif

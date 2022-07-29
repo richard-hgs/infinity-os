@@ -107,7 +107,9 @@ extern "C" int kmain() {
     // __asm__ volatile ("cli; hlt");  // Halt the cpu. Waits until an IRQ occurs
 
     // Idle process consumes cpu
-    while(1) {}
+    while(1) {
+        __asm__ volatile ("hlt"); // Halt the cpu. Waits until an IRQ occurs minimize CPU usage
+    }
 
     return 0;
 }
