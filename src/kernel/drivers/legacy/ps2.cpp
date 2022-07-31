@@ -2,6 +2,7 @@
 #include <stdbool.h>
 // stdlibs
 #include "bitwise.h"
+#include "stdlib.h"
 // cpu
 #include "isr.h"
 // stdio
@@ -82,38 +83,35 @@
 #define DEVICE_CMD_DISABLE_SCANNING                 0xF5    // Disable scanning (If Keyboard=won't send scan codes, If Mouse=Disable Data Reporting)
 #define DEVICE_CMD_IDENTIFY                         0xF2    // Identify Device Type
 
-#define DEVICE_RESP_ERROR                           0x00    // Error or internal buffer overrun
-#define DEVICE_RESP_ACK                             0xFA    // Command acknowledged (ACK)
-#define DEVICE_RESP_SELF_TEST_SUCCESS               0xAA    // Self test passed (sent after "0xFF (reset)" command or keyboard power up)
-
 /**
  * @brief PS/2 Device types
  * 
  */
 // None=Ancient AT keyboard with translation enabled in the PS/Controller (not possible for the second PS/2 port)
-#define DEVICE_TYPE_STANDARD_MOUSE                  0x00    // Standard PS/2 mouse
-#define DEVICE_TYPE_MOUSE_WITH_SCROLL_WHEEL         0x03    // Mouse with scroll wheel
-#define DEVICE_TYPE_5_BUTTON_MOUSE                  0x04    // 5-button mouse
-#define DEVICE_TYPE_MF2_KEYBOARD_1_1                0xAB    // ‾|--> MF2 keyboard with translation enabled in the   
-#define DEVICE_TYPE_MF2_KEYBOARD_1_2                0x41    // _|    PS/Controller (not possible for the second PS/2 port)
-#define DEVICE_TYPE_MF2_KEYBOARD_2_1                0xAB    // ‾|--> MF2 keyboard with translation enabled in the   
-#define DEVICE_TYPE_MF2_KEYBOARD_2_2                0xC1    // _|    PS/Controller (not possible for the second PS/2 port)
-#define DEVICE_TYPE_MF2_KEYBOARD_3_1                0xAB    // ‾|--> MF2 keyboard  
-#define DEVICE_TYPE_MF2_KEYBOARD_3_2                0x83    // _|
+#define DEVICE_ID_STANDARD_MOUSE                  0x00    // Standard PS/2 mouse
+#define DEVICE_ID_MOUSE_WITH_SCROLL_WHEEL         0x03    // Mouse with scroll wheel
+#define DEVICE_ID_5_BUTTON_MOUSE                  0x04    // 5-button mouse
+#define DEVICE_ID_MF2_KEYBOARD_1_1                0xAB    // ‾|--> MF2 keyboard with translation enabled in the   
+#define DEVICE_ID_MF2_KEYBOARD_1_2                0x41    // _|    PS/Controller (not possible for the second PS/2 port)
+#define DEVICE_ID_MF2_KEYBOARD_2_1                0xAB    // ‾|--> MF2 keyboard with translation enabled in the   
+#define DEVICE_ID_MF2_KEYBOARD_2_2                0xC1    // _|    PS/Controller (not possible for the second PS/2 port)
+#define DEVICE_ID_MF2_KEYBOARD_3_1                0xAB    // ‾|--> MF2 keyboard  
+#define DEVICE_ID_MF2_KEYBOARD_3_2                0x83    // _|
 
 /**
- * @brief PS/2 Device types translated to be simple inside the kernel
+ * @brief PS/2 Device ids translated to be simple inside the kernel
  * 
  */
-#define PS2_DEVICE_TYPE_KEYBOARD_ANCIENT_AT         0x00
-#define PS2_DEVICE_TYPE_KEYBOARD_1                  0x01
-#define PS2_DEVICE_TYPE_KEYBOARD_2                  0x02
-#define PS2_DEVICE_TYPE_KEYBOARD_3                  0x03
-#define PS2_DEVICE_TYPE_MOUSE_STANDARD              0x04
-#define PS2_DEVICE_TYPE_MOUSE_WITH_SCROLL_WHEEL     0x05
-#define PS2_DEVICE_TYPE_MOUSE_WITH_5_BUTTON         0x06
+#define PS2_DEVICE_ID_KEYBOARD_ANCIENT_AT         0x00
+#define PS2_DEVICE_ID_KEYBOARD_1                  0x01
+#define PS2_DEVICE_ID_KEYBOARD_2                  0x02
+#define PS2_DEVICE_ID_KEYBOARD_3                  0x03
+#define PS2_DEVICE_ID_MOUSE_STANDARD              0x04
+#define PS2_DEVICE_ID_MOUSE_WITH_SCROLL_WHEEL     0x05
+#define PS2_DEVICE_ID_MOUSE_WITH_5_BUTTON         0x06
 
-#define PS2_PORTS_DATA_BUFFER_SIZE 10
+#define TIMEOUT_COUNT 1000 // Max loop count before timeout reached
+#define TIMEOUT_SLEEP 1    // Millis Time to wait for each loop count before try again
 
 unsigned char ps2Port1DataBuffer[PS2_PORTS_DATA_BUFFER_SIZE];
 unsigned char ps2Port2DataBuffer[PS2_PORTS_DATA_BUFFER_SIZE];
@@ -125,16 +123,14 @@ bool isDualChannel; // true=PS/2 Is dual channel, false=Single chanel only
 bool isPort1DevicePresent; // true=Device is connected, false=Device not connected
 bool isPort2DevicePresent; // true=Device is connected, false=Device not connected
 
+uint8_t ps2Port1DeviceId; // PS/2 Port 1 device id PS2_DEVICE_ID_...
+uint8_t ps2Port2DeviceId; // PS/2 Port 2 device id PS2_DEVICE_ID_...
+
 uint8_t ps2Port1DeviceType; // PS/2 Port 1 device type PS2_DEVICE_TYPE_...
 uint8_t ps2Port2DeviceType; // PS/2 Port 2 device type PS2_DEVICE_TYPE_...
 
 // uint8_t ps2KeybordDevicePort; // PS/2 Port of the keyboard device
 // uint8_t ps2MouseDevicePort;   // PS/2 Port of the mouse device
-
-typedef struct BufferContains {
-    uint8_t required;
-    uint8_t error;
-} BufferContains_t;
 
 void ps2Port1IntHandler(registers_t* r) {
     uint8_t data;
@@ -161,38 +157,86 @@ void ps2Port2IntHandler(registers_t* r) {
 }
 
 /**
- * @brief Wait until buffer contains specified values in the same order
+ * @brief Wait until buffer contains specified allValues in the same order
  * 
- * @param port          1=ps2Port1DataBuffer, 2=ps2Port2DataBuffer
- * @param values        Values to find in search buffer
- * @param valuesLen     Size of the values buffer
- * @return int          0=SUCCESS, or ERROR_CODE otherwise
+ * @param port            IN - 1=ps2Port1DataBuffer, 2=ps2Port2DataBuffer
+ * @param allValues       IN - Required values to find in search buffer in the same order
+ * @param allValuesLen    IN - Size of the allValues buffer
+ * @param oneOfValues     IN - Required only one value of the list in search buffer in any order
+ * @param oneOfValuesLen  IN - Size of the oneOfValues buffer
+ * @param oneOfFound      OUT - If oneOfValues found return the value found.
+ * @return int            0=SUCCESS, or ERROR_CODE otherwise
  */
-uint8_t waitUntilBufferContainsOrdered(uint8_t port, BufferContains_t* values, uint8_t valuesLen) {
+uint8_t waitUntilBufferContains(
+    uint8_t port, 
+    BufferContains_t* allValues, 
+    uint8_t allValuesLen, 
+    BufferContains_t* oneOfValues, 
+    uint8_t oneOfValuesLen,
+    uint8_t* oneOfFound
+) {
     uint8_t i;
     uint8_t lastFoundIndex = 0;
-    uint32_t countdownTimeout = 18; // 1 = 56 Millis
-    while(countdownTimeout > 0 && lastFoundIndex < valuesLen) {
-        countdownTimeout--;
+    uint32_t countdownTimeout = TIMEOUT_COUNT;
+    if (allValuesLen > 0 && allValues != NULL) { // Check if device will respond the specified sequence of bytes
+        while(countdownTimeout > 0 && lastFoundIndex < allValuesLen) {
+            countdownTimeout--;
 
-        // Check if buffer contains all the required values in the same order
-        for(i=lastFoundIndex; i<(lastFoundIndex + 1 <= valuesLen ? lastFoundIndex + 1 : valuesLen); i++) {
-            const void* ptr = port == 1 ? ps2Port1DataBuffer : ps2Port2DataBuffer;
-            int valueAt = values[i].required;
-            uint32_t bufferLen = port == 1 ? ps2Port1DataLength : ps2Port2DataLength;
-            if (memutils::memchr(ptr, valueAt, bufferLen)) {
-                lastFoundIndex++;
+            // Check if buffer contains all the required values in the same order
+            for(i=lastFoundIndex; i<(lastFoundIndex + 1 <= allValuesLen ? lastFoundIndex + 1 : allValuesLen); i++) {
+                const void* ptr = port == 1 ? ps2Port1DataBuffer : ps2Port2DataBuffer;
+                int valueAt = allValues[i].required;
+                uint32_t bufferLen = port == 1 ? ps2Port1DataLength : ps2Port2DataLength;
+                if (memutils::memchr(ptr, valueAt, bufferLen)) {
+                    lastFoundIndex++;
+                }
             }
+            pit::ksleep(TIMEOUT_SLEEP);
         }
-        pit::ksleep(56);
     }
 
-    return (lastFoundIndex == valuesLen ? PS2_NO_ERROR : values[lastFoundIndex].error);
+    if (oneOfValuesLen > 0 && oneOfValues != NULL && lastFoundIndex == allValuesLen) {
+        while (countdownTimeout > 0 && lastFoundIndex < allValuesLen + 1) {
+            countdownTimeout--;
+            // Check if buffer contains one of the required values in the same order
+            for(i=0; i<oneOfValuesLen; i++) {
+                const void* ptr = port == 1 ? ps2Port1DataBuffer : ps2Port2DataBuffer;
+                int valueAt = oneOfValues[i].required;
+                uint32_t bufferLen = port == 1 ? ps2Port1DataLength : ps2Port2DataLength;
+                if (memutils::memchr(ptr, valueAt, bufferLen)) {
+                    lastFoundIndex++;
+                    if (oneOfFound != NULL) {
+                        *oneOfFound = valueAt;
+                    }
+                    break;
+                }
+            }
+            pit::ksleep(TIMEOUT_SLEEP);
+        }
+    }
+
+    if (
+        (
+            (allValuesLen == 0 || allValues == NULL) &&                                       // --| No validation required always succeded.
+            (oneOfValuesLen == 0 || oneOfValues == NULL)                                      // --|
+        ) || 
+        ((oneOfValuesLen == 0 || oneOfValues == NULL) && lastFoundIndex == allValuesLen) ||   // If only the all values informed and succeeded.
+        (lastFoundIndex == allValuesLen + 1)                                                  // If last or both validations succeeded.
+    ) {
+        return PS2_NO_ERROR;
+    } else if (allValuesLen > 0 && lastFoundIndex < allValuesLen) { // If only the all values informed one value not found.
+        return allValues[lastFoundIndex].error;
+    } else if (oneOfValuesLen > 0 && lastFoundIndex == allValuesLen) { // No value found for one of values.
+        return oneOfValues[0].error;
+    } else { // Unexpected behavior, should never gets here
+        return PS2_NO_ERROR;
+    }
 }
 
 uint8_t waitUntilStatusBitEquals(uint8_t bitOffset, uint8_t bitValue) {
     uint32_t countdownTimeout = 2147483646; // Max Int
-    while(countdownTimeout > 0 && ((io::inb(IO_CR_STATUS) >> bitOffset) & 0x1) != (bitValue & 0x1)) {
+    while(countdownTimeout > 0 && ((io::inb(IO_CR_STATUS) >> bitOffset) & 0x1) != (bitValue & 0x1)) { 
+        // Until bit offset of the status register equals to bitValue continue loop until countdown reaches 0
         countdownTimeout--;
     }
 
@@ -200,15 +244,15 @@ uint8_t waitUntilStatusBitEquals(uint8_t bitOffset, uint8_t bitValue) {
 }
 
 uint8_t waitDeviceIdentifierResponse(uint8_t port) {
-    uint32_t countdownTimeout = 18; // 1 = 56 Millis
-    uint8_t ackIndex = 255;
+    uint32_t countdownTimeout = TIMEOUT_COUNT;
+    uint8_t ackIndex = 255; // 255 is a placeholder for NO INDEX FOUND. The port data buffer length must be less than this value.
     uint8_t i;
     while(countdownTimeout > 0) {
         countdownTimeout--;
         unsigned char* ptr = port == 1 ? ps2Port1DataBuffer : ps2Port2DataBuffer;
         uint32_t bufferLen = port == 1 ? ps2Port1DataLength : ps2Port2DataLength;
         if (bufferLen > 0) {
-            if (ackIndex == 255) {
+            if (ackIndex == 255) { // 255 is a placeholder for NO INDEX FOUND. The port data buffer length must be less than this value.
                 for (i=0; i<bufferLen; i++) { // Search for ack index
                     if (ptr[i] == DEVICE_RESP_ACK) {
                         ackIndex = i;
@@ -222,36 +266,47 @@ uint8_t waitDeviceIdentifierResponse(uint8_t port) {
                 if (bufferLen > 2) {
                     // Keyboard
                     if (
-                        ptr[ackIndex + 1] == DEVICE_TYPE_MF2_KEYBOARD_1_1 &&
-                        ptr[ackIndex + 2] == DEVICE_TYPE_MF2_KEYBOARD_1_2
+                        ptr[ackIndex + 1] == DEVICE_ID_MF2_KEYBOARD_1_1 &&
+                        ptr[ackIndex + 2] == DEVICE_ID_MF2_KEYBOARD_1_2
                     ) {
-                        return PS2_DEVICE_TYPE_KEYBOARD_1;
+                        return PS2_DEVICE_ID_KEYBOARD_1;
                     } else if (
-                        ptr[ackIndex + 1] == DEVICE_TYPE_MF2_KEYBOARD_2_1 &&
-                        ptr[ackIndex + 2] == DEVICE_TYPE_MF2_KEYBOARD_2_2
+                        ptr[ackIndex + 1] == DEVICE_ID_MF2_KEYBOARD_2_1 &&
+                        ptr[ackIndex + 2] == DEVICE_ID_MF2_KEYBOARD_2_2
                     ) {
-                        return PS2_DEVICE_TYPE_KEYBOARD_2;
+                        return PS2_DEVICE_ID_KEYBOARD_2;
                     } else if (
-                        ptr[ackIndex + 1] == DEVICE_TYPE_MF2_KEYBOARD_3_1 &&
-                        ptr[ackIndex + 2] == DEVICE_TYPE_MF2_KEYBOARD_3_2
+                        ptr[ackIndex + 1] == DEVICE_ID_MF2_KEYBOARD_3_1 &&
+                        ptr[ackIndex + 2] == DEVICE_ID_MF2_KEYBOARD_3_2
                     ) {
-                        return PS2_DEVICE_TYPE_KEYBOARD_3;
+                        return PS2_DEVICE_ID_KEYBOARD_3;
                     }
                 } else if (bufferLen > 1) {
-                    if (ptr[ackIndex + 1] == DEVICE_TYPE_STANDARD_MOUSE) {
-                        return PS2_DEVICE_TYPE_MOUSE_STANDARD;
-                    } else if (ptr[ackIndex + 1] == DEVICE_TYPE_MOUSE_WITH_SCROLL_WHEEL) {
-                        return PS2_DEVICE_TYPE_MOUSE_WITH_SCROLL_WHEEL;
-                    } else if (ptr[ackIndex + 1] == DEVICE_TYPE_5_BUTTON_MOUSE) {
-                        return PS2_DEVICE_TYPE_MOUSE_WITH_5_BUTTON;
+                    if (ptr[ackIndex + 1] == DEVICE_ID_STANDARD_MOUSE) {
+                        return PS2_DEVICE_ID_MOUSE_STANDARD;
+                    } else if (ptr[ackIndex + 1] == DEVICE_ID_MOUSE_WITH_SCROLL_WHEEL) {
+                        return PS2_DEVICE_ID_MOUSE_WITH_SCROLL_WHEEL;
+                    } else if (ptr[ackIndex + 1] == DEVICE_ID_5_BUTTON_MOUSE) {
+                        return PS2_DEVICE_ID_MOUSE_WITH_5_BUTTON;
                     }
                 }
             }
         }
-        pit::ksleep(56);
+        pit::ksleep(TIMEOUT_SLEEP);
     }
 
-    return PS2_DEVICE_TYPE_KEYBOARD_ANCIENT_AT;
+    return PS2_DEVICE_ID_KEYBOARD_ANCIENT_AT;
+}
+
+void registerDriverIrqForDeviceType(uint8_t deviceType) {
+    // Pass the control to the interrupt driver
+    if (ps2Port1DeviceType == deviceType) {
+        if (deviceType == PS2_DEVICE_TYPE_KEYBOARD) {
+            isr::registerIsrHandler(IRQ1, kbd::keyboardIntHandler);   // Register PS/2 Controller port1 IRQ handler
+        } // else if (deviceType == PS2_DEVICE_TYPE_MOUSE) {
+            // isr::registerIsrHandler(IRQ1, mouse::mouseIntHandler); // Register PS/2 Controller port2 IRQ handler
+        // }
+    } // else { same as above for IRQ12 }
 }
 
 uint8_t ps2::install() {
@@ -266,17 +321,19 @@ uint8_t ps2::install() {
 
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
+
+
     
     // Disable PS/2 port 2 to avoid PS/2 devices from sending data during Controller configuration
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT2_DISABLE);
 
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
@@ -289,7 +346,7 @@ uint8_t ps2::install() {
 
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
@@ -300,7 +357,7 @@ uint8_t ps2::install() {
 
     // Wait until Output bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_OUT_BUFFER_STATUS), 1);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Output status bit not cleared
         return data;
     }
@@ -315,7 +372,7 @@ uint8_t ps2::install() {
 
     // Wait until Input bit status cleared
     data2 = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data2) {
+    if (data2 != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data2;
     }
@@ -324,7 +381,7 @@ uint8_t ps2::install() {
     io::outb(IO_CR_STATUS, CTRL_CMD_WRITE_CONFIGURATION);
     // Wait until Input bit status cleared
     data2 = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data2) {
+    if (data2 != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data2;
     }
@@ -333,7 +390,7 @@ uint8_t ps2::install() {
 
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
@@ -343,7 +400,7 @@ uint8_t ps2::install() {
     
     // Wait until Output bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_OUT_BUFFER_STATUS), 1);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Output status bit not cleared
         return data;
     }
@@ -354,7 +411,7 @@ uint8_t ps2::install() {
     
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
@@ -364,7 +421,7 @@ uint8_t ps2::install() {
 
     // Wait until Output bit status set
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_OUT_BUFFER_STATUS), 1);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Output status bit not set
         return data;
     }
@@ -376,7 +433,7 @@ uint8_t ps2::install() {
 
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
@@ -386,7 +443,7 @@ uint8_t ps2::install() {
 
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
@@ -395,7 +452,7 @@ uint8_t ps2::install() {
     
     // Wait until Output bit status set
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_OUT_BUFFER_STATUS), 1);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Output status bit not set
         return data;
     }
@@ -413,7 +470,7 @@ uint8_t ps2::install() {
     
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
@@ -437,7 +494,7 @@ uint8_t ps2::install() {
 
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
@@ -448,7 +505,7 @@ uint8_t ps2::install() {
     if (isDualChannel) {
         // Wait until Input bit status cleared
         data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-        if (data) {
+        if (data != PS2_NO_ERROR) {
             // Input status bit not cleared
             return data;
         }
@@ -457,7 +514,7 @@ uint8_t ps2::install() {
 
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
@@ -469,7 +526,7 @@ uint8_t ps2::install() {
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
     // Wait until Input bit status cleared
     data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-    if (data) {
+    if (data != PS2_NO_ERROR) {
         // Input status bit not cleared
         return data;
     }
@@ -478,8 +535,8 @@ uint8_t ps2::install() {
     // Check if port1 reset succeeded
     bufferContains[0] = {DEVICE_RESP_ACK, PS2_ERROR_PORT1_RESET_ACK_ERROR};
     bufferContains[1] = {DEVICE_RESP_SELF_TEST_SUCCESS, PS2_ERROR_PORT1_RESET_SELF_TEST_ERROR};
-    data = waitUntilBufferContainsOrdered(1, bufferContains, 2);
-    if (!data) {
+    data = waitUntilBufferContains(1, bufferContains, 2, NULL, 0, NULL);
+    if (data == PS2_NO_ERROR) {
         // Reset succeeded and device returned response with success
         isPort1DevicePresent = true;
     }
@@ -491,7 +548,7 @@ uint8_t ps2::install() {
 
         // Wait until Input bit status cleared
         data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-        if (data) {
+        if (data != PS2_NO_ERROR) {
             // Input status bit not cleared
             return data;
         }
@@ -501,7 +558,7 @@ uint8_t ps2::install() {
         io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT2_IN_WRITE);
         // Wait until Input bit status cleared
         data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-        if (data) {
+        if (data != PS2_NO_ERROR) {
             // Input status bit not cleared
             return data;
         }
@@ -510,8 +567,8 @@ uint8_t ps2::install() {
         // Check if port2 reset succeeded
         bufferContains[0] = {DEVICE_RESP_ACK, PS2_ERROR_PORT2_RESET_ACK_ERROR};
         bufferContains[1] = {DEVICE_RESP_SELF_TEST_SUCCESS, PS2_ERROR_PORT2_RESET_SELF_TEST_ERROR};
-        data = waitUntilBufferContainsOrdered(2, bufferContains, 2);
-        if (!data) {
+        data = waitUntilBufferContains(2, bufferContains, 2, NULL, 0, NULL);
+        if (data == PS2_NO_ERROR) {
             // Reset succeeded and device returned response with success
             isPort2DevicePresent = true;
         }
@@ -527,7 +584,7 @@ uint8_t ps2::install() {
 
         // Wait until Input bit status cleared
         data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-        if (data) {
+        if (data != PS2_NO_ERROR) {
             // Input status bit not cleared
             return data;
         }
@@ -536,7 +593,7 @@ uint8_t ps2::install() {
         io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
         // Wait until Input bit status cleared
         data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-        if (data) {
+        if (data != PS2_NO_ERROR) {
             // Input status bit not cleared
             return data;
         }
@@ -544,8 +601,8 @@ uint8_t ps2::install() {
 
         // Check if port1 Disable scanning succeeded
         bufferContains[0] = {DEVICE_RESP_ACK, PS2_ERROR_PORT1_DISABLE_SCANNING_ERROR};
-        data = waitUntilBufferContainsOrdered(1, bufferContains, 1);
-        if (data) {
+        data = waitUntilBufferContains(1, bufferContains, 1, NULL, 0, NULL);
+        if (data != PS2_NO_ERROR) {
             // Timeout error. Device doesn't returned the required data.
             return data;
         }
@@ -555,7 +612,7 @@ uint8_t ps2::install() {
 
         // Wait until Input bit status cleared
         data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-        if (data) {
+        if (data != PS2_NO_ERROR) {
             // Input status bit not cleared
             return data;
         }
@@ -564,17 +621,17 @@ uint8_t ps2::install() {
         io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
         // Wait until Input bit status cleared
         data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-        if (data) {
+        if (data != PS2_NO_ERROR) {
             // Input status bit not cleared
             return data;
         }
         io::outb(IO_DATA, DEVICE_CMD_IDENTIFY);
 
-        ps2Port1DeviceType = waitDeviceIdentifierResponse(1);
+        ps2Port1DeviceId = waitDeviceIdentifierResponse(1);
 
         // Wait until Input bit status cleared
         data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-        if (data) {
+        if (data != PS2_NO_ERROR) {
             // Input status bit not cleared
             return data;
         }
@@ -583,7 +640,7 @@ uint8_t ps2::install() {
         io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
         // Wait until Input bit status cleared
         data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
-        if (data) {
+        if (data != PS2_NO_ERROR) {
             // Input status bit not cleared
             return data;
         }
@@ -595,22 +652,28 @@ uint8_t ps2::install() {
 
         // Wait until buffer contains
         bufferContains[0] = {DEVICE_RESP_ACK, PS2_ERROR_PORT1_ENABLE_SCANNING_ERROR};
-        data = waitUntilBufferContainsOrdered(1, bufferContains, 1);
-        if (data) {
+        data = waitUntilBufferContains(1, bufferContains, 1, NULL, 0, NULL);
+        if (data != PS2_NO_ERROR) {
             // Timeout error. Device doesn't returned the required data.
             return data;
         }
         
         if (
-            ps2Port2DeviceType == PS2_DEVICE_TYPE_KEYBOARD_ANCIENT_AT ||
-            ps2Port2DeviceType == PS2_DEVICE_TYPE_KEYBOARD_1 ||
-            ps2Port2DeviceType == PS2_DEVICE_TYPE_KEYBOARD_2 ||
-            ps2Port2DeviceType == PS2_DEVICE_TYPE_KEYBOARD_3
-        ) { // Port1 is the keyboard device. Register keyboard int handler in port 1 to handle keyboard interruptions.
+            ps2Port1DeviceId == PS2_DEVICE_ID_KEYBOARD_ANCIENT_AT ||
+            ps2Port1DeviceId == PS2_DEVICE_ID_KEYBOARD_1 ||
+            ps2Port1DeviceId == PS2_DEVICE_ID_KEYBOARD_2 ||
+            ps2Port1DeviceId == PS2_DEVICE_ID_KEYBOARD_3
+        ) { 
+            // Port1 is the keyboard device.
+            // Pass the control to keyboard driver.
+            // Register keyboard int handler in port 1 to handle keyboard interruptions.
+            // Call keyboard driver install function.
+            ps2Port1DeviceType = PS2_DEVICE_TYPE_KEYBOARD;
             isr::registerIsrHandler(IRQ1, kbd::keyboardIntHandler);   // Register PS/2 Controller port1 IRQ handler
+            kbd::install();
         }
 
-        // stdio::kprintf("PS/2 port1 device type: %d\n", ps2Port1DeviceType);
+        // stdio::kprintf("PS/2 port1 device type: %d\n", ps2Port1DeviceId);
     }
 
     // if (isPort2DevicePresent) {
@@ -662,4 +725,88 @@ void ps2::readData(uint8_t* data) {
     } else {
         *data = 0; // Error
     }
+}
+
+uint8_t ps2::sendDataToDevice(
+    uint8_t deviceType, 
+    uint8_t data, 
+    BufferContains_t* allValues, 
+    uint8_t allValuesLen, 
+    BufferContains_t* oneOfValues, 
+    uint8_t oneOfValuesLen, 
+    uint8_t* oneOfValueFound,
+    unsigned char** respData, 
+    uint8_t* respLen
+) {
+    uint8_t mData;
+    uint8_t portId;
+    // Wait until Input bit status cleared
+    mData = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+    if (mData != PS2_NO_ERROR) {
+        // Input status bit not cleared
+        return mData;
+    }
+
+    if (ps2Port1DeviceType == deviceType) {
+        if (!isPort1DevicePresent) {
+            // Device is not present return error
+            return PS2_ERROR_DEVICE_TYPE_NOT_CONNECTED;
+        }
+
+        // Clear port buffer to be used to receive device response
+        ps2Port1DataLength = 0;
+        portId = 1;
+
+        // Register PS/2 Controller port1 IRQ handler
+        isr::registerIsrHandler(IRQ1, ps2Port1IntHandler);
+
+        // Tells the PS/2 controller that the next data goes to device in port1
+        io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
+    } else if (ps2Port2DeviceType == deviceType) {
+        if (!isPort2DevicePresent) {
+            // Device is not present return error
+            return PS2_ERROR_DEVICE_TYPE_NOT_CONNECTED;
+        }
+
+        // Clear port buffer to be used to receive device response
+        ps2Port2DataLength = 0;
+        portId = 2;
+
+        // Register PS/2 Controller port2 IRQ handler
+        isr::registerIsrHandler(IRQ12, ps2Port2IntHandler);  
+
+        // Tells the PS/2 controller that the next data goes to device in port2
+        io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
+    }
+
+    // Wait until Input bit status cleared
+    mData = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
+    if (mData != PS2_NO_ERROR) { // Input status bit not cleared
+        
+        // Pass the control to the driver interrupt driver again
+        registerDriverIrqForDeviceType(deviceType);
+
+        return mData;
+    }
+
+    // Send data to device
+    io::outb(IO_DATA, data);
+
+    // Get device response
+    mData = waitUntilBufferContains(portId, allValues, allValuesLen, oneOfValues, oneOfValuesLen, oneOfValueFound);
+
+    // Pass the control to the driver interrupt driver again
+    registerDriverIrqForDeviceType(deviceType);
+
+    if (respData != NULL && respLen != NULL) {
+        if (portId == 1) {
+            *respData = ps2Port1DataBuffer;
+            *respLen = ps2Port1DataLength;
+        } else {
+            *respData = ps2Port2DataBuffer;
+            *respLen = ps2Port2DataLength;
+        }
+    }
+
+    return mData;
 }

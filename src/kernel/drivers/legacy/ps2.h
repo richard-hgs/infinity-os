@@ -27,6 +27,37 @@
 #define PS2_ERROR_STATUS_BIT_EQUALS_TIMEOUT            15
 #define PS2_ERROR_NO_DEVICE_CONNECTED                  16
 #define PS2_ERROR_PORT1_ENABLE_SCANNING_ERROR          17
+#define PS2_ERROR_DEVICE_TYPE_NOT_CONNECTED            18
+
+/**
+ * @brief PS/2 Device to send/read data through serial com
+ * 
+ */
+#define PS2_DEVICE_TYPE_KEYBOARD 0
+#define PS2_DEVICE_TYPE_MOUSE    1
+
+/**
+ * @brief PS/2 Common device responses
+ * 
+ */
+#define DEVICE_RESP_ERROR                           0x00    // Error or internal buffer overrun
+#define DEVICE_RESP_ACK                             0xFA    // Command acknowledged (ACK)
+#define DEVICE_RESP_SELF_TEST_SUCCESS               0xAA    // Self test passed (sent after "0xFF (reset)" command or keyboard power up)
+
+/**
+ * @brief PS/2 Size of the buffers of the response of controller ports
+ * 
+ */
+#define PS2_PORTS_DATA_BUFFER_SIZE 10
+
+/**
+ * @brief Structure used to check if one byte of a buffer equals to required value if not return the given error.
+ * 
+ */
+typedef struct BufferContains {
+    uint8_t required;
+    uint8_t error;
+} BufferContains_t;
 
 /**
  * @brief 8042 PS/2 Controller
@@ -136,6 +167,28 @@ namespace ps2 {
      * @param data Ptr where to store the data received. 0=Error or device not found, or the Data received    
      */
     void readData(uint8_t* data);
+
+
+    /**
+     * @brief Send a data to one of the devices if device is present and is configured successfully.
+     * 
+     * @param deviceType             IN  - One of (0=PS2_DEVICE_TYPE_KEYBOARD, 1=PS2_DEVICE_TYPE_MOUSE)
+     * @param data                   IN  - Data to send to the given device
+     * @param allValues              IN  - Response in asc order that the device should contains. This is not a equality check, is a contains check.
+     *                               Since the buffer can contains some data we don't want.
+     * @param allValuesLen           IN  - NULL or The length of the list of contains values to check in buffer response.
+     * @param respData               OUT - Buffer containing the response of this command after "values contains match".
+     * @param respLen                OUT - Size of the resp data received.
+     * @return uint8_t                0 = PS2_NO_ERROR(Operation Suceeded)     -> Operation success
+     *                               15 = PS2_ERROR_STATUS_BIT_EQUALS_TIMEOUT  -> Input bit status not equals to 0, so we cant send the command.
+     *                               18 = PS2_ERROR_DEVICE_TYPE_NOT_CONNECTED  -> Device not connected or some error happened inside the ps2::install() function.
+     *                               XX = Or one of the errors in BufferContains values if provided.
+     */
+    uint8_t sendDataToDevice(uint8_t deviceType, uint8_t data, 
+                             BufferContains_t* allValues, uint8_t allValuesLen, 
+                             BufferContains_t* oneOfValues, uint8_t oneOfValuesLen, 
+                             uint8_t* oneOfValueFound,
+                             unsigned char** respData, uint8_t* respLen);
 }
 
 #endif

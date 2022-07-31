@@ -80,7 +80,7 @@ void pit::install() {
     isr::registerIsrHandler(IRQ0, timerInterruptHandler);
 
     // Configure pit channel to lowest frequency possible
-    configureChannel(IO_CHANNEL_0, CMD_AM_LO_HI_BYTE, CMD_OPMODE_SQUARE_WAVE, CMD_BCD_16_BIT, 0);
+    configureChannel(IO_CHANNEL_0, CMD_AM_LO_HI_BYTE, CMD_OPMODE_SQUARE_WAVE, CMD_BCD_16_BIT, 1193);
 }
 
 void pit::enable() {
@@ -148,5 +148,7 @@ void pit::ksleep(uint32_t millis) {
     // channel0Divisor ----> 1000 millis
     // kCountdownTimer ----> millis
     kCountdownTimer = millis * channel0Divisor / 1000;
-    while(kCountdownTimer > 0) {} // Wait until countdown timer reaches 0 then continue execution.
+    while(kCountdownTimer > 0) {
+        __asm__ volatile ("hlt"); // Halt the cpu. Waits until an IRQ occurs minimize CPU usage
+    } // Wait until countdown timer reaches 0 then continue execution.
 }

@@ -1,200 +1,75 @@
+// libc
+#include <stdio.h>
+#include <stdint.h>
+// stdlibs
+#include "stdlib.h"
 // drivers
 #include "ps2.h"
 // stdlibs
 #include "stdio.h"
-
+// sys
+#include "io.h"
 #include "keyboard.h"
 
-// Append keys one after another comma sepparated inside an array
-// #define APPEND_KEYS(K, ...) K, ##__VA_ARGS__
+#define CMD_GET_SET_SCANCODE_SET 0xF0    // Get/set current scan code set
+#define CMD_DATA_GET_SCANCODE_SET 0x0    // Get current scan code set
 
-/**
- * @brief Enum with all Keyboard Key Codes Mapped to int
- * 
- */
-typedef enum KEYCODE {
-	/* Alphanumeric keys */
-	KEY_SPACE	= ' ',
-	KEY_0		= '0',
-	KEY_1		= '1',
-	KEY_2		= '2',
-	KEY_3		= '3',
-	KEY_4		= '4',
-	KEY_5		= '5',
-	KEY_6		= '6',
-	KEY_7		= '7',
-	KEY_8		= '8',
-	KEY_9		= '9',
+uint8_t lastKey = 0;        // Last key pressed
+unsigned char lastKeyAscii; // Last ascii key recognized
 
-	KEY_A		= 'a',
-	KEY_B		= 'b',
-	KEY_C		= 'c',
-	KEY_D		= 'd',
-	KEY_E		= 'e',
-	KEY_F		= 'f',
-	KEY_G		= 'g',
-	KEY_H		= 'h',
-	KEY_I		= 'i',
-	KEY_J		= 'j',
-	KEY_K		= 'k',
-	KEY_L		= 'l',
-	KEY_M		= 'm',
-	KEY_N		= 'n',
-	KEY_O		= 'o',
-	KEY_P		= 'p',
-	KEY_Q		= 'q',
-	KEY_R		= 'r',
-	KEY_S		= 's',
-	KEY_T		= 't',
-	KEY_U		= 'u',
-	KEY_V		= 'v',
-	KEY_W		= 'w',
-	KEY_X		= 'x',
-	KEY_Y		= 'y',
-	KEY_Z		= 'z',
+bool _shift;
+bool _ctrl;
 
-	KEY_RETURN	= '\r',
-	KEY_ESCAPE	= 0x1001,
-	KEY_BACKSPACE	= '\b',
+typedef enum SCS1_en {
+    KEY_NULL = 0x00,
 
-	/* Arrow keys */
-	KEY_UP		= 0x1100,
-	KEY_DOWN	= 0x1101,
-	KEY_LEFT	= 0x1102,
-	KEY_RIGHT	= 0x1103,
+    KEY_ESC      = 0x01, KEY_F1         = 0x3B, KEY_F2   = 0x3C, KEY_F3    = 0x3D, KEY_F4 = 0x3E, KEY_F5 = 0x3F, KEY_F6 = 0x3F, KEY_F7 = 0x41, KEY_F8 = 0x42, KEY_F9    = 0x43, KEY_F10       = 0x44, KEY_F11       = 0x57, KEY_F12       = 0x58, 
+    KEY_1        = 0x02, KEY_2          = 0x03, KEY_3    = 0x04, KEY_4     = 0x05, KEY_5  = 0x06, KEY_6  = 0x07, KEY_7  = 0x08, KEY_8  = 0x09, KEY_9  = 0x0A, KEY_0     = 0x0B, KEY_MINUS     = 0x0C, KEY_EQUAL     = 0x0D, KEY_BACKSPACE = 0x0E,
+    KEY_TAB      = 0x0F, KEY_Q          = 0x10, KEY_W    = 0x11, KEY_E     = 0x12, KEY_R  = 0x13, KEY_T  = 0x14, KEY_Y  = 0x15, KEY_U  = 0x16, KEY_I  = 0x17, KEY_O     = 0x18, KEY_P         = 0x19, KEY_O_BRACKET = 0x1A, KEY_C_BRACKET = 0x1B, KEY_ENTER = 0x1C,
+    KEY_CAPSLOCK = 0x3A, KEY_A          = 0x1E, KEY_S    = 0x1F, KEY_D     = 0x20, KEY_F  = 0x21, KEY_G  = 0x22, KEY_H  = 0x23, KEY_J  = 0x24, KEY_K  = 0x25, KEY_L     = 0x26, KEY_SEMICOLON = 0x27, KEY_S_QUOTE   = 0x28, KEY_GRAVE     = 0x29,
+    KEY_LSHIFT   = 0x2A, KEY_BACKSLASH  = 0x2B, KEY_Z    = 0x2C, KEY_X     = 0x2D, KEY_C  = 0x2E, KEY_V  = 0x2F, KEY_B  = 0x30, KEY_N  = 0x31, KEY_M  = 0x32, KEY_COMMA = 0x33, KEY_PERIOD    = 0x34, KEY_SLASH     = 0x35, KEY_RSHIFT    = 0x36, 
+    KEY_LCTRL    = 0x1D, /*LGUI = 0xE0, 0x5B*/  KEY_LALT = 0x38, KEY_SPACE = 0x39, /*KEY_RALT=0xE0, 0x38*/
+} SCS1_en;
 
-	/* Function keys */
-	KEY_F1		= 0x1201,
-	KEY_F2		= 0x1202,
-	KEY_F3		= 0x1203,
-	KEY_F4		= 0x1204,
-	KEY_F5		= 0x1205,
-	KEY_F6		= 0x1206,
-	KEY_F7		= 0x1207,
-	KEY_F8		= 0x1208,
-	KEY_F9		= 0x1209,
-	KEY_F10	= 0x120a,
-	KEY_F11	= 0x120b,
-	KEY_F12	= 0x120c,
-	KEY_F13	= 0x120d,
-	KEY_F14	= 0x120e,
-	KEY_F15	= 0x120f,
+uint8_t kbd::install() {
+    uint8_t tmp;
+    stdio::kprintf("KBD - install\n");
 
-	KEY_DOT               = '.',
-	KEY_COMMA             = ',',
-	KEY_COLON             = ':',
-	KEY_SEMICOLON         = ';',
-	KEY_SLASH             = '/',
-	KEY_BACKSLASH         = '\\',
-	KEY_PLUS              = '+',
-	KEY_MINUS             = '-',
-	KEY_ASTERISK          = '*',
-	KEY_EXCLAMATION       = '!',
-	KEY_QUESTION          = '?',
-	KEY_QUOTEDOUBLE       = '\"',
-	KEY_QUOTE             = '\'',
-	KEY_EQUAL             = '=',
-	KEY_HASH              = '#',
-	KEY_PERCENT           = '%',
-	KEY_AMPERSAND         = '&',
-	KEY_UNDERSCORE        = '_',
-	KEY_LEFTPARENTHESIS   = '(',
-	KEY_RIGHTPARENTHESIS  = ')',
-	KEY_LEFTBRACKET       = '[',
-	KEY_RIGHTBRACKET      = ']',
-	KEY_LEFTCURL          = '{',
-	KEY_RIGHTCURL         = '}',
-	KEY_DOLLAR            = '$',
-	KEY_POUND             = '£',
-	KEY_EURO              = '$',
-	KEY_LESS              = '<',
-	KEY_GREATER           = '>',
-	KEY_BAR               = '|',
-	KEY_GRAVE             = '`',
-	KEY_TILDE             = '~',
-	KEY_AT                = '@',
-	KEY_CARRET            = '^',
-
-	/* Numeric keypad */
-	KEY_KP_0              = '0',
-	KEY_KP_1              = '1',
-	KEY_KP_2              = '2',
-	KEY_KP_3              = '3',
-	KEY_KP_4              = '4',
-	KEY_KP_5              = '5',
-	KEY_KP_6              = '6',
-	KEY_KP_7              = '7',
-	KEY_KP_8              = '8',
-	KEY_KP_9              = '9',
-	KEY_KP_PLUS           = '+',
-	KEY_KP_MINUS          = '-',
-	KEY_KP_DECIMAL        = '.',
-	KEY_KP_DIVIDE         = '/',
-	KEY_KP_ASTERISK       = '*',
-	KEY_KP_NUMLOCK        = 0x300f,
-	KEY_KP_ENTER          = 0x3010,
-
-	KEY_TAB               = 0x4000,
-	KEY_CAPSLOCK          = 0x4001,
-
-	/* Modify keys */
-	KEY_LSHIFT            = 0x4002,
-	KEY_LCTRL             = 0x4003,
-	KEY_LALT              = 0x4004,
-	KEY_LWIN              = 0x4005,
-	KEY_RSHIFT            = 0x4006,
-	KEY_RCTRL             = 0x4007,
-	KEY_RALT              = 0x4008,
-	KEY_RWIN              = 0x4009,
-
-	KEY_INSERT            = 0x400a,
-	KEY_DELETE            = 0x400b,
-	KEY_HOME              = 0x400c,
-	KEY_END               = 0x400d,
-	KEY_PAGEUP            = 0x400e,
-	KEY_PAGEDOWN          = 0x400f,
-	KEY_SCROLLLOCK        = 0x4010,
-	KEY_PAUSE             = 0x4011,
-
-	KEY_UNKNOWN,
-	KEY_NUMKEYCODES
-} KEYCODE;
-
-// MAP in ordinal order
-int _kbd_std_table[] = {
-//      00         01        02      03    04     05
-	KEY_UNKNOWN, KEY_ESCAPE, KEY_1, KEY_2, KEY_3, KEY_4,
-//   06      07     08     09     0A     0B      0C
-	KEY_5, KEY_6, KEY_7, KEY_8, KEY_9, KEY_0, KEY_MINUS,
-//    0D              0E         F        10    11     12
-	KEY_EQUAL, KEY_BACKSPACE, KEY_TAB, KEY_Q, KEY_W, KEY_E,
-//   13      14     15     16    17      18    19
-    KEY_R, KEY_T, KEY_Y, KEY_U, KEY_I, KEY_O, KEY_P,
-//        1A               1B             1C          1D 
-	KEY_LEFTBRACKET, KEY_RIGHTBRACKET, KEY_RETURN, KEY_LCTRL,
-//    1E     1F     20    21     22     23     24      25     26
-	KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K, KEY_L,
-//    27               28          29        2A           2B
-	KEY_SEMICOLON, KEY_QUOTE, KEY_GRAVE, KEY_LSHIFT, KEY_BACKSLASH,
-//   2C    2D     2E      2F    30     31      32      33
-	KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M, KEY_COMMA,
-//    34         35         36            37             38
-	KEY_DOT, KEY_SLASH, KEY_RSHIFT, KEY_KP_ASTERISK, KEY_RALT,
-//     39           3A         3B       3C     3D      3E      3F
-	KEY_SPACE, KEY_CAPSLOCK, KEY_F1, KEY_F1, KEY_F2, KEY_F3, KEY_F4,
-//    40     41       42     43      44      45        46
-	KEY_F5, KEY_F6, KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_SCROLLLOCK,
-//     47       48       49         4A             4B
-	KEY_HOME, KEY_UP, KEY_PAGEUP, KEY_KP_MINUS, KEY_LEFT,
-//    4C        4D          4E          4F        50
-	KEY_KP_5, KEY_RIGHT, KEY_KP_PLUS, KEY_END, KEY_DOWN,
-//     51             52          53          54           55           56         57       58
-	KEY_PAGEDOWN, KEY_INSERT, KEY_DELETE, KEY_UNKNOWN, KEY_UNKNOWN, KEY_UNKNOWN, KEY_F11, KEY_F12
-};
+    return PS2_NO_ERROR;
+}
 
 void kbd::keyboardIntHandler(registers_t* r) {
-    uint8_t data;
-    ps2::readData(&data); // Read the data returned by the keyboard in PS/2 Controller data
+    uint8_t curKey;
+    ps2::readData(&curKey); // Read the data returned by the keyboard in PS/2 Controller data
 
-    stdio::kprintf("KBD - data: %02x\n", data);
+    if (curKey >= KEY_1 && curKey <= KEY_9) { // Is numeric
+        lastKeyAscii = curKey + 47; // Offset in ascii table to the first numeric 1 char. Since numbers are in sequence resolve them
+    } else if (curKey == KEY_0) { // Since number isn't the last number in ascii we need to write its value manually
+        lastKeyAscii = '0';
+    }
+
+    lastKey = curKey;
+
+    stdio::kprintf("KBD - lastKey %02x - curKey: %02x - lastKeyAscii: %c\n", lastKey, curKey, lastKeyAscii);
+}
+
+uint8_t kbd::getCurrentScanCodeSet(uint8_t* scanCodeSet) {
+    uint8_t result;
+    BufferContains_t bufferContains[3];
+    BufferContains_t bufferContains2[3];
+
+    // Command to get keyboard scan code
+    bufferContains[0] = {DEVICE_RESP_ACK, KBD_ERROR_GET_SCANCODE_ACK_ERROR};
+    result = ps2::sendDataToDevice(PS2_DEVICE_TYPE_KEYBOARD, CMD_GET_SET_SCANCODE_SET, bufferContains, 1, NULL, 0, NULL, NULL, NULL);
+    if (result != PS2_NO_ERROR) {
+        return result;
+    }
+    
+    // Sub command to get keyboard scan code
+    bufferContains2[0] = {KBD_SCAN_CODE_SET1, KBD_ERROR_GET_SCANCODE_ERROR}; // Wait until response contains one of scan code sets
+    bufferContains2[1] = {KBD_SCAN_CODE_SET2, KBD_ERROR_GET_SCANCODE_ERROR}; // If one found return inside scanCodeSet
+    bufferContains2[2] = {KBD_SCAN_CODE_SET3, KBD_ERROR_GET_SCANCODE_ERROR};
+    result = ps2::sendDataToDevice(PS2_DEVICE_TYPE_KEYBOARD, CMD_DATA_GET_SCANCODE_SET, bufferContains, 1, bufferContains2, 3, scanCodeSet, NULL, NULL);
+    
+    return result;
 }
