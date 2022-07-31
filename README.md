@@ -6,11 +6,11 @@
   - ✅ Vga Text mode 80x25;
     - ✅ Print text on screen;
     - ✅ Scroll content up on last line reached and is full filled;
-    - ✅ Supported Scape sequeces:
+    - ✅ Supported Scape sequences:
       - ✅ \n = Line break;
-      - ⬜ \t = Tabulation;
+      - ✅ \t = Tabulation;
       - ⬜ \r = Carriage return (move cursor position to start of the line);
-      - ⬜ \b = Backspace;
+      - ✅ \b = Backspace;
       - ⬜ \f = Form feed (clear screen);
     - ✅ Format strings (stdlib::kprintf("A String: %s", "My string")):
       - ✅ %s = String data type;

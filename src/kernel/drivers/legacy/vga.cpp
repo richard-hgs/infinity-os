@@ -88,6 +88,21 @@ void vga::printStr(int foreColor, int bgColor, const char* str) {
             // VIDEO_BUFFER_INCREMENT = 70 = WIDTH - OFFSET_INCREMENT;
             //  - Increment video address by 70 to advance to the next line
             video += WIDTH - (VGA_OFFSET_CURSOR_POS((int) video) % WIDTH);
+        } else if (*str == '\b') {
+            // Back space - Discard \b char backspace
+            *str++;
+            if (((int) video) > vgaAddress + cursorOffset) {
+                // Get back to previous char writes a blank char on it then set offset to previous char position.
+                video -= 1;
+                *video++ = PAINT(' ', bgColor, foreColor);
+                video -= 1;
+            }
+        } else if (*str == '\t') {
+            // Tab - Discard \t char tab
+            *str++;
+            for(uint8_t i=0; i<4 && ((int) video) < SCREEN_MAX_OFFSET_POS; i++) { // Adds 4 space chars if less than max screen content
+                *video++ = PAINT(' ', bgColor, foreColor);
+            }
         } else {
             *video++ = PAINT(*str++, bgColor, foreColor);
         }

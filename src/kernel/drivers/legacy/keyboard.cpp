@@ -1,5 +1,4 @@
 // libc
-#include <stdio.h>
 #include <stdint.h>
 // stdlibs
 #include "stdlib.h"
@@ -7,18 +6,20 @@
 #include "ps2.h"
 // stdlibs
 #include "stdio.h"
-// sys
-#include "io.h"
 #include "keyboard.h"
 
 #define CMD_GET_SET_SCANCODE_SET 0xF0    // Get/set current scan code set
 #define CMD_DATA_GET_SCANCODE_SET 0x0    // Get current scan code set
 
 uint8_t lastKey = 0;        // Last key pressed
-unsigned char lastKeyAscii; // Last ascii key recognized
 
+bool _capslock;
 bool _shift;
 bool _ctrl;
+
+const char* _qwertyuiop = "qwertyuiop";
+const char* _asdfghjkl = "asdfghjkl";
+const char* _zxcvbnm = "zxcvbnm";
 
 typedef enum SCS1_en {
     KEY_NULL = 0x00,
@@ -40,17 +41,45 @@ uint8_t kbd::install() {
 
 void kbd::keyboardIntHandler(registers_t* r) {
     uint8_t curKey;
+    unsigned char asciiKey = 0;
     ps2::readData(&curKey); // Read the data returned by the keyboard in PS/2 Controller data
 
-    if (curKey >= KEY_1 && curKey <= KEY_9) { // Is numeric
-        lastKeyAscii = curKey + 47; // Offset in ascii table to the first numeric 1 char. Since numbers are in sequence resolve them
-    } else if (curKey == KEY_0) { // Since number isn't the last number in ascii we need to write its value manually
-        lastKeyAscii = '0';
+    if (curKey >= 0x81 && curKey <= 0xD8) { // Key released
+        curKey -= 0x80;                     // Transform the released key code in a pressed key code
+        if (curKey == KEY_LSHIFT || curKey == KEY_RSHIFT) {
+            _shift = false;
+        }
+    } else if (curKey >= KEY_1 && curKey <= KEY_9) { // Is numeric
+        asciiKey = curKey + 47;           // Offset in ascii table to the first numeric 1 char. Since numbers are in sequence resolve them
+    } else if (curKey == KEY_0) {             // Since number isn't the last number in ascii we need to write its value manually
+        asciiKey = '0';
+    } else if (curKey >= KEY_Q && curKey <= KEY_P) { // Since codes are in sequence subtract them to point to same chars of the buffer.
+        asciiKey = _qwertyuiop[curKey - KEY_Q];
+    } else if (curKey >= KEY_A && curKey <= KEY_L) { // Since codes are in sequence subtract them to point to same chars of the buffer.
+        asciiKey = _asdfghjkl[curKey - KEY_A];
+    } else if (curKey >= KEY_Z && curKey <= KEY_M) { // Since codes are in sequence subtract them to point to same chars of the buffer.
+        asciiKey = _zxcvbnm[curKey - KEY_Z];
+    } else if (curKey == KEY_TAB) {                  // Horizontal tab
+        asciiKey = '\t';
+    } else if (curKey == KEY_BACKSPACE) {
+        asciiKey = '\b';
+    } else if (curKey == KEY_SPACE) {
+        asciiKey = ' ';
+    } else if (curKey == KEY_LSHIFT || curKey == KEY_RSHIFT) {
+        _shift = true;
+    } else if (curKey == KEY_CAPSLOCK) {
+        _capslock = !_capslock;
     }
+
+    if ((!_capslock && _shift || _capslock && !_shift) && asciiKey >= 0x61 && asciiKey <= 0x7A) { // Shift or Capslock pressed change from ASCII 0x61=a ... 0x7A=z to ASCII 0x41=A ... 0x5A=Z
+        asciiKey -= 0x20; // subtract from ASCII a to ASCII A equivalent.
+    }
+
+    stdio::kprintf("%c", asciiKey);
 
     lastKey = curKey;
 
-    stdio::kprintf("KBD - lastKey %02x - curKey: %02x - lastKeyAscii: %c\n", lastKey, curKey, lastKeyAscii);
+    // stdio::kprintf("KBD - lastKey %02x - curKey: %02x - lastKeyAscii: %c\n", lastKey, curKey, (lastKeyAscii != 0 ? lastKeyAscii : ' '));
 }
 
 uint8_t kbd::getCurrentScanCodeSet(uint8_t* scanCodeSet) {
