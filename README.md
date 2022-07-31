@@ -21,11 +21,14 @@
       - ✅ %0d = Leading zeros for above format types %d, $x, %b;
   - ✅ PS/2 8042 - Controller:
       - ✅ Self Tests and Configuration;
-  - ⬜ PS/2 Keyboard;
-      - ⬜ Self Tests and Configuration;
-      - ⬜ Key code scan read;
+  - ✅ PS/2 Keyboard;
+      - ✅ Self Tests and Configuration;
+      - ✅ Key code scan read;
+      - ⬜ ASCII key buffer to send key data to processes;
   - ✅ PIT - Programmable Interval Timer;
-      - ✅ Minimum implementation, not used yet;
+      - ✅ Minimum implementation;
+      - ✅ Kernel sleep function pit::ksleep(int Millis);
+      - ✅ Configurable channels;
   - ✅ GDT - Global Descriptor Table;
   - ✅ IDT - Interrupt Descriptor Table;
   - ✅ ISR - Interrupt Service Routine;
@@ -64,7 +67,6 @@
               - ✅ TEXT - printStr - Prints raw text with escape sequences only in the screen;
           - ✅ SCHEDULER - Process Scheduler;
               - ✅ EXIT - exit - Terminate current process and return a result code, then move to the next process;
-      - ⬜ Idle process creation;
       - ✅ SHELL process creation;
           - ✅ Communicate with kernel using IDT Interruptions to access VGA memory;
           - ✅ Hello World Print;
