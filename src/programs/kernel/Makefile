@@ -4,8 +4,7 @@ CURRENT_DIR=$(shell basename $(CURDIR))
 .PHONY: all test
 
 all:
-	cd $(CURDIR)/libs && $(MAKE)
-	cd $(CURDIR)/kernel && $(MAKE)
+	cd $(CURDIR)/apps/shell && $(MAKE)
 
 test:
  	$(info $$var is [${CURRENT_DIR}])

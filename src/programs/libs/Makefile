@@ -40,8 +40,7 @@ $(BUILD_DIR)$(CURRENT_DIR)/%.cpp.o : %.cpp
 	mkdir -p $(dir $@)
 	$(CCX) $(CXXFLAGS) -c -o $@ $<
 	objdump -drwC -Mintel $@ > $@.dump
-	rm -rf $(BUILD_DIR)kernel/sys/fs.cpp.o
-	rm -rf $(BUILD_DIR)programs/user/shell/shell.bin
+	rm -rf $(BUILD_DIR)programs/kernel/apps/shell/shell.cpp.o
 
 # $(TARGET) : $(TARGET_ELF)
 # 	objcopy -O binary $(TARGET_ELF) $@

@@ -5,7 +5,7 @@
 #include "stdlib.h"
 // user libs ----------------------------------
 // sys
-#include "sysfuncs.h"
+#include "ksysfuncs.h"
 
 // -------------- SYSCALLS ARE DEFINED IN ./src/kernel/sys/syscalls.h ------------------
 #define SYSCALL_PRINT 1             // Print text on screen vga printStr("myText\n");
@@ -25,10 +25,10 @@ extern "C" int main();
  * 
  */
 void __attribute__((section("._start"))) _start() {
-    sysfuncs::exit(main());
+    ksysfuncs::exit(main());
 }
 
-void sysfuncs::printStr(const char* str) { // Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)
+void ksysfuncs::printStr(const char* str) { // Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)
     __asm__ __volatile__ (
         "mov %0, %%eax;"
         "mov %1, %%esi;"
@@ -40,7 +40,7 @@ void sysfuncs::printStr(const char* str) { // Executes the interruption INT=(0x3
 }
 
 
-void sysfuncs::printf(const char* str, ...) { // Format the string and redirects to printStr func
+void ksysfuncs::printf(const char* str, ...) { // Format the string and redirects to printStr func
     char fStr[PRINTF_STR_BUFFER_SIZE];
     va_list list;
     va_start(list, str);
@@ -49,7 +49,7 @@ void sysfuncs::printf(const char* str, ...) { // Format the string and redirects
     printStr(fStr);
 }
 
-void sysfuncs::readln(char* dest) { // Executes the interruption INT=(0x30=48) with EAX=(0x03=3=SYSCALL_READLN) with no parameters(E.g The process scheduler already knows wich process is running)
+void ksysfuncs::readln(char* dest) { // Executes the interruption INT=(0x30=48) with EAX=(0x03=3=SYSCALL_READLN) with no parameters(E.g The process scheduler already knows wich process is running)
     __asm__ __volatile__ (
         "mov %0, %%eax;"
         "mov %1, %%edi;"
@@ -60,7 +60,7 @@ void sysfuncs::readln(char* dest) { // Executes the interruption INT=(0x30=48) w
     );
 }
 
-void sysfuncs::exit(int code) { // Executes the interruption INT=(0x30=48) with EAX=(0x02=2=SYSCALL_PROC_EXIT) and EBX=(code={0=SUCCESS or ERROR_CODE}) - Remove proccess from queue get the return code and move to the next proccess
+void ksysfuncs::exit(int code) { // Executes the interruption INT=(0x30=48) with EAX=(0x02=2=SYSCALL_PROC_EXIT) and EBX=(code={0=SUCCESS or ERROR_CODE}) - Remove proccess from queue get the return code and move to the next proccess
     __asm__ __volatile__ (
         "mov %0, %%eax;"
         "mov %1, %%ebx;"
