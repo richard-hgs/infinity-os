@@ -6,12 +6,16 @@
 #include "ps2.h"
 // stdlibs
 #include "stdio.h"
+// process
+#include "scheduler.h"
 #include "keyboard.h"
 
 #define CMD_GET_SET_SCANCODE_SET 0xF0    // Get/set current scan code set
 #define CMD_DATA_GET_SCANCODE_SET 0x0    // Get current scan code set
 
-uint8_t lastKey = 0;        // Last key pressed
+#define KBD_KEY_BUFFER_SIZE 256
+
+static uint8_t lastKey;                  // Last key pressed
 
 bool _capslock;
 bool _shift;
@@ -20,6 +24,9 @@ bool _ctrl;
 const char* _qwertyuiop = "qwertyuiop";
 const char* _asdfghjkl = "asdfghjkl";
 const char* _zxcvbnm = "zxcvbnm";
+
+char keyboardBuffer[KBD_KEY_BUFFER_SIZE];
+unsigned char keyboardBufferPos;
 
 typedef enum SCS1_en {
     KEY_NULL = 0x00,
@@ -33,7 +40,13 @@ typedef enum SCS1_en {
 } SCS1_en;
 
 uint8_t kbd::install() {
-    uint8_t tmp;
+    // Zero fill .bss unitialized data. Must be initialized.
+    lastKey = 0;
+    _capslock = false;
+    _shift = false;
+    _ctrl = false;
+    keyboardBufferPos = 0;
+
     stdio::kprintf("KBD - install\n");
 
     return PS2_NO_ERROR;
@@ -60,9 +73,11 @@ void kbd::keyboardIntHandler(registers_t* r) {
     } else if (curKey >= KEY_Z && curKey <= KEY_M) { // Since codes are in sequence subtract them to point to same chars of the buffer.
         asciiKey = _zxcvbnm[curKey - KEY_Z];
     } else if (curKey == KEY_TAB) {                  // Horizontal tab
-        asciiKey = '\t';
+        asciiKey = '\t';    // Must be implemented in buffer
     } else if (curKey == KEY_BACKSPACE) {
         asciiKey = '\b';
+    } else if (curKey == KEY_ENTER) {
+        asciiKey = '\n';
     } else if (curKey == KEY_SPACE) {
         asciiKey = ' ';
     } else if (curKey == KEY_LSHIFT || curKey == KEY_RSHIFT) {
@@ -71,15 +86,35 @@ void kbd::keyboardIntHandler(registers_t* r) {
         _capslock = !_capslock;
     }
 
-    if ((!_capslock && _shift || _capslock && !_shift) && asciiKey >= 0x61 && asciiKey <= 0x7A) { // Shift or Capslock pressed change from ASCII 0x61=a ... 0x7A=z to ASCII 0x41=A ... 0x5A=Z
-        asciiKey -= 0x20; // subtract from ASCII a to ASCII A equivalent.
+    if (((!_capslock && _shift) || (_capslock && !_shift)) && asciiKey >= 0x61 && asciiKey <= 0x7A) { // Shift or Capslock pressed change from ASCII 0x61=a ... 0x7A=z to ASCII 0x41=A ... 0x5A=Z
+        asciiKey -= 0x20; // subtract from ASCII minor case to ASCII upper case equivalent.
     }
 
-    stdio::kprintf("%c", asciiKey);
+    if (
+        asciiKey != 0 && ( // Ascii key received
+            (asciiKey == '\b' && keyboardBufferPos > 0) || // Is a backspace char and first item of buffer not reached.
+            (asciiKey != '\b' && keyboardBufferPos < KBD_KEY_BUFFER_SIZE - 1) // Is a new char and end of buffer not reached.
+        )
+    ) {
+        keyboardBuffer[keyboardBufferPos] = asciiKey == '\b' ? 0 : asciiKey; // If is a new char add char to buffer, If is a backspace add zero to current buffer position.
+        if (asciiKey != '\b') { // Is a new char increment keyboard buffer
+            keyboardBufferPos++;
+        } else {                // Is a backspace decrement keyboard buffer
+            keyboardBufferPos--;
+        }
+        
+        stdio::kprintf("%c", asciiKey); // Write char on screen or perform the backspace.
+    }
+
+    if (asciiKey == '\n') {
+        keyboardBuffer[(keyboardBufferPos > 0 ? keyboardBufferPos - 1 : 0)] = 0;      // Add EOF in buffer in the same place of the \n to allow strlen measurement and remove \n from buffer.
+        scheduler::kbdCreateResource(keyboardBuffer);   // Pass this resource to next keyboard process waiting for a keyboard resource.
+        keyboardBufferPos = 0;                          // Reset buffer offset to receive a new input line.
+    }
 
     lastKey = curKey;
 
-    // stdio::kprintf("KBD - lastKey %02x - curKey: %02x - lastKeyAscii: %c\n", lastKey, curKey, (lastKeyAscii != 0 ? lastKeyAscii : ' '));
+    // stdio::kprintf("KBD - lastKey %02x - curKey: %02x - asciiKey: %c - validation: %d\n", lastKey, curKey, (asciiKey != 0 ? asciiKey : ' '), keyboardBufferPos);
 }
 
 uint8_t kbd::getCurrentScanCodeSet(uint8_t* scanCodeSet) {

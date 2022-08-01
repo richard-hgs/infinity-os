@@ -17,7 +17,7 @@ extern "C" unsigned int kernelESP; // Imported from scheduler.cpp
 #define IDT_MESSAGES_LEN 32
 #define INTERRUPT_HANDLERS_SIZE 256
 
-isr_t interruptHandlers[INTERRUPT_HANDLERS_SIZE];
+isr_t interruptHandlers[IDT_ENTRIES];
 
 const char* idtMessages[IDT_MESSAGES_LEN] {                        // 627 length
     "Fault - (DE) Divide Error",                                    // 25 length
@@ -77,20 +77,20 @@ extern "C" void irq_handler(registers_t* r) { // PIC - IRQs Handler
 
 extern "C" void isr48_handler(IntRegisters r) { // USER - ISR Handler
     asm("mov %0, %%esp" : : "r" (kernelESP)); // Change context to the kernel stack pointer
-    PID runningProcess = scheduler::getRunningProcess();
-    scheduler::processSaveContext(runningProcess, &r);
     syscalls::syscallHandler(&r);
-    // Switch to process context to keep it's execution from where it stopped
-    scheduler::processLoadContext(runningProcess);
 }
 
 void isr::install() {
-    __asm__ __volatile__("cli");  // Clear the interrupt flag in flags CPU Register
-    uint8_t i;
+    __asm__ volatile("cli");  // Clear the interrupt flag in flags CPU Register
+    uint16_t i;
+    // Initialize all variables located in .bss unitialized section. Must be initialized.
+    for(i=0; i<IDT_ENTRIES; i++) {
+        registerIsrHandler(i, 0); // Not present
+    }
 
     // Setup the isr interrupt functions that was created in isr_int.asm
-    for (i = 0; i < 32; i++) {
-        idt::setGate(i, (uint32_t) isr_stub_table[i]);
+    for (i=0; i<32; i++) {
+        idt::setGate(i, (uint32_t) isr_stub_table[i], IDT_KERNEL_CS, IDT_GATE_PRESENT, IDT_GATE_DPL_PRIVILEGE_MAX, IDT_GATE_STORAGE_SEG_INT, IDT_GATE_TYPE_X86_INTERRUPT);
     }
 
     // Remap Master PIC to offset 0x20 = IDT 32
@@ -99,18 +99,25 @@ void isr::install() {
 
     // Setup the irq interrupt functions that was created in isr_int.asm
     for (; i<48; i++) {
-        idt::setGate(i, (uint32_t) isr_stub_table[i]);
+        idt::setGate(i, (uint32_t) isr_stub_table[i], IDT_KERNEL_CS, IDT_GATE_PRESENT, IDT_GATE_DPL_PRIVILEGE_MAX, IDT_GATE_STORAGE_SEG_INT, IDT_GATE_TYPE_X86_INTERRUPT);
     }
     
     // Setup the user interrupt functions that was created in isr_int.asm
     for (; i<49; i++) {
-        idt::setGate(i, (uint32_t) isr_stub_table[i]);
+        idt::setGate(i, (uint32_t) isr_stub_table[i], IDT_KERNEL_CS, IDT_GATE_PRESENT, IDT_GATE_DPL_PRIVILEGE_MAX, IDT_GATE_STORAGE_SEG_INT, IDT_GATE_TYPE_X86_INTERRUPT);
     }
 
-    idt::install();
-    __asm__ __volatile__("sti");  // Set the interrupt flag in flags CPU Register
+    // Setup the other gates to not present. Since the global variables are located in the .bss section.
+    for (; i<IDT_ENTRIES; i++) {
+        idt::setGate(i, 0, 0, 0, 0, 0, IDT_GATE_TYPE_X86_INTERRUPT); // The gate type is required
+    }
+
+    // Install the operating system interruptio table in cpu configuration.
+    // This will replace the IDT created by the bios in the boot process.
+    idt::install(); 
+    __asm__ volatile("sti");  // Set the interrupt flag in flags CPU Register
 }
 
-void isr::registerIsrHandler(uint8_t isrIndex, isr_t handler) {
+void isr::registerIsrHandler(uint16_t isrIndex, isr_t handler) {
     interruptHandlers[isrIndex] = handler;
 }

@@ -70,6 +70,7 @@ TARGET_ELF=$(BUILD_DIR)$(CURRENT_DIR)/kernel.elf
 TARGET_MAP=$(BUILD_DIR)$(CURRENT_DIR)/kernel.map
 TARGET_DUMP=$(BUILD_DIR)$(CURRENT_DIR)/kernel.dump
 TARGET_RODATA=$(BUILD_DIR)$(CURRENT_DIR)/kernel.rodata 
+TARGET_BSS=$(BUILD_DIR)$(CURRENT_DIR)/kernel.bss
 
 .PHONY: all test clean distclean
 all: $(TARGET)

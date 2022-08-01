@@ -83,9 +83,11 @@ extern "C" int kmain() {
     heap::initKheap();
     vga::printStr("KERNEL HEAP     - Install: OK\n");
 
-    // scheduler::init();
-    // PID pidShell = scheduler::createProcess("shell.exe");
-    // scheduler::resumeProcess(pidShell);
+    scheduler::init();
+    PID pidShell = scheduler::createProcess("shell.exe");
+    scheduler::resumeProcess(pidShell);
+    scheduler::start();
+
     // scheduler::processLoadContext(pidShell);
 
     // stdio::kprintf("pidShell 0x%x\n", (int) pidShell);
@@ -105,6 +107,8 @@ extern "C" int kmain() {
 
     // Dont consume cpu
     // __asm__ volatile ("cli; hlt");  // Halt the cpu. Waits until an IRQ occurs
+
+    
 
     // Idle process consumes cpu
     while(1) {

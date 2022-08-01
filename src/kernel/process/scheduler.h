@@ -54,6 +54,12 @@ namespace scheduler {
     void init();
 
     /**
+     * @brief Start process scheduler and execute the next ready program on the first ready queue position.
+     * 
+     */
+    void start();
+
+    /**
      * @brief 
      * 
      * @param pages 
@@ -70,6 +76,9 @@ namespace scheduler {
 
     /**
      * @brief Resume the given Process Control Block
+     * 
+     * - Add process pid to ready queue.
+     * - Change process state to PROC_STATE_READY to be executed.
      * 
      * @param pid PCB* Process Control Block
      */
@@ -89,6 +98,36 @@ namespace scheduler {
      * @param regs Registers to be saved
      */
     void processSaveContext(PID pid, IntRegisters* regs);
+
+    /**
+     * @brief Terminate process execution for given PID
+     * 
+     * - Check if process is in process list if not, process don't exists, it's not running.
+     * - Remove given process from all queue lists.
+     * - Also release all page frames used by this process to be used by others. Reset all pages to unused.
+     * - Also release memory dynamic allocated to this process PID = PCB*
+     * 
+     * @param pid PID = PCB*
+     */
+    void processTerminate(PID pid);
+
+    /**
+     * @brief Process is asking for a keyboard input resource.
+     * 
+     * - Remove pid from ready queue.
+     * - Add pid to waiting queue.
+     * - Add pid to waitingKbdProcesses queue.
+     * 
+     * @param pid PID = PCB*
+     */
+    void kbdAskResource(PID pid);
+
+    /**
+     * @brief Create a keyboard resource to be shared with process that requested keyboard input
+     * 
+     * @param kbdBuffer Buffer to be shared with the process
+     */
+    void kbdCreateResource(char* kbdBuffer);
 
     /**
      * @brief Get the current Running Process

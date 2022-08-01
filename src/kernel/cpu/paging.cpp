@@ -22,20 +22,23 @@ PageDirectory* pageDirectory;
 void paging::install() {
     int i;
 
-    for (i = 0; i < FRAMES_COUNT; i++) {
+    // Initialize the frames to 0=UNUSED, because frames is located in .bss section and must be initialized.
+    for (i = 0; i < FRAMES_COUNT; i++) { 
         frames[i] = 0; // unused
     }
 
     // Frames for page directory and page tables are set as in use
     frameSetUsage(PAGE_DIRECTORY_START, 1);
-    for (i = 0; i < PAGE_TABLE_COUNT; i++) {
+    for (i=0; i<PAGE_TABLE_COUNT; i++) {
         frameSetUsage(PAGE_TABLES_START + i, 1);
     }
 
+    // PageDirectory is located in .bss section and must be initialized.
     // PageDirectory from (0x100000 - 0x101000) = 0x1000 = 4kb
     pageDirectory = (PageDirectory*) frameAddress(PAGE_DIRECTORY_START);
+
     // All pages are set as not present
-    for (i = 0; i < 1024; i++) {
+    for (i=0; i<1024; i++) {
         // Set all directory entries as not present in memory
         // Wich means that the page doesn't have a physical address
         setPageTableEntry(&pageDirectory->entry[i], 0, 0, 0, 0); // not present
@@ -46,13 +49,13 @@ void paging::install() {
 
     // Map kernel source code where virtual addr = physical addr
     // from (0x6400000 - 0x6500000) = 0x100000 = 1Mb
-    for (i = 0; i < KERNEL_SOURCE_SIZE; i++) {
+    for (i=0; i<KERNEL_SOURCE_SIZE; i++) {
         mapPage(pageDirectory, KERNEL_START_ADDR + i * FRAME_SIZE, KERNEL_START_ADDR + i * FRAME_SIZE);
     }
 
     // Map kernel stack where virtual addr = physical addr
     // from (0x6501000 - 0x6505000) = 0x4000 = 16kb
-    for (i = 0; i < 4; i++) {
+    for (i=0; i<4; i++) {
         mapPage(pageDirectory, KERNEL_STACK_START_ADDR + i * FRAME_SIZE, KERNEL_STACK_START_ADDR + i * FRAME_SIZE);
     }
 
@@ -62,14 +65,14 @@ void paging::install() {
 
     // Mapping kernel heap where virtual addr = physical addr
     // from (0x6507000 - 0x7107000) = 0xC00000 = 12 Mb
-    for (i = 0; i < KERNEL_HEAP_SIZE; i++) {
+    for (i=0; i<KERNEL_HEAP_SIZE; i++) {
         mapPage(pageDirectory, KERNEL_HEAP_START_ADDR + i * FRAME_SIZE, KERNEL_HEAP_START_ADDR + i * FRAME_SIZE);
     }
 
     // Map page directory and page tables
     // from (0x100000 - 0x101000) = 0x1000 = 4kb
     mapPage(pageDirectory, frameAddress(PAGE_DIRECTORY_START), frameAddress(PAGE_DIRECTORY_START));
-    for (i = 0; i < PAGE_TABLE_COUNT; i++) {
+    for (i=0; i<PAGE_TABLE_COUNT; i++) {
         // from (0x101000 - 0x500000) = 0x3FF000 = 4 Mb
         mapPage(pageDirectory, frameAddress(PAGE_TABLES_START + i), frameAddress(PAGE_TABLES_START + i));
     }
@@ -132,7 +135,7 @@ unsigned int paging::frameAlloc() {
     unsigned char temp;   // bit number in byte
     unsigned int frameNr; // frame number
 
-    for (i = 0; i < FRAMES_COUNT; i++) { // For each frame
+    for (i=0; i<FRAMES_COUNT; i++) { // For each frame
         if (frames[i] != 0xFF) {         // Check if the byte of the frame has at least one frame (bit) = 0 if so the value will be different of 0xFF (255 = 11111111)
             temp = frames[i];            // The byte has a free frame (bit) so we need to iterate the frames (bits) of the current byte to check wich frame (bit) is free
 

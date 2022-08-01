@@ -1,3 +1,5 @@
+// libc
+#include <stdbool.h>
 // stdlibs
 #include "stdlib.h"
 #include "string.h"
@@ -20,16 +22,38 @@ Queue readyProcesses;
 Queue waitingProcesses;
 PID runningProcess;
 
+// Only one process can access a keyboard resource per time.
+// Also this resource should be discarded, after it's usage.
 Stack waitingKeyboardProcesses;
-
-PID idleProcess;
 
 unsigned int kernelESP;
 
 void scheduler::init() {
+    // Global vars are located in .bss section unitialized data. Must be initialized.
     queue::init(&allProcesses);
     queue::init(&readyProcesses);
     queue::init(&waitingProcesses);
+    stack::init(&waitingKeyboardProcesses);
+    kernelESP = 0;
+
+}
+
+void scheduler::start() {
+    runningProcess = (PID) queue::removeFirst(&readyProcesses);
+    if (runningProcess == NULL) {
+        // No ready processes, stop cpu execution until next interruption to save power consumption.
+        // stdio::kprintf("SCHEDULER - no ready process found.\n");
+        __asm__ volatile ("sti");       // Enable interruptions again to use hlt.
+        while(runningProcess == NULL) { // This is our idle process.
+            __asm__ volatile ("hlt");   // Halt the cpu. Waits until an IRQ occurs minimize CPU usage, heat and consumption.
+            runningProcess = (PID) queue::removeFirst(&readyProcesses);
+        }
+        __asm__ volatile ("cli");       // Disable interruptions again since one or more processes are in execution.
+    }
+
+    // kprintf("sched: %s\n", runningProcess->processName);
+
+    processLoadContext(runningProcess);
 }
 
 unsigned int scheduler::loadProcess(unsigned int *pages, const char* processName) {
@@ -227,6 +251,60 @@ void scheduler::processSaveContext(PID pid, IntRegisters *regs) {
     pid->registers.EFLAGS = regs->eflags;
     pid->registers.EIP = regs->eip;
     pid->registers.CS = regs->cs;
+}
+
+void scheduler::processTerminate(PID pid) {
+    int i;
+
+    if (queue::removeElement(&allProcesses, (void*) pid) == false) { // No such process
+        return;
+    }
+
+    // Freeing memory used by the process
+    for (i = 0; i < PROC_MAX_MEMORY_PAGES; i++) {
+        if (pid->memoryPages[i] != PROC_UNUSED_PAGE) {
+            paging::frameFree(paging::frameNumber(pid->memoryPages[i]));
+            paging::unmapPage(i * FRAME_SIZE);
+        }
+    }
+
+    // Removing PID from all process queues
+    while (queue::removeElement(&allProcesses, (void*)pid->pid)){}
+    while (queue::removeElement(&readyProcesses, (void*)pid->pid)){}
+    while (queue::removeElement(&waitingProcesses, (void*)pid->pid)){}
+    while (stack::removeElement(&waitingKeyboardProcesses, (void*)pid->pid)){}
+
+    // Freeing process PCB
+    heap::kfree(pid);
+}
+
+void scheduler::kbdAskResource(PID pid) {
+    pid->processState = PROC_STATE_WAITING;                                      // Move process to waiting state
+    while (queue::removeElement(&readyProcesses, (void*) runningProcess->pid)){} // Remove process from ready queue
+    queue::add(&waitingProcesses, (void*) runningProcess->pid);                  // Add process to waiting queue
+    stack::push(&waitingKeyboardProcesses, (void*) runningProcess->pid);         // Add process to waitingKeyboard queue
+}
+
+void scheduler::kbdCreateResource(char* kbdBuffer) {
+    PID pid;
+    int i;
+
+    // Remove process from waiting queues
+    pid = (PID) stack::pop(&waitingKeyboardProcesses);
+    if (pid != NULL) {
+        while (queue::removeElement(&waitingProcesses, (void*) pid->pid)) {}
+
+        // Copy input buffer to process memory, address is in EDI
+        for (i=0; i<PROC_MAX_MEMORY_PAGES; i++) {
+            if (pid->memoryPages[i] != PROC_UNUSED_PAGE) {
+                paging::remoteMapPage(i * FRAME_SIZE, pid->memoryPages[i]);
+            }
+        }
+        string::strcpy((char*) pid->registers.EDI, kbdBuffer);
+
+        // Add process that request this resource to ready queue
+        queue::add(&readyProcesses, (void*) pid->pid);
+    }
 }
 
 PID scheduler::getRunningProcess() {

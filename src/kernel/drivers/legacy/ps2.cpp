@@ -113,11 +113,12 @@
 #define TIMEOUT_COUNT 1000 // Max loop count before timeout reached
 #define TIMEOUT_SLEEP 1    // Millis Time to wait for each loop count before try again
 
+// All global variables are located in .bss section Uninitialized data and must be initialized.
 unsigned char ps2Port1DataBuffer[PS2_PORTS_DATA_BUFFER_SIZE];
 unsigned char ps2Port2DataBuffer[PS2_PORTS_DATA_BUFFER_SIZE];
 
-uint8_t ps2Port1DataLength = 0;
-uint8_t ps2Port2DataLength = 0;
+uint8_t ps2Port1DataLength;
+uint8_t ps2Port2DataLength;
 
 bool isDualChannel; // true=PS/2 Is dual channel, false=Single chanel only
 bool isPort1DevicePresent; // true=Device is connected, false=Device not connected
@@ -234,7 +235,8 @@ uint8_t waitUntilBufferContains(
 }
 
 uint8_t waitUntilStatusBitEquals(uint8_t bitOffset, uint8_t bitValue) {
-    uint32_t countdownTimeout = 2147483646; // Max Int
+    // uint32_t countdownTimeoutMultiplier = 10; // Multiply max int by ten times to increase wait time
+    uint32_t countdownTimeout = 2147483646;   // Max Int
     while(countdownTimeout > 0 && ((io::inb(IO_CR_STATUS) >> bitOffset) & 0x1) != (bitValue & 0x1)) { 
         // Until bit offset of the status register equals to bitValue continue loop until countdown reaches 0
         countdownTimeout--;
@@ -314,6 +316,15 @@ uint8_t ps2::install() {
     uint8_t data;
     uint8_t data2;
 
+    // Zero fill all uninitilized data located at .bss section. Must be initialized.
+    isDualChannel = false;
+    isPort1DevicePresent = false;
+    isPort2DevicePresent = false;
+    ps2Port1DeviceId = 0;
+    ps2Port2DeviceId = 0;
+    ps2Port1DeviceType = 0;
+    ps2Port2DeviceType = 0;
+
     // Determine if PS/2 Controller exists through ACPI Check bit 1 (value = 2, the "8042" flag) in the "IA PC Boot Architecture Flags" field at offset 109 in the Fixed ACPI Description Table (FADT). If this bit is clear, then there is no PS/2 Controller
 
     // Disable PS/2 port 1 to avoid PS/2 devices from sending data during Controller configuration
@@ -325,8 +336,6 @@ uint8_t ps2::install() {
         // Input status bit not cleared
         return data;
     }
-
-
     
     // Disable PS/2 port 2 to avoid PS/2 devices from sending data during Controller configuration
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT2_DISABLE);
@@ -519,9 +528,6 @@ uint8_t ps2::install() {
         return data;
     }
 
-    // Clear port1 buffer to be used to receive device reset response data
-    ps2Port1DataLength = 0;
-
     // Reset PS/2 Device 1
     io::outb(IO_CR_STATUS, CTRL_CMD_PS2_PORT1_IN_WRITE);
     // Wait until Input bit status cleared
@@ -530,6 +536,9 @@ uint8_t ps2::install() {
         // Input status bit not cleared
         return data;
     }
+    // Clear port1 buffer to be used to receive device reset response data
+    ps2Port1DataLength = 0;
+    // Send reset command to device in port1
     io::outb(IO_DATA, CTRL_CMD_PS2_RESET);
 
     // Check if port1 reset succeeded
@@ -543,9 +552,6 @@ uint8_t ps2::install() {
 
     // PS/2 Device reset
     if (isDualChannel) {
-        // Clear port2 buffer to be used to receive device reset response data
-        ps2Port2DataLength = 0;
-
         // Wait until Input bit status cleared
         data = waitUntilStatusBitEquals(first_bit_set_index(STATUS_IN_BUFFER_STATUS), 0);
         if (data != PS2_NO_ERROR) {
@@ -562,6 +568,9 @@ uint8_t ps2::install() {
             // Input status bit not cleared
             return data;
         }
+        // Clear port2 buffer to be used to receive device reset response data
+        ps2Port2DataLength = 0;
+        // Send reset command to device in port2
         io::outb(IO_DATA, CTRL_CMD_PS2_RESET);
 
         // Check if port2 reset succeeded
@@ -673,12 +682,15 @@ uint8_t ps2::install() {
             kbd::install();
         }
 
-        // stdio::kprintf("PS/2 port1 device type: %d\n", ps2Port1DeviceId);
+        stdio::kprintf("PS/2 port1 device type: %d\n", ps2Port1DeviceId);
     }
 
     // if (isPort2DevicePresent) {
     //     // stdio::kprintf("port2 device present\n");
     // }
+
+    // isr::registerIsrHandler(IRQ1, kbd::keyboardIntHandler);   // Register PS/2 Controller port1 IRQ handler
+    // kbd::install();
 
     return PS2_NO_ERROR;
 }

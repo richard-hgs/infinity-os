@@ -76,6 +76,13 @@ void timerInterruptHandler(registers_t* r) {
 }
 
 void pit::install() {
+    uint8_t i;
+    // Zero fill .bss unitialized data. Must be initialized.
+    for (i=0; i<TIMER_BLOCK_BUF_SIZE; i++) {
+        timerBlocks[i].id = 0;
+        timerBlocks[i].id = 0;
+    }
+
     // Setup the handler
     isr::registerIsrHandler(IRQ0, timerInterruptHandler);
 

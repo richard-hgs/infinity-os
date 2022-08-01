@@ -14,7 +14,7 @@ namespace sysfuncs {
      *  MAX_TEXT_SIZE: 1024 chars long
      * 
      */
-    void printStr(const char* str);
+    void printStr(const char *str);
 
     /**
      * @brief Prints a formatted string text with unlimited arguments
@@ -34,7 +34,17 @@ namespace sysfuncs {
      * 
      * @param str 
      */
-    void printf(const char* str, ...);
+    void printf(const char *str, ...);
+
+    /**
+     * @brief Read one line from console terminal input by the keyboard driver. 
+     *        Continue process execution only after one line of text received.
+     * 
+     * Executes the interruption INT=(0x30=48) with EAX=(0x03=3=SYSCALL_READLN) with no parameters(E.g The process scheduler already knows wich process is running)
+     * 
+     * @param dest OUT - The char* buffer that will hold this keyboard input line.
+     */
+    void readln(char *dest);
 
     /**
      * @brief Stop proccess execution and return a code if an error happened

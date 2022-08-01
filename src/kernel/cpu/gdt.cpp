@@ -34,6 +34,8 @@ void gdt_set_gate(uint32_t i, uint32_t base, uint32_t limit, uint8_t access, uin
 
 void gdt::install(void)
 {
+	// Since (gdt_entries, gdt_ptr) are in .bss section they must be initialized before use
+	
 	gdt_ptr.limit = sizeof(gdt_entry_t) * MAX_GDT_ENTRIES - 1;
 	gdt_ptr.base = (uint32_t) &gdt_entries;
 

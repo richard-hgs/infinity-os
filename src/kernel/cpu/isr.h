@@ -76,7 +76,7 @@ namespace isr {
 	 * @param isrIndex 	ISR Index
 	 * @param handler 	callback handler
 	 */
-	void registerIsrHandler(uint8_t isrIndex, isr_t handler);
+	void registerIsrHandler(uint16_t isrIndex, isr_t handler);
 }
 
 #endif

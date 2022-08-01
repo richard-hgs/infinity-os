@@ -89,6 +89,7 @@ void heap::free(Heap* heap, void* addr) {
 }
 
 void heap::initKheap() {
+    // Initialize kernelHeap since it is located in .bss unitialized data section.
     init(&kernelHeap, KERNEL_HEAP_START_ADDR, KERNEL_HEAP_SIZE);
 }
 
