@@ -24,7 +24,7 @@
   - ✅ PS/2 Keyboard;
       - ✅ Self Tests and Configuration;
       - ✅ Key code scan read;
-      - ⬜ ASCII key buffer to send key data to processes;
+      - ✅ ASCII key buffer to send key data to processes;
   - ✅ PIT - Programmable Interval Timer;
       - ✅ Minimum implementation;
       - ✅ Kernel sleep function pit::ksleep(int Millis);
@@ -65,8 +65,11 @@
       - ✅ SYSFUNCS - System Functions that runs in user mode and perform SYSCALLS;
           - ✅ VGA - Video Graphics Array;
               - ✅ TEXT - printStr - Prints raw text with escape sequences only in the screen;
+              - ✅ TEXT - printf   - Prints formatted text with escape sequences in the screen; Uses the same interruption of printStr;
           - ✅ SCHEDULER - Process Scheduler;
               - ✅ EXIT - exit - Terminate current process and return a result code, then move to the next process;
+          - ✅ KEYBOARD - Keyboard Driver;
+              - ✅ TEXT - readln - Read one line of text typed by the user and stop in next \n (KEY_ENTER) scape sequence;
       - ✅ SHELL process creation;
           - ✅ Communicate with kernel using IDT Interruptions to access VGA memory;
           - ✅ Hello World Print;
