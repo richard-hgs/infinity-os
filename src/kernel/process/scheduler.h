@@ -135,6 +135,12 @@ namespace scheduler {
      * @return PID = PCB* Process Control Block
      */
     PID getRunningProcess();
+
+    /**
+     * @brief Print the process list
+     * 
+     */
+    void printProcessList();
 }
 
 #endif

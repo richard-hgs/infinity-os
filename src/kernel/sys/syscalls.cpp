@@ -7,27 +7,46 @@
 
 void syscalls::syscallHandler(IntRegisters* r) {
     // Get current running process and save his context
-    PID runningProcess = scheduler::getRunningProcess();
-    scheduler::processSaveContext(runningProcess, r);
+    PID pid = scheduler::getRunningProcess();
+    scheduler::processSaveContext(pid, r);
 
     // stdio::kprintf("ISR(48 - 0x30) - (EAX=0x%x) - (EBX=0x%x) - (ECX=0x%x) - (EDX=0x%x)\n", r->eax, r->ebx, r->ecx, r->edx);
     // stdio::kprintf("                 (ESP=0x%x) - (EIP=0x%x) - (ESI=0x%x) - (EDI=0x%x)\n", r->esp, r->eip, r->esi, r->edi);
     if (r->eax == SYSCALL_PRINT) {              // SYSCALL - Print a raw text on screen 
 
-        stdio::kprintf("%s (0x%x) - %s", runningProcess->processName, runningProcess->pid, (char*) r->esi);
+        stdio::kprintf("%s (0x%x) - %s", pid->processName, pid->pid, (char*) pid->registers.ESI);
         // Add this process to the ready queue again to continue its execution.
-        scheduler::resumeProcess(runningProcess); 
+        scheduler::resumeProcess(pid); 
 
     } else if (r->eax == SYSCALL_PROC_EXIT) {   // SYSCALL - Proccess finished it's execution
 
         if (r->ebx > 0) { // Process finished with error code
-            stdio::kprintf("\n%s (0x%x) - Finished with code %d\n", runningProcess->processName, runningProcess->pid, r->ebx);
+            stdio::kprintf("\n%s (0x%x) - Finished with code %d\n", pid->processName, pid->pid, pid->registers.EBX);
         }
         // Terminate this process
-        scheduler::processTerminate(runningProcess);
+        scheduler::processTerminate(pid);
 
     } else if (r->eax == SYSCALL_READLN) {      // SYSCALL - Process wants to receive one input line from keyboad.
-        scheduler::kbdAskResource(runningProcess);
+
+        scheduler::kbdAskResource(pid);
+
+    } else if (r->eax == SYSCALL_MALLOC) {      // SYSCALL - Dynamic allocate memory in process heap space.
+
+        pid->registers.EAX = (unsigned int) heap::malloc(&pid->processHeap, pid->registers.EBX);
+        // Add this process to the ready queue again to continue its execution.
+        scheduler::resumeProcess(pid); 
+
+    } else if (r->eax == SYSCALL_FREE) {         // SYSCALL - Dynamic free memory in process heap space.
+
+        heap::free(&pid->processHeap, (void*) pid->registers.EBX);
+        // Add this process to the ready queue again to continue its execution.
+        scheduler::resumeProcess(pid);
+
+    } else if (r->eax == SYSCALL_PSLIST) {      // SYSCALL -  Print process list in terminal.
+
+        scheduler::printProcessList();
+        // Add this process to the ready queue again to continue its execution.
+        scheduler::resumeProcess(pid);
     }
 
     scheduler::start();

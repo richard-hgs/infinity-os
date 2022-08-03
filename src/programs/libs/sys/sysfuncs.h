@@ -14,7 +14,7 @@ namespace sysfuncs {
      *  MAX_TEXT_SIZE: 1024 chars long
      * 
      */
-    void printStr(const char *str);
+    void print(const char *str);
 
     /**
      * @brief Prints a formatted string text with unlimited arguments

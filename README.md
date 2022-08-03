@@ -59,13 +59,13 @@
       - ✅ findFile - Function to search a file by it's name in virtual file system list;
   - ✅ SYSCALLS - System calls that is executed when a SYSFUNCS is called;
       - ✅ INT 0x30(48) - General Syscall that handle all SYSFUNCS;
-          - ✅ EAX 0x01(1) - VGA - printStr;
+          - ✅ EAX 0x01(1) - VGA - print;
           - ✅ EAX 0x02(2) - SCHEDULER - exit;
   - ⬜ Programs/Processes/Libs;
       - ✅ SYSFUNCS - System Functions that runs in user mode and perform SYSCALLS;
           - ✅ VGA - Video Graphics Array;
-              - ✅ TEXT - printStr - Prints raw text with escape sequences only in the screen;
-              - ✅ TEXT - printf   - Prints formatted text with escape sequences in the screen; Uses the same interruption of printStr;
+              - ✅ TEXT - print  - Prints raw text with escape sequences only in the screen;
+              - ✅ TEXT - printf - Prints formatted text with escape sequences in the screen; Uses the same interruption of print;
           - ✅ SCHEDULER - Process Scheduler;
               - ✅ EXIT - exit - Terminate current process and return a result code, then move to the next process;
           - ✅ KEYBOARD - Keyboard Driver;

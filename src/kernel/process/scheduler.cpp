@@ -129,25 +129,42 @@ PID scheduler::createProcess(const char* processName) {
     int stackOffet = 2;
     int heapOffset = 3;
 
-    // Initializing process stack
+    /*
+        N=Number of pages needed to program executable code in memory.
+
+        PROCESS MEMORY LAYOUT (N=1):
+        PROGRAM: 0,
+        HEAP: 1-16,
+        UNUSED: 17,
+        STACK: 18,
+        UNUSED(ESP-1_BYTE): 19
+    */
+
+    // Initializing process stack (PAGE POSITION 17)
     pcb->memoryPages[PROC_MAX_MEMORY_PAGES - stackOffet] = paging::frameAddress(paging::frameAlloc());
 
     // stdio::kprintf("%s - (%d) - STACK: 0x%x\n", processName, PROC_MAX_MEMORY_PAGES - stackOffet, pcb->memoryPages[PROC_MAX_MEMORY_PAGES - stackOffet]);
 
-    // Initializing heap
+    // Initializing heap (PAGE POSITION 1-16)
     for (i = progPageCount; i < PROC_MAX_MEMORY_PAGES - heapOffset; i++) {
         pcb->memoryPages[i] = paging::frameAddress(paging::frameAlloc());
     }
     // stdio::kprintf("%s - (%d) - HEAP: 0x%x - 0x%x\n", processName, PROC_MAX_MEMORY_PAGES - heapOffset, pcb->memoryPages[progPageCount], pcb->memoryPages[PROC_MAX_MEMORY_PAGES - heapOffset - 1]);
 
-    // heap::init(&pcb->processHeap, progPageCount * FRAME_SIZE, (i - progPageCount));
+    heap::init(&pcb->processHeap, progPageCount * FRAME_SIZE, (i - progPageCount));
+
+    stdio::kprintf("PAGE_LAYOUT: ");
+    for (i=0; i<PROC_MAX_MEMORY_PAGES; i++) {
+        stdio::kprintf("%x, ", pcb->memoryPages[i]);
+    }
+    stdio::kprintf("\n");
 
     // Initializing registers
     pcb->registers.EAX = 0;
     pcb->registers.EBX = 0;
     pcb->registers.ECX = 0;
     pcb->registers.EDX = 0;
-    pcb->registers.ESP = (PROC_MAX_MEMORY_PAGES - espOffset) * FRAME_SIZE - 4;
+    pcb->registers.ESP = (PROC_MAX_MEMORY_PAGES - espOffset) * FRAME_SIZE - 4; // Decrement 4 to let 1 byte free in end of process memory layout.
     pcb->registers.EBP = 0;
     pcb->registers.ESI = 0;
     pcb->registers.EDI = 0;
@@ -165,7 +182,7 @@ PID scheduler::createProcess(const char* processName) {
     queue::add(&allProcesses, (void*) pcb->pid);
 
     // Debug only
-    runningProcess = pcb;
+    // runningProcess = pcb;
 
     return pcb;
 }
@@ -181,7 +198,7 @@ void scheduler::processLoadContext(PID pid) {
     pid->processState = PROC_STATE_RUNNING;
 
     // memory switch
-    for (i = 0; i < PROC_MAX_MEMORY_PAGES; i++) {
+    for (i=0; i < PROC_MAX_MEMORY_PAGES; i++) {
         if (pid->memoryPages[i] != PROC_UNUSED_PAGE) {
             paging::unmapPage(i * FRAME_SIZE);
             paging::remoteMapPage(i * FRAME_SIZE, pid->memoryPages[i]);
@@ -196,7 +213,6 @@ void scheduler::processLoadContext(PID pid) {
         int currentEspPtr = 0;
         kernelESP = (unsigned int) &currentEspPtr;
     }
-
 
     asm("push %0;"
         "pop %%esp;"
@@ -309,4 +325,20 @@ void scheduler::kbdCreateResource(char* kbdBuffer) {
 
 PID scheduler::getRunningProcess() {
     return runningProcess;
+}
+
+void scheduler::printProcessList() {
+    int i;
+    Queue* q = &allProcesses;
+    QueueElement *e;
+    PCB *pcb;
+
+    stdio::kprintf("---------- Processes ---------\n");
+    e = q->front;
+    while (e != NULL) {
+        pcb = (PCB*) e->data;
+        stdio::kprintf("%s (%x)", pcb->processName, (unsigned int) pcb);
+        e = e->next;
+    }
+    stdio::kprintf("-----------------------------\n");
 }

@@ -28,7 +28,7 @@ void __attribute__((section("._start"))) _start() {
     sysfuncs::exit(main());
 }
 
-void sysfuncs::printStr(const char* str) { // Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)
+void sysfuncs::print(const char* str) { // Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)
     __asm__ __volatile__ (
         "mov %0, %%eax;"
         "mov %1, %%esi;"
@@ -40,13 +40,13 @@ void sysfuncs::printStr(const char* str) { // Executes the interruption INT=(0x3
 }
 
 
-void sysfuncs::printf(const char* str, ...) { // Format the string and redirects to printStr func
+void sysfuncs::printf(const char* str, ...) { // Format the string and redirects to print func
     char fStr[PRINTF_STR_BUFFER_SIZE];
     va_list list;
     va_start(list, str);
     stdlib::va_stringf(fStr, str, list);
     va_end(list);
-    printStr(fStr);
+    print(fStr);
 }
 
 void sysfuncs::readln(char* dest) { // Executes the interruption INT=(0x30=48) with EAX=(0x03=3=SYSCALL_READLN) with no parameters(E.g The process scheduler already knows wich process is running)
