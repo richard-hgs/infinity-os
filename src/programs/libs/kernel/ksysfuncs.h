@@ -3,7 +3,7 @@
 #define _KSYSFUNCS_H_
 
 namespace ksysfuncs {
-        /**
+    /**
      * @brief Prints a raw string text with only the Escape Sequences
      * 
      * Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)

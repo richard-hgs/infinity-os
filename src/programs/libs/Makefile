@@ -5,6 +5,7 @@ CURRENT_DIR=$(shell basename $(CURDIR))
 
 all:
 	cd $(CURDIR)/kernel && $(MAKE)
+	cd $(CURDIR)/user && $(MAKE)
 
 test:
  	$(info $$var is [${CURRENT_DIR}])

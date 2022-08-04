@@ -17,6 +17,15 @@ namespace sysfuncs {
     void print(const char *str);
 
     /**
+     * @brief Stop proccess execution and return a code if an error happened
+     * 
+     * Executes the interruption INT=(0x30=48) with EAX=(0x02=2=SYSCALL_PROC_EXIT) and EBX=(code={0=SUCCESS or ERROR_CODE})
+     * 
+     * @param code 0=SUCCESS or ERROR_CODE
+     */
+    void exit(int code);
+
+    /**
      * @brief Prints a formatted string text with unlimited arguments
      * 
      * Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)
@@ -47,13 +56,26 @@ namespace sysfuncs {
     void readln(char *dest);
 
     /**
-     * @brief Stop proccess execution and return a code if an error happened
+     * @brief Dynamic allocate memory inside process heap free memory.
+     *        If no free memory found returs an address of 0.
      * 
-     * Executes the interruption INT=(0x30=48) with EAX=(0x02=2=SYSCALL_PROC_EXIT) and EBX=(code={0=SUCCESS or ERROR_CODE})
-     * 
-     * @param code 0=SUCCESS or ERROR_CODE
+     * @param size          Size to be allocated
+     * @return unsigned int 0=No free space available, or ptr address to allocated memory.
      */
-    void exit(int code);
+    unsigned int malloc(unsigned int size);
+
+    /**
+     * @brief Dynamic free memory inside process heap.
+     * 
+     * @param ptr           Ptr address to be free.
+     */
+    void free(void* ptr);
+
+    /**
+     * @brief Print process list
+     * 
+     */
+    void printProcessList();
 }
 
 #endif

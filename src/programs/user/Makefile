@@ -4,9 +4,7 @@ CURRENT_DIR=$(shell basename $(CURDIR))
 .PHONY: all test
 
 all:
-	echo N/D
-	
-# cd $(CURDIR)/apps/shell && $(MAKE)
+	cd $(CURDIR)/shell && $(MAKE)
 
 test:
  	$(info $$var is [${CURRENT_DIR}])

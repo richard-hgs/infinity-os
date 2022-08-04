@@ -337,7 +337,22 @@ void scheduler::printProcessList() {
     e = q->front;
     while (e != NULL) {
         pcb = (PCB*) e->data;
-        stdio::kprintf("%s (%x)", pcb->processName, (unsigned int) pcb);
+        char* stateStr;
+        switch(pcb->processState) {
+            case PROC_STATE_NEW:
+                stateStr = "NEW";
+                break;           
+            case PROC_STATE_READY:
+                stateStr = "READY";
+                break;
+            case PROC_STATE_RUNNING:
+                stateStr = "RUNNING";
+                break;
+            case PROC_STATE_WAITING:
+                stateStr = "WAITING";
+                break;
+        }
+        stdio::kprintf("%s (%x) - %s\n", pcb->processName, (unsigned int) pcb, stateStr);
         e = e->next;
     }
     stdio::kprintf("-----------------------------\n");

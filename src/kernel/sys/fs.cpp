@@ -1,6 +1,6 @@
 #include "fs.h"
 #include "string.h"
-#include "../../../build/programs/kernel/apps/shell/shell.bin.h"
+#include "../../../build/programs/user/shell/shell.bin.h"
 
 FileNode fileList[] = {
     { "shell.exe", shell_bin_len, shell_bin }

@@ -5,10 +5,10 @@ TARGET_DIR=$(BUILD_DIR)$(CURRENT_DIR)
 
 LIBC_SRC_DIR=../../../libs/libc/
 STDLIBS_SRC_DIR=../../../kernel/stdlibs
-LIBSYS_SRC_DIR=../../libs/sys/
+LIBSYS_SRC_DIR=../../libs/user/
 
 STDLIBS_B_DIR=$(BUILD_DIR)kernel/stdlibs
-LIBSYS_B_DIR=$(BUILD_DIR)programs/libs/sys
+LIBSYS_B_DIR=$(BUILD_DIR)programs/libs/user
 
 DEFAULT_LINK=../linkdefault.ld
 HEX_VAR_NAME=shell_bin

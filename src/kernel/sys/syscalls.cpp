@@ -14,7 +14,8 @@ void syscalls::syscallHandler(IntRegisters* r) {
     // stdio::kprintf("                 (ESP=0x%x) - (EIP=0x%x) - (ESI=0x%x) - (EDI=0x%x)\n", r->esp, r->eip, r->esi, r->edi);
     if (r->eax == SYSCALL_PRINT) {              // SYSCALL - Print a raw text on screen 
 
-        stdio::kprintf("%s (0x%x) - %s", pid->processName, pid->pid, (char*) pid->registers.ESI);
+        // stdio::kprintf("%s (0x%x) - %s", pid->processName, pid->pid, (char*) pid->registers.ESI);
+        vga::printStr((char*) pid->registers.ESI);
         // Add this process to the ready queue again to continue its execution.
         scheduler::resumeProcess(pid); 
 
