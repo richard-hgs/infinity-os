@@ -76,6 +76,12 @@ namespace sysfuncs {
      * 
      */
     void printProcessList();
+
+    /**
+     * @brief Clear the vga screen
+     * 
+     */
+    void clearScreen();
 }
 
 #endif

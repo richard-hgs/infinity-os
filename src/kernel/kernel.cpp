@@ -83,6 +83,10 @@ extern "C" int kmain() {
     heap::initKheap();
     vga::printStr("KERNEL HEAP     - Install: OK\n");
 
+    // vga::printStr("\033[0");
+
+    // while(true){}
+
     scheduler::init();
     PID pidShell = scheduler::createProcess("shell.exe");
     scheduler::resumeProcess(pidShell);

@@ -39,7 +39,7 @@ uint16_t getCursorOffsetPos() {
     io::outb(0x3D4, 0x0F);
     offset = offset | io::inb(0x3D5);
     io::outb(0x3D4, 0x0E);
-    offset = offset | ((uint16_t)io::inb(0x3D5)) << 8;
+    offset = offset | ((uint16_t) io::inb(0x3D5)) << 8;
     return offset;
 }
 
@@ -62,6 +62,8 @@ void vga::printStr(const char* str) {
 }
 
 void vga::printStr(int foreColor, int bgColor, const char* str) {
+    int i;
+
     // Get current vga cursor offset position
     uint16_t cursorOffset = getCursorOffsetPos();
 
@@ -90,7 +92,7 @@ void vga::printStr(int foreColor, int bgColor, const char* str) {
             video += WIDTH - (VGA_OFFSET_CURSOR_POS((int) video) % WIDTH);
         } else if (*str == '\b') {
             // Back space - Discard \b char backspace
-            *str++;
+            str++;
             if (((int) video) > vgaAddress + cursorOffset) {
                 // Get back to previous char writes a blank char on it then set offset to previous char position.
                 video -= 1;
@@ -99,8 +101,8 @@ void vga::printStr(int foreColor, int bgColor, const char* str) {
             }
         } else if (*str == '\t') {
             // Tab - Discard \t char tab
-            *str++;
-            for(uint8_t i=0; i<4 && ((int) video) < SCREEN_MAX_OFFSET_POS; i++) { // Adds 4 space chars if less than max screen content
+            str++;
+            for(i=0; i<4 && ((int) video) < SCREEN_MAX_OFFSET_POS; i++) { // Adds 4 space chars if less than max screen content
                 *video++ = PAINT(' ', bgColor, foreColor);
             }
         } else {
@@ -144,12 +146,14 @@ void vga::printStr(int foreColor, int bgColor, const char* str) {
 }
 
 void vga::clearScreen() {
-    vga::clearScreen(VGA_DEF_FORECOLOR, VGA_DEF_BGCOLOR);
+    vga::clearScreen(VGA_DEF_FORECOLOR, VGA_DEF_BGCOLOR, true);
 }
 
-void vga::clearScreen(int foreColor, int bgColor) {
+void vga::clearScreen(int foreColor, int bgColor, bool setCursor) {
     // Write 0x20 = ' ' blank char in entire vga buffer
-    vga::setCursorPosition(0, 0);
+    if (setCursor) {
+        vga::setCursorPosition(0, 0);
+    }
     memutils::memset_16((uint16_t*) vgaAddress, PAINT(0x20, bgColor, foreColor), WIDTH * HEIGHT);
 }
 

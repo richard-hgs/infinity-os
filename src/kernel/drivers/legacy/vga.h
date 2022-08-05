@@ -2,6 +2,8 @@
 #ifndef _VGA_H_
 #define _VGA_H_
 
+#include <stdbool.h>
+
 /* VGA (FOREGROUND | BACKGROUND) COLORS */
 #define VGA_BLACK           0
 #define VGA_BLUE            1
@@ -59,6 +61,11 @@
  *     foreground color of the character at the cursor's current location.
  *   - A mouse cursor in TUI (when implemented) is not usually the same thing as a hardware cursor, but a moving rectangle 
  *     with altered background or a special glyph.
+ * 
+ * - ESCAPESEQ:
+ *   - \b - Backspace;
+ *   - \t - Tabulation;
+ * 
  * - MORE:
  *   - To know more about vga access folder docs and search for soft_vga.pdf file
  */
@@ -80,7 +87,7 @@ namespace vga {
     void printStr(int foreColor, int bgColor, const char *str);
 
     /**
-     * @brief Clear the vga text using default foreColor and bgColor
+     * @brief Clear the vga text using default foreColor and bgColor and set cursor
      * 
      */
     void clearScreen();
@@ -90,8 +97,9 @@ namespace vga {
      * 
      * @param foreColor Text color E.g VGA_WHITE
      * @param bgColor Text background color E.g VGA_BLACK
+     * @param setCursor true=Reset cursor position, false=Cursor where it was before.
      */
-    void clearScreen(int foreColor, int bgColor);
+    void clearScreen(int foreColor, int bgColor, bool setCursor);
 
     /**
      * @brief Get the vga Cursor position

@@ -8,12 +8,15 @@
 #include "sysfuncs.h"
 
 // -------------- SYSCALLS ARE DEFINED IN ./src/kernel/sys/syscalls.h ------------------
-#define SYSCALL_PRINT       1         // Print text on screen vga print("myText\n");
-#define SYSCALL_PROC_EXIT   2         // Called when a proccess finish it's execution. Remove from queue and move to the next proccess;
-#define SYSCALL_READLN      3         // Process wait until one line from console terminal is returned;
-#define SYSCALL_MALLOC      4         // Dynamic allocate memory in process heap.
-#define SYSCALL_FREE        5         // Dynamic free memory in process heap.
-#define SYSCALL_PSLIST      6         // Print process list in terminal.
+#define SYSCALL_PRINT             1         // Print text on screen vga print("myText\n");
+#define SYSCALL_PROC_EXIT         2         // Called when a proccess finish it's execution. Remove from queue and move to the next proccess;
+#define SYSCALL_READLN            3         // Process wait until one line from console terminal is returned;
+#define SYSCALL_MALLOC            4         // Dynamic allocate memory in process heap.
+#define SYSCALL_FREE              5         // Dynamic free memory in process heap.
+#define SYSCALL_PSLIST            6         // Print process list in terminal.
+#define SYSCALL_EXEC_PROGRAM      7         // Executes a program
+#define SYSCALL_TERMINATE_PROCESS 8         // Executes a program
+#define SYSCALL_CLEAR_SCREEN      9         // Clears the text on screen equivalent to vga::clearScreen();
 
 #define PRINTF_STR_BUFFER_SIZE 1024
 
@@ -101,6 +104,16 @@ void sysfuncs::printProcessList() { // Executes the interruption INT=(0x30=48) w
         "int $0x30;" 
         : /* output */ 
         : /* input */ "r"(SYSCALL_PSLIST)
+        : /* clobbers */ "eax"
+    );
+}
+
+void sysfuncs::clearScreen() {
+    __asm__ __volatile__ (
+        "mov %0, %%eax;"
+        "int $0x30;" 
+        : /* output */ 
+        : /* input */ "r"(SYSCALL_CLEAR_SCREEN)
         : /* clobbers */ "eax"
     );
 }
