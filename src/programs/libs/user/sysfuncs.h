@@ -78,6 +78,16 @@ namespace sysfuncs {
     void printProcessList();
 
     /**
+     * @brief Execute a program
+     * 
+     * @param path  Program path.
+     * @param argc  Arguments count to be passed to program.
+     * @param argv  Arguments to be passed to program.
+     * @return 0=Program not found or not created, or PCB id.
+     */
+    int execv(const char* path, int argc, char* argv[]);
+
+    /**
      * @brief Clear the vga screen
      * 
      */

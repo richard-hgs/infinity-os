@@ -5,6 +5,7 @@ CURRENT_DIR=$(shell basename $(CURDIR))
 
 all:
 	cd $(CURDIR)/shell && $(MAKE)
+	cd $(CURDIR)/fs && $(MAKE)
 
 test:
  	$(info $$var is [${CURRENT_DIR}])

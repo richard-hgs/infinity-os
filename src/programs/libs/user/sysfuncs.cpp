@@ -24,14 +24,14 @@
  * @brief Access the main function of the executable process
  * 
  */
-extern "C" int main();
+extern "C" int main(int argc, char** argv);
 
 /**
  * @brief This is the entry point of a process. It creates and access all required parameters to execute a process
  * 
  */
 void __attribute__((section("._start"))) _start() {
-    sysfuncs::exit(main());
+    sysfuncs::exit(main(0, 0));
 }
 
 void sysfuncs::print(const char* str) { // Executes the interruption INT=(0x30=48) with EAX=(0x01=1=SYSCALL_PRINT) with ESI=(const char*=text_to_print)

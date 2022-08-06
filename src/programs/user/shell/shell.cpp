@@ -7,8 +7,8 @@ using namespace sysfuncs;
 int getCmdNextArg(char *cmd, int startOffset, char *arg, int* endOffset);
 
 int main() {
-    char* cmd = (char*) malloc(256); // Max keyboard.h buffer is 256 so we set buffer to its max value.
-    char* cmdArg = (char*) malloc(256);
+    char* cmd = (char*) malloc(256);    // Max keyboard.h buffer is 256 so we set buffer to its max value.
+    char* cmdArg = (char*) malloc(256); 
     int argOffset;
     bool eocLineBreak; // Adds line break to the end of command
 
@@ -19,7 +19,7 @@ int main() {
         argOffset = 0;
         eocLineBreak = true;
         // Move this process to waiting keyboard queue and wait until a keyboard ENTER key is pressed
-        // then switch to my process again and continue execution.
+        // then move this process to the ready queue and wait until it is executed again.
         readln(cmd);
 
         // Get first argument from command
@@ -41,7 +41,7 @@ int main() {
             printf("   list - List all processes running;");
             printf("clear - Wipe text on the screen, also reset the cursor position;");
         } else {
-            printf("Unknow command. Use help command to list available commands.");
+            printf("\"%s\" command not found.", cmdArg);
         }
         if (eocLineBreak) {
             printf("\n");

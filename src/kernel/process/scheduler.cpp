@@ -92,10 +92,10 @@ unsigned int scheduler::loadProcess(unsigned int *pages, const char* processName
         bytesCopied += bytesToCopy;
         paging::unmapPage(pages[i]);
 
-        stdio::kprintf("SCHED - allocatingPages: 0x%x\n", pages[i]);
+        // stdio::kprintf("SCHED - allocatingPages: 0x%x\n", pages[i]);
     }
 
-    stdio::kprintf("SCHED - bytesCopied: %d\n", bytesCopied);
+    // stdio::kprintf("SCHED - bytesCopied: %d\n", bytesCopied);
 
     return pageCount;
 }
@@ -108,7 +108,7 @@ PID scheduler::createProcess(const char* processName) {
     pcb = (PCB*) heap::kmalloc(sizeof(PCB));
 
     if (pcb == NULL) {
-        return 0;
+        return NULL;
     }
 
     string::strcpy(pcb->processName, processName);
@@ -153,11 +153,11 @@ PID scheduler::createProcess(const char* processName) {
 
     heap::init(&pcb->processHeap, progPageCount * FRAME_SIZE, (i - progPageCount));
 
-    stdio::kprintf("PAGE_LAYOUT: ");
-    for (i=0; i<PROC_MAX_MEMORY_PAGES; i++) {
-        stdio::kprintf("%x, ", pcb->memoryPages[i]);
-    }
-    stdio::kprintf("\n");
+    // stdio::kprintf("PAGE_LAYOUT: ");
+    // for (i=0; i<PROC_MAX_MEMORY_PAGES; i++) {
+    //     stdio::kprintf("%x, ", pcb->memoryPages[i]);
+    // }
+    // stdio::kprintf("\n");
 
     // Initializing registers
     pcb->registers.EAX = 0;
