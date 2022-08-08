@@ -35,7 +35,7 @@ AS=nasm
 AFLAGS=-f elf32
 CC=g++
 CFLAGS=-m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
-	-fno-pic -std=c++14 -fno-rtti -fno-exceptions -Wall -Wextra -g \
+	-fno-pic -std=c++14 -fno-rtti -fno-exceptions -ffunction-sections -Wl,--gc-sections -Wall -Wextra -g \
 	-I. $(KERNEL_INCLUDE_DIRS)
 CFLAGSPOS=
 

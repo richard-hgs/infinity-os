@@ -30,6 +30,7 @@ int main() {
             getCmdNextArg(cmd, argOffset, cmdArg, &argOffset);
             if (string::strcmp(cmdArg, "list") == 0) {
                 printProcessList();
+                continue;
             }
         } if (string::strcmp(cmdArg, "clear") == 0) {       // VGA - Clear screen content
             clearScreen();
@@ -41,7 +42,7 @@ int main() {
             printf("   list - List all processes running;");
             printf("clear - Wipe text on the screen, also reset the cursor position;");
         } else {
-            printf("\"%s\" command not found.", cmdArg);
+            printf("\"%s\" command not found.", cmd);
         }
         if (eocLineBreak) {
             printf("\n");
