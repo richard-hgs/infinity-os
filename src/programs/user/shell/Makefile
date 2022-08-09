@@ -71,8 +71,6 @@ $(TARGET_ELF) : $(C_SOURCES)
 	mkdir -p $(dir $@)
 	$(CCX) $(CXXFLAGS) -o $@ $< $(LIB_OBJECTS)
 	objdump -drwC -Mintel $@ > $@.dump
-	objdump -f $@ > $@.fdump
-	objdump -p $@ > $@.pdump
 
 # $(TARGET) : $(TARGET_ELF)
 # 	objcopy -O binary $(TARGET_ELF) $@
