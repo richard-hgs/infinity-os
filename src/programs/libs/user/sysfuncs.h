@@ -2,6 +2,8 @@
 #ifndef _SYSFUNCS_H_
 #define _SYSFUNCS_H_
 
+extern "C" void __attribute__((section("._start"))) _start();
+
 namespace sysfuncs {
     /**
      * @brief Prints a raw string text with only the Escape Sequences

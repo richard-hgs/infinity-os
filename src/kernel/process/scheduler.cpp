@@ -92,10 +92,10 @@ unsigned int scheduler::loadProcess(unsigned int *pages, const char* processName
         bytesCopied += bytesToCopy;
         paging::unmapPage(pages[i]);
 
-        // stdio::kprintf("SCHED - allocatingPages: 0x%x\n", pages[i]);
+        stdio::kprintf("SCHED - allocatingPages: 0x%x\n", pages[i]);
     }
 
-    // stdio::kprintf("SCHED - bytesCopied: %d\n", bytesCopied);
+    stdio::kprintf("SCHED - bytesCopied: %d\n", bytesCopied);
 
     return pageCount;
 }

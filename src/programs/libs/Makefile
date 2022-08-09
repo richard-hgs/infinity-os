@@ -4,7 +4,7 @@ CURRENT_DIR=$(shell basename $(CURDIR))
 .PHONY: all test
 
 all:
-    cd $(CURDIR)/static && $(MAKE)
+	cd $(CURDIR)/static && $(MAKE)
 	cd $(CURDIR)/kernel && $(MAKE)
 	cd $(CURDIR)/user && $(MAKE)
 

@@ -33,7 +33,7 @@ extern "C" int main(int argc, char** argv);
  * @brief This is the entry point of a process. It creates and access all required parameters to execute a process
  * 
  */
-void __attribute__((section("._start"))) _start() {
+extern "C" void _start() {
     sysfuncs::exit(main(0, 0));
 }
 
@@ -79,6 +79,9 @@ void sysfuncs::readln(char* dest) { // Executes the interruption INT=(0x30=48) w
     );
 }
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wreturn-type" // (-Wreturn-type) Disable no return type warning
+
 unsigned int sysfuncs::malloc(unsigned int size) { // Executes the interruption INT=(0x30=48) with EAX=(0x04=4=SYSCALL_MALLOC) with EBX=(unsigned int = sizeOf memory being allocated) returns EAX=(Start address of the allocated memory block or 0 if fails)
     __asm__ __volatile__ (
         "mov %0, %%eax;"
@@ -90,7 +93,9 @@ unsigned int sysfuncs::malloc(unsigned int size) { // Executes the interruption 
     );
 }
 
-void sysfuncs::free(void* ptr) { // // Executes the interruption INT=(0x30=48) with EAX=(0x05=5=SYSCALL_FREE) with EBX=(unsigned int = ptr address of the heap dynamic memory block to be free)
+#pragma GCC diagnostic pop // (-Wreturn-type) Enable no return type warning
+
+void sysfuncs::free(void* ptr) { // Executes the interruption INT=(0x30=48) with EAX=(0x05=5=SYSCALL_FREE) with EBX=(unsigned int = ptr address of the heap dynamic memory block to be free)
     __asm__ __volatile__ (
         "mov %0, %%eax;"
         "mov %1, %%ebx;"
