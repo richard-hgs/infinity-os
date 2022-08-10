@@ -3,7 +3,7 @@ BUILD_DIR=../../build/
 CURRENT_DIR=$(shell basename $(CURDIR))
 
 AS=nasm
-AFLAGS=-f bin
+AFLAGS=-f bin -g
 
 BACKUPS=$(shell find . -iname "*.bak")
 INCLUDES=
@@ -17,6 +17,7 @@ all: $(TARGETS)
 $(BUILD_DIR)$(CURRENT_DIR)/boot.bin: boot.asm $(INCLUDES)
 	mkdir -p $(dir $@)
 	$(AS) $(AFLAGS) -o $@ $<
+	objdump -DrwC -Mintel,i8086 -b binary -m i386 $@ > $@.dump
 	
 # objdump -drwC -Mintel $< > $($<.dump)
 

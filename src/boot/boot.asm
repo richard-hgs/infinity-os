@@ -2,7 +2,63 @@
 
 ORG 0x7C00
 
-jmp 0x0000:START
+; ==============================================================================================
+; FAT32 - Boot Sector definition
+;  - BS : Boot Sector
+;  - BPB: Bios Parameter Block
+                                    ;  _________________________________________________________________________________
+                                    ; | offset | size | Current Value |  Description                                    |
+jmp START                           ; |   0    |  3   |               | Jmp to boot entry point                         |
+BS_OEMName:      db "INFINITY"      ; |   3    |  8   | INFINITY      | Fat OEM signature                               |
+BPB_BytesPerSec: dw 0x200           ; |  11    |  2   | 512 BYTES     | Bytes per sector                                |
+BPB_SecPerClus:  db 0x1             ; |  13    |  1   | 1 SECTOR      | Sectors per cluster                             |
+BPB_RsvdSecCnt:  dw 0x1             ; |  14    |  2   | 1 FAT32 OBLIG | Reserved sectors                                |
+BPB_NumFATs:     db 0x2             ; |  16    |  1   | 2 COMPATIBLE  | FAT count                                       |
+BPB_RootEntCnt:  dw 0x0             ; |  17    |  2   | 0 FAT32 OBLIG | Amount of dir entries in root dir               |
+BPB_TotSec16:    dw 0x0             ; |  19    |  2   | 0 FAT32 OBLIG | 16-bit total count of sectors on the volume     |
+BPB_Media:       db 0xf0            ; |  21    |  1   | f0 REMOVABLE  | Media type                                      |
+BPB_FATSz16:     dd 0x0             ; |  22    |  2   | 0 FAT32 OBLIG | 16 bit count of sectors used by one fat         |
+BPB_SecPerTrk:   dw 0x12            ; |  24    |  2   | 18 SECT/TRACK | Sectors per track                               |
+BPB_NumHeads:    dw 0x1             ; |  26    |  2   | 1 HEAD        | Read/Write disk heads                           |
+BPB_HiddSec:     dd 0x0             ; |  28    |  4   | 0 HIDDEN SECT | Count of hidden sectors                         |
+BPB_TotSec32:    dd 0xB40           ; |  32    |  4   | 2880 SECTORS  | 32 bit total count of sectors on the volume     |
+BPB_FATSz32:     dd 0x1C            ; |  36    |  4   | 28 SECTORS    | Sectors used by one fat structure               |
+BPB_ExtFlags:    dw 0x0             ; |  40    |  2   | 
+
+; ===============================================================================================
+
+START:
+    xor ax, ax ;ax = 0
+    mov es, ax
+    mov ds, ax
+    mov ss, ax
+    mov sp, 0x700 ;stack 512 bytes
+
+    mov [boot_disk], dl ; BIOS fills dl with disk number
+
+    mov si, welcome_msg
+    call print_bios
+
+    call a20_enable
+    ; call check_a20
+
+    call read_kernel
+
+    cli
+    lgdt [gdt_desc]
+    mov eax, cr0
+    or eax, 1
+    mov cr0, eax ;switch to protected mode
+    ;sti
+
+    mov ax, 0x10 ; 0x10 is the offset in the GDT to our data segment
+    mov ds, ax
+    mov es, ax
+    mov gs, ax
+    mov fs, ax
+    mov ss, ax
+    mov esp, [kernel_stack_pointer]
+    jmp 0x8:protected_modeStart
 
 ; op_a20yes db "A20 is enabled.",10,13,0
 ; op_a20no db "A20 is disabled.",10,13,0
@@ -145,39 +201,6 @@ fatal_error:
 boot_disk: db 0
 welcome_msg db "InfinityOS bootloader", 13, 10, 0
 kernel_stack_pointer dd 0x6504FFF
-
-START:
-    xor ax, ax ;ax = 0
-    mov es, ax
-    mov ds, ax
-    mov ss, ax
-    mov sp, 0x700 ;stack 512 bytes
-
-    mov [boot_disk], dl ; BIOS fills dl with disk number
-
-    mov si, welcome_msg
-    call print_bios
-
-    call a20_enable
-    ; call check_a20
-
-    call read_kernel
-
-    cli
-    lgdt [gdt_desc]
-    mov eax, cr0
-    or eax, 1
-    mov cr0, eax ;switch to protected mode
-    ;sti
-
-    mov ax, 0x10 ; 0x10 is the offset in the GDT to our data segment
-    mov ds, ax
-    mov es, ax
-    mov gs, ax
-    mov fs, ax
-    mov ss, ax
-    mov esp, [kernel_stack_pointer]
-    jmp 0x8:protected_modeStart
 
 
 kernel_start_address dd 0x6400000

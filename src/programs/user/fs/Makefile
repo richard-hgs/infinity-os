@@ -28,7 +28,7 @@ INCLUDE_OBJS := $(LIBSYS_B_DIR)/sysfuncs.cpp.o $(STDLIBS_B_DIR)/stdlib.cpp.o $(S
 CCX=g++
 CXXFLAGS = -m32 -nostdlib -nostdinc -fno-builtin -fno-stack-protector \
 	-fno-pic -std=c++14 -fno-rtti -fno-exceptions -Wall -Wextra -g \
-	-O2 -ffunction-sections --entry _start -Wl,--gc-sections -Wl,-T$(DEFAULT_LINK) -Wl,-Map=$(TARGET_MAP) \
+	-O2 -ffunction-sections --entry main -Wl,--gc-sections -Wl,-T$(DEFAULT_LINK) -Wl,-Map=$(TARGET_MAP) \
 	$(INCLUDE_DIRS) -L$(LIBSTATIC_B_DIR) -lstatic -L$(LIBSYSFUNCS_B_DIR) -lsysfuncs
 LDFLAGS = --Ttext 0x0 --oformat elf32-i386 -m elf_i386
 LD = ld
@@ -50,7 +50,7 @@ TARGET_HEX=$(BUILD_DIR)$(CURRENT_DIR)/$(APP_NAME).bin.h
 # APP SOURCE FILES AND OBJECTS
 C_SOURCES := $(shell find './' -type f -name '*.cpp')
 C_OBJECTS := $(patsubst ./%.cpp,$(BUILD_DIR)$(CURRENT_DIR)/%.cpp.o, $(C_SOURCES))
-LIB_OBJECTS := $(LIBSYSFUNCS_B_DIR)/libsysfuncs.a $(LIBSTATIC_B_DIR)/libstatic.a
+LIB_OBJECTS := -Wl,--whole-archive $(LIBSYSFUNCS_B_DIR)/libsysfuncs.a $(LIBSTATIC_B_DIR)/libstatic.a
 
 # # OBJECTS HOLDS THE APP SOURCE OBJECTS ONLY
 # OBJECTS=$(C_OBJECTS)

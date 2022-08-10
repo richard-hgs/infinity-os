@@ -20,9 +20,6 @@
 
 #define PRINTF_STR_BUFFER_SIZE 1024
 
-#pragma GCC push_options    // (BEGIN) DISABLE_OPTIMIZATIONS
-#pragma GCC optimize("O0")
-
 /**
  * @brief Access the main function of the executable process
  * 
@@ -125,4 +122,3 @@ void sysfuncs::clearScreen() {
         : /* clobbers */ "eax"
     );
 }
-#pragma GCC pop_options // (END) DISABLE_OPTIMIZATIONS
