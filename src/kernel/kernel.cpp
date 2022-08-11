@@ -15,6 +15,7 @@
 #include "heap.h"
 // sys
 #include "io.h"
+#include "fs.h"
 // scheduler
 #include "scheduler.h"
 #include "kernel.h"
@@ -62,6 +63,10 @@ extern "C" int kmain() {
     // kheap::install();
     // vga::printStr("HEAP - Install: OK\n");
 
+    // Install FS - File System
+    fs::install();
+    stdio::kprintf("FS File System  - Install: %s\n", OK_MSG);
+
     // Install MMU - Paging tables
     paging::install();
     stdio::kprintf("MMU Paging      - Install: %s\n", OK_MSG);
@@ -82,10 +87,6 @@ extern "C" int kmain() {
     // Install HEAP
     heap::initKheap();
     vga::printStr("KERNEL HEAP     - Install: OK\n");
-
-    // vga::printStr("\033[0");
-
-    // while(true){}
 
     scheduler::init();
     PID pidShell = scheduler::createProcess("shell.exe");

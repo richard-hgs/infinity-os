@@ -90,7 +90,10 @@ for variables.   |      |         |
 
 - DEBUG KERNEL INTERRUPTIONS:
 
-- DATA SIZE:
+- DATA SIZE (16 BITS):
     - db -> Define Byte        : 1 byte
     - dw -> Define Word        : 2 bytes
     - dd -> Define Double Word : 4 bytes
+
+- DATA SIZE (32 BITS):
+    - 

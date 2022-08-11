@@ -8,7 +8,8 @@ ORG 0x7C00
 ;  - BPB: Bios Parameter Block
                                             ;  _________________________________________________________________________________________________
                                             ; | offset | size | Current Value       |  Description                                              |
-jmp START                                   ; |    0   |   3  |                     | Jmp to boot entry point                                   |
+jmp START                                   ; |    0   |   2  | 0xEB, 0x5A          | Jmp to boot entry point                                   |
+JMP_Continue:    db 0x90                    ; |    2   |   1  | 0x90                | Required jmp end                                          |
 BS_OEMName:      db "INFINITY"              ; |    3   |   8  | INFINITY            | Fat OEM signature                                         |
 BPB_BytesPerSec: dw 0x200                   ; |   11   |   2  | 512 BYTES           | Bytes per sector                                          |
 BPB_SecPerClus:  db 0x1                     ; |   13   |   1  | 1 SECTOR            | Sectors per cluster                                       |
