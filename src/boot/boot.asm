@@ -18,7 +18,7 @@ BPB_NumFATs:     db 0x2                     ; |   16   |   1  | 2 COMPATIBLE    
 BPB_RootEntCnt:  dw 0x0                     ; |   17   |   2  | 0 FAT32 OBLIG       | Amount of dir entries in root dir                         |
 BPB_TotSec16:    dw 0x0                     ; |   19   |   2  | 0 FAT32 OBLIG       | 16-bit total count of sectors on the volume               |
 BPB_Media:       db 0xf0                    ; |   21   |   1  | f0 REMOVABLE        | Media type                                                |
-BPB_FATSz16:     dd 0x0                     ; |   22   |   2  | 0 FAT32 OBLIG       | 16 bit count of sectors used by one fat                   |
+BPB_FATSz16:     dw 0x0                     ; |   22   |   2  | 0 FAT32 OBLIG       | 16 bit count of sectors used by one fat                   |
 BPB_SecPerTrk:   dw 0x12                    ; |   24   |   2  | 18 SECT/TRACK       | Sectors per track                                         |
 BPB_NumHeads:    dw 0x1                     ; |   26   |   2  | 1 HEAD              | Read/Write disk heads                                     |
 BPB_HiddSec:     dd 0x0                     ; |   28   |   4  | 0 HIDDEN SECT       | Count of hidden sectors                                   |
