@@ -73,55 +73,6 @@ void *memutils::memcpy_r(void *dst, const void *src, uint32_t size) {
     return dst;
 }
 
-void *memutils::memcpy_16(void *dst, const void *src, uint32_t size) {
-    uint32_t *wdst = (uint32_t *) dst;
-    const uint32_t *wsrc = (uint32_t *) src;
-
-    // word per word copy if both addresses aligned
-    if (!((uint32_t) wdst & 3) && !((uint32_t) wsrc & 3)) {
-        while (size > 3) {
-            *wdst++ = *wsrc++;
-            size -= 4;
-        }
-    }
-
-    uint16_t *cdst = (uint16_t *) wdst;
-    uint16_t *csrc = (uint16_t *) wsrc;
-
-    // byte per byte for last bytes (or not aligned)
-    while (size--) {
-        *cdst++ = *csrc++;
-    }
-    return dst;
-}
-
-void *memutils::memcpy_16_def(void *dst, const void *src, uint16_t defVal, uint32_t size) {
-    uint32_t *wdst = (uint32_t *) dst;
-    const uint32_t *wsrc = (uint32_t *) src;
-
-    // word per word copy if both addresses aligned
-    if (!((uint32_t) wdst & 3) && !((uint32_t) wsrc & 3)) {
-        while (size > 3) {
-
-            *wdst++ = *wsrc++;
-            size -= 4;
-        }
-    }
-
-    uint16_t *cdst = (uint16_t *) wdst;
-    uint16_t *csrc = (uint16_t *) wsrc;
-
-    // byte per byte for last bytes (or not aligned)
-    while (size--) {
-        uint16_t sourceVal = *csrc++;
-        if (sourceVal == 0) {
-            sourceVal = defVal;
-        }
-        *cdst++ = sourceVal;
-    }
-    return dst;
-}
-
 void *memutils::memset(void *dst, uint32_t val, uint32_t size) {
     // build 8 bits and 32 bits values
     uint8_t byte = (uint8_t) (val & 0xFF);
@@ -151,20 +102,6 @@ void *memutils::memset_16(void *dest, uint16_t val, uint16_t len) {
     uint16_t *ptr = (uint16_t *) dest;
     while (len-- > 0)
         *ptr++ = val;
-    return dest;
-}
-
-void *memset_16_safe(void *dest, uint16_t val, uint16_t len) {
-    uint16_t *buf = (uint16_t *) dest;
-    union {
-        uint8_t d8[2];
-        uint16_t d16;
-    } u16 = {.d16 = val};
-
-    while (len--) {
-        *buf++ = u16.d8[0];
-        *buf++ = u16.d8[1];
-    }
     return dest;
 }
 

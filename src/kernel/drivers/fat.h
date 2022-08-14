@@ -46,7 +46,7 @@ namespace fat {
      * 
      * @param BPB_RsvdSecCnt Reserved sectors count before the first FAT entry. Specify reserved area for boot executable code.
      */
-    void create(uint16_t BPB_RsvdSecCnt);
+    void create();
 }
 
 #endif

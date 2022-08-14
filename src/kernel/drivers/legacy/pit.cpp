@@ -159,3 +159,11 @@ void pit::ksleep(uint32_t millis) {
         __asm__ volatile ("hlt"); // Halt the cpu. Waits until an IRQ occurs minimize CPU usage
     } // Wait until countdown timer reaches 0 then continue execution.
 }
+
+/**
+ * @brief TSC - Time Stamp Counter
+ * 
+ * The instruction RDTSC returns the TSC in EDX:EAX. 
+ * In x86-64 mode, RDTSC also clears the upper 32 bits of RAX and RDX. 
+ * Its opcode is 0F 31
+ */

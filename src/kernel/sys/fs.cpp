@@ -7,6 +7,8 @@
 #include "memutils.h"
 // cpu
 #include "paging.h"
+// drivers
+#include "fat.h"
 // binaries programs
 #include "../../../build/programs/user/shell/shell.bin.h"
 
@@ -23,6 +25,7 @@ const unsigned int filesCount = sizeof(fileList) / sizeof(FileNode);
 void fs::install() {
     // Add 3 to Boot start address to ignore the JMP instruction that is 3 bytes long. After it is the boot sector.
     // memutils::memcpy((void*) &bootSector, (void*) (BOOT_START_ADDR + 3), sizeof(Fat32BootSector));
+    fat::create();
 }
 
 // ==================== VIRTUAL FILE SYSTEM =========================

@@ -42,26 +42,6 @@ namespace memutils
     void *memcpy_r(void *dst, const void *src, uint32_t size);
 
     /**
-     * @brief Copy memory contents from a source pointer to a destination pointer memory by increments of 2 bytes (short)
-     * 
-     * @param dst Destination pointer
-     * @param src Source pointer
-     * @param size Size to copy
-     * @return void* Destination pointer result
-     */
-    void *memcpy_16(void *dst, const void *src, uint32_t size);
-
-    /**
-     * @brief Copy memory contents from a source pointer to a destination pointer memory by increments of 2 bytes (short) in reverse order
-     * 
-     * @param dst Destination pointer
-     * @param src Source pointer
-     * @param size Size to copy
-     * @return void* Destination pointer result
-     */
-    void *memcpy_16_def(void *dst, const void *src, uint16_t defVal, uint32_t size);
-
-    /**
      * @brief Set given source value in entire destination pointer memory slots
      * 
      * @param dst Destination pointer
@@ -80,16 +60,6 @@ namespace memutils
      * @return void* Destination pointer result
      */
     void *memset_16(void *dest, uint16_t val, uint16_t len);
-
-    /**
-     * @brief Set given source value in entire destination pointer memory slots 2 bytes (short) Safer version of memset_16
-     * 
-     * @param dst Destination pointer
-     * @param src Source pointer
-     * @param size Size to copy
-     * @return void* Destination pointer result
-     */
-    void *memset_16_safe(void *dest, uint16_t val, uint16_t len);
 
     /**
      * @brief Compare two memory values using a predetermined size
