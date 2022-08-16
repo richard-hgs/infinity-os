@@ -11,50 +11,56 @@
 
 /**
  * @brief Windows FAT Format Map Overview Disassembly
+ *  - FOR A PENDRIVE OF 8 GB OF SIZE:
+ *    - 7,3 GB AVAILABLE
+ *    - 4096 Bytes per allocation unit
+ *    - 1.903.871 Allocation units available.
+ *    - 32 bits for each fat entry.
+ *    - Serial Number: 9281-B345
  * 
  * SECTORS 1-3: 
  *      WINDOWS USES 3 SECTORS FOR BOOT, SO WE MUST CONFIGURE THE 3 FIRST SECTORS AS BOOTABLE FINISHING WITH 0xAA55
  * 
  * 
  * SECTOR 1: 
- *      BS_JmpBoot: EB 58 90
- *      BS_OEMName: "MSDOS5.0"
- *      BPB_BytesPerSec: 0x200
- *      BPB_SecPerClus: 0x8
- *      BPB_RsvdSecCnt: 0xBCA    STARTS IN SECTOR 0
- *      BPB_NumFATs: 0x02
- *      BPB_RootEntCnt: 0x0
- *      BPB_TotSec16: 0x0
- *      BPB_Media: 0xF8
- *      BPB_FATSz16: 0x0
- *      BPB_SecPerTrk: 0x3F
- *      BPB_NumHeads: 0xFF
- *      BPB_HiddSec: 0x800
- *      BPB_TotSec32: 0xE8E800
- *      BPB_FATSz32: 0x3A1B
- *      BPB_ExtFlags: 0x0
- *      BPB_FSVer: 0x0
- *      BPB_RootClus: 0x2
- *      BPB_FSInfo: 0x1
- *      BPB_BkBootSec: 0x6
- *      BPB_Reserved: 0x0
- *      BS_DrvNum: 0x8
- *      BS_Reserved1: 0x0
- *      BS_BootSig: 0x29
- *      BS_VolID: 0x45B38192   Serial Number of Volume
- *      BS_VolLab: "NO NAME    "
- *      BS_FilSysType: "FAT32   "
- *      BS_BootCode32: ***
- *      BS_BootSign: 0X55AA
+ *      BS_JmpBoot      : EB 58 90
+ *      BS_OEMName      : "MSDOS5.0"
+ *      BPB_BytesPerSec : 0x200
+ *      BPB_SecPerClus  : 0x8      EACH FILE USES 8 SECTORS
+ *      BPB_RsvdSecCnt  : 0xBCA    STARTS IN SECTOR 0
+ *      BPB_NumFATs     : 0x02
+ *      BPB_RootEntCnt  : 0x0
+ *      BPB_TotSec16    : 0x0
+ *      BPB_Media       : 0xF8
+ *      BPB_FATSz16     : 0x0
+ *      BPB_SecPerTrk   : 0x3F
+ *      BPB_NumHeads    : 0xFF
+ *      BPB_HiddSec     : 0x800
+ *      BPB_TotSec32    : 0xE8E800
+ *      BPB_FATSz32     : 0x3A1B
+ *      BPB_ExtFlags    : 0x0
+ *      BPB_FSVer       : 0x0
+ *      BPB_RootClus    : 0x2
+ *      BPB_FSInfo      : 0x1
+ *      BPB_BkBootSec   : 0x6
+ *      BPB_Reserved    : 0x0
+ *      BS_DrvNum       : 0x8
+ *      BS_Reserved1    : 0x0
+ *      BS_BootSig      : 0x29
+ *      BS_VolID        : 0x45B38192   Serial Number of Volume
+ *      BS_VolLab       : "NO NAME    "
+ *      BS_FilSysType   : "FAT32   "
+ *      BS_BootCode32   : ***
+ *      BS_BootSign     : 0X55AA
  * 
  * SECTOR 2 (BPB_FSInfo): 
- *      FSI_LeadSig: 0x41615252
- *      FSI_Reserved1: 0x0
- *      FSI_StrucSig: 0x61417272
- *      FSI_Free_Count: 0x1D0CFC * BPB_SecPerClus * BPB_BytesPerSec = FREE_SIZE_IN_BYTES
- *      FSI_Nxt_Free: 0x6
- *      FSI_Reserved2: 0x0
- *      FSI_TrailSig: 0x0000AA55
+ *      FSI_LeadSig     : 0x41615252
+ *      FSI_Reserved1   : 0x0
+ *      FSI_StrucSig    : 0x61417272
+ *      FSI_Free_Count  : 0x1D0CFC * BPB_SecPerClus * BPB_BytesPerSec = FREE_SIZE_IN_BYTES
+ *      FSI_Nxt_Free    : 0x6
+ *      FSI_Reserved2   : 0x0
+ *      FSI_TrailSig    : 0x0000AA55
  * 
  * SECTOR 6-8:
  *      BOOT SECTOR BACKUP
@@ -64,6 +70,45 @@
  *     
  * SECTOR 32768 = (BPB_RsvdSecCnt + (BPB_NumFATs * BPB_FATSz32)):
  *      ROOT Fat32Directory entry sector
+ * 
+ *      SUPPOSING WE HAVE A STORAGE STRUCTURE LIKE THIS IN FAT32:
+ *      .
+ *      ├── System Volume Information/
+ *      |   ├── IndexerVolumeGuid   CONTENT -> {0E347D23-EAE4-4C18-A4A6-B5E63A65BC0B}
+ *      |   └── WPSettings.dat      CONTENT -> HEX(0C 00 00 00 C4 B7 A8 C2 44 3F A8 16)  ASCII(....Ä·¨ÂD?¨.)
+ *      ├── Folder1/
+ *      │   └── File3.txt           CONTENT -> Hello World 3  
+ *      ├── File1.txt               CONTENT -> Hello World 1
+ *      └── File2.txt               CONTENT -> Hello World 2
+ * 
+ *      FOLDER(Fat32Directory) - System Volume Information:
+ *       - LOCATED SECTOR(32.792-32.799)
+ *          DIR_Name[11]     : "PENDRIVE   "
+ *          DIR_Attr         : 0x8 - ATTR_VOLUME_ID (Volume label)
+ *          DIR_NTRes        : 0x0 
+ *          DIR_CrtTimeTenth : 0x0
+ *          DIR_CrtTime      : 0x0
+ *          DIR_CrtDate      : 0x0
+ *          DIR_LstAccDate   : 0x0
+ *          DIR_FstClusHI    : 0x0
+ *          DIR_WrtTime      : 0xB1AC
+ *          DIR_WrtDate      : 0x550D
+ *          DIR_FstClusLO    : 0x0
+ *          DIR_FileSize     : 0x0
+ *      
+ *       ENTRY - SYSTEM~1:
+ *          DIR_Name[11]     : "SYSTEM~1   "
+ *          DIR_Attr         : 0x16 - ???
+ *          DIR_NTRes        : 0x0 
+ *          DIR_CrtTimeTenth : 0x81
+ *          DIR_CrtTime      : 0xB1AB
+ *          DIR_CrtDate      : 0x550D
+ *          DIR_LstAccDate   : 0x550F
+ *          DIR_FstClusHI    : 0x0
+ *          DIR_WrtTime      : 0xB1AC
+ *          DIR_WrtDate      : 0x550D
+ *          DIR_FstClusLO    : 0x3
+ *          DIR_FileSize     : 0x0
  */
 
 /**
