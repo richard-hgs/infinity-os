@@ -5,7 +5,11 @@ LIB_NAME=sysfuncs
 LIBC_SRC_DIR=../../../libs/libc/
 LIBSTATIC_SRC_DIR=../static
 
-INCLUDE_DIRS := -I. -I$(LIBC_SRC_DIR) -I$(LIBSTATIC_SRC_DIR)
+LIBSTATIC_B_DIR=$(BUILD_DIR)programs/libs/static
+
+LIBSTATIC_I_DIR=$(LIBSTATIC_B_DIR)/include
+
+INCLUDE_DIRS := -I. -I$(LIBC_SRC_DIR) -I$(LIBSTATIC_I_DIR)
 
 C_SOURCES := $(shell find './' -type f -name '*.cpp')
 C_OBJECTS := $(patsubst ./%.cpp,$(BUILD_DIR)$(CURRENT_DIR)/%.cpp.o, $(C_SOURCES))

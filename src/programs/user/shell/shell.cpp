@@ -4,8 +4,6 @@
 
 using namespace sysfuncs;
 
-int getCmdNextArg(char *cmd, int startOffset, char *arg, int* endOffset);
-
 int main() {
     char* cmd = (char*) malloc(256);    // Max keyboard.h buffer is 256 so we set buffer to its max value.
     char* cmdArg = (char*) malloc(256); 
@@ -23,11 +21,11 @@ int main() {
         readln(cmd);
 
         // Get first argument from command
-        getCmdNextArg(cmd, 0, cmdArg, &argOffset);
+        string::readNextArg(cmd, 0, cmdArg, &argOffset);
 
         // Compare all commands
         if (string::strcmp(cmdArg, "ps") == 0) {            // PS - Process commands
-            getCmdNextArg(cmd, argOffset, cmdArg, &argOffset);
+            string::readNextArg(cmd, argOffset, cmdArg, &argOffset);
             if (string::strcmp(cmdArg, "list") == 0) {
                 printProcessList();
                 continue;
@@ -54,26 +52,6 @@ int main() {
     free(cmdArg);
 
     return 1;
-}
-
-int getCmdNextArg(char* cmd, int startOffset, char* arg, int* endOffset) {
-    int length = 0;
-
-    cmd += startOffset;
-    
-    while(*cmd != '\0' && (length == 0 || *cmd != ' ')) {
-        if (*cmd != ' ') {
-            length++;
-            *arg++ = *cmd++;
-        } else {
-            cmd++;
-        }
-        (*endOffset)++;
-    }
-
-    *arg++ = '\0';
-
-    return length;
 }
 
 /*

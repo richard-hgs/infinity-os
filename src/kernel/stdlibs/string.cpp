@@ -54,3 +54,23 @@ char *string::strcpy(char *dest, const char *src) {
     dest[i] = '\0';
     return dest;
 }
+
+int string::readNextArg(char* cmd, int startOffset, char* arg, int* endOffset) {
+    int length = 0;
+
+    cmd += startOffset;
+    
+    while(*cmd != '\0' && (length == 0 || *cmd != ' ')) {
+        if (*cmd != ' ') {
+            length++;
+            *arg++ = *cmd++;
+        } else {
+            cmd++;
+        }
+        (*endOffset)++;
+    }
+
+    *arg++ = '\0';
+
+    return length;
+}

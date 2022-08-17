@@ -70,6 +70,17 @@ namespace string {
      * @return char*    The destination with copied data
      */
     char *strcpy(char *dest, const char *src);
+
+    /**
+     * @brief Read next argument from command string
+     * 
+     * @param cmd           Command to read argument from
+     * @param startOffset   The base offset where to start looking
+     * @param arg           Return the argument found
+     * @param endOffset     The end offset from argument found
+     * @return int 
+     */
+    int readNextArg(char *cmd, int startOffset, char *arg, int* endOffset);
 } // namespace string
 
 #endif
