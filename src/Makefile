@@ -4,11 +4,12 @@
 # ========================================
 BUILD_DIR=../build/
 
+
 AS=nasm
 AFLAGS=-f bin
 
 # Custom commands
-IMAGEFS=$(BUILD_DIR)imagefs/imagefs
+IMAGEFS=$(BUILD_DIR)programs/linux/imagefs/imagefs.elf
 PRSFS=$(BUILD_DIR)prsfs/prsfs
 
 SRCDIR=.
@@ -38,6 +39,7 @@ debug: disk
 
 disk: all
 	echo $(CURDIR)
+	$(IMAGEFS) c fat32 2880 512 $(BUILD_DIR)fat32.img
 	cat $(BUILD_DIR)boot/boot.bin $(BUILD_DIR)kernel/kernel.bin /dev/zero | head -c 1474560 > $(BUILD_DIR)floppy.img
 # $(IMAGEFS) c $(BUILD_DIR)floppy.img 200
 # $(IMAGEFS) w $(BUILD_DIR)floppy.img $(BUILD_DIR)boot/stage1.bin

@@ -7,6 +7,7 @@ all:
 	cd $(CURDIR)/libs && $(MAKE)
 	cd $(CURDIR)/kernel && $(MAKE)
 	cd $(CURDIR)/user && $(MAKE)
+	cd $(CURDIR)/linux/imagefs && $(MAKE)
 
 test:
  	$(info $$var is [${CURRENT_DIR}])

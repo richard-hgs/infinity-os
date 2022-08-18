@@ -73,5 +73,8 @@
       - ✅ SHELL process creation;
           - ✅ Communicate with kernel using IDT Interruptions to access VGA memory;
           - ✅ Hello World Print;
+      - ✅ IMAGEFS process creation;
+          - ⬜ FAT32 - File system format implemented;
+          - ⬜ CREATE - Creates a .img for a file system format;
 
       
