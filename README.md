@@ -76,5 +76,3 @@
       - ✅ IMAGEFS process creation;
           - ⬜ FAT32 - File system format implemented;
           - ⬜ CREATE - Creates a .img for a file system format;
-
-      
