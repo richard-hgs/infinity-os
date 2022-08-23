@@ -11,6 +11,7 @@ TARGET=$(BUILD_DIR)$(CURRENT_DIR)/imagefs.elf
 
 .PHONY: all test
 all: $(TARGET)
+	objdump -drwC -Mintel $(TARGET) > $(TARGET).dump
 
 $(BUILD_DIR)$(CURRENT_DIR)/%.cpp.o: %.cpp
 	mkdir -p $(dir $@)

@@ -2,7 +2,8 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <string.h>
-#include <errno.h>
+
+#include "fat.h"
 
 enum class EnMode {
     UNDEFINED,
@@ -48,7 +49,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    if (mode == EnMode::CREATE) {
+    if (mode == EnMode::CREATE) { // Create a new file system architecture binary data
         if (argc < 6) {
             printUsage = true;
         } else {
@@ -72,6 +73,12 @@ int main(int argc, char **argv) {
             }
 
             fprintf(stdout, "Creating format.\n");
+
+            // Begin the creation of the fat32 file system format.
+            FatBS32 fatBS32 = {};
+            fat::create(totalSec, bytesPerSec, 0x3A1B, &fatBS32);
+
+            // fprintf(stdout, "fatBS32 - oemName: %s\n", (char*) fatBS32.header.BS_OEMName);
         }
     }
 
