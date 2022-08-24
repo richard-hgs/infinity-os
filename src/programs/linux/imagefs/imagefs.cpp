@@ -76,7 +76,7 @@ int main(int argc, char **argv) {
 
             // Begin the creation of the fat32 file system format.
             FatBS32 fatBS32 = {};
-            fat::create(totalSec, bytesPerSec, 0x3A1B, &fatBS32);
+            fat::create(totalSec, bytesPerSec, 0x3A1B, FAT_MEDIA_TYPE_REMOVABLE, &fatBS32);
 
             // fprintf(stdout, "fatBS32 - oemName: %s\n", (char*) fatBS32.header.BS_OEMName);
         }

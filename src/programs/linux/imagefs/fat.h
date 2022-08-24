@@ -65,6 +65,9 @@
  * 
  * SECTOR 12:
  *      ANOTHER BOOT SECTOR USED FOR SOME UNKNOWN REASON
+ * 
+ * SECTOR 3018 = (BPB_RsvdSecCnt)
+ *      File Allocation Table 1 Starts at this sector.
  *     
  * SECTOR 32768 = (BPB_RsvdSecCnt + (BPB_NumFATs * BPB_FATSz32)):
  *      ROOT Fat32Directory entry sector
@@ -229,6 +232,55 @@ typedef struct DskSzToSecPerClus {
  * |   71   |  11  | Main Volume LABEL   | Volume label max length 11                                |
  * |   82   |   8  | FAT32 FSystem Type  | File System type                                          |
  *  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
+ * 
+ * FAT - File Allocation Table:
+ *    - The allocation table on a FAT volume tracks each cluster in that volume, mapping the allocation chains associated with the 
+ *      volume's directories and files. Each table entry corresponds to a cluster and is typically in one of four states:
+ *      - FREE        - The cluster is unused
+ *      -             - The cluster is in an allocation chain associated with a specific file or directory; the table entry references to the next cluster in the chain.
+ *      - EOC         - The cluster is the last cluster in an allocation chain associated with a specific file or directory.
+ *      - BAD CLUSTER - The cluster is bad.
+ * 
+ *    - Each fat entry has 28 bits and not 32 bits. Only the 28 low bits should be used for detecting FREE, EOC and BAD CLUSTERS
+ *    
+ *    - FREE - Free Cluster:
+ *      - 0x00000000
+ *      - Signals that the cluster is free to be used.
+ * 
+ *    - EOC - End Of Clusterchain:
+ *      - 0x0FFFFFFF
+ *      - Signals the end of the clusterchain of the current file being readed.
+ * 
+ *    - Bad Cluster:
+ *      - 0x0FFFFFF7
+ *      - Signals that the cluster should not be placed on the free list because it's prone to disk errors.
+ * 
+ *    - RESERVED ENTRIES OF FAT TABLE :
+ *      - FAT[0] = 0x0FFFFFF8: 
+ *        - Contains the BPB_Media byte value in its low 8 bits and all other bits are set to 1.
+ *      
+ *      - FAT[1] = (ClnShutBitMask = 0x08000000 | HrdErrBitMask = 0x04000000):
+ *        - The file system driver may use the high two bits of the FAT[1] entry for dirty volume flags (all other bits, are always left set to 1).
+ *        - Is set by FORMAT to the EOC mark
+ *        
+ *        - ClnShutBitMask = 0x08000000 (HIGH BIT - HIGH):
+ *            - If bit is 1, volume is “clean”.
+ *            - If bit is 0, volume is “dirty”. This indicates that the file system driver did not
+ *              Dismount the volume properly the last time it had the volume mounted. It
+ *              would be a good idea to run a Chkdsk/Scandisk disk repair utility on it,
+ *              because it may be damaged.
+ * 
+ *        - HrdErrBitMask = 0x04000000 (HIGH BIT - LOW):
+ *            - If this bit is 1, no disk read/write errors were encountered.
+ *            - If this bit is 0, the file system driver encountered a disk I/O error on the
+ *              Volume the last time it was mounted, which is an indicator that some sectors
+ *              may have gone bad on the volume. It would be a good idea to run a
+ *              Chkdsk/Scandisk disk repair utility that does surface analysis on it to look
+ *              for new bad sectors.
+ *        
+ *         - The last FAT entry is the CountofClusters + 1
+ *
+ * 
  * SIZE_LIMITS:
  *    FAT12 requirements : 3 sectors on each copy of FAT for every 1,024 clusters
  *    FAT16 requirements : 1 sector on each copy of FAT for every 256 clusters
@@ -261,7 +313,7 @@ namespace fat {
      * 
      * @param rsvdSecCnt Reserved sectors count before the first FAT entry. Specify reserved area for boot executable code.
      */
-    void create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, FatBS32* fatBs);
+    void create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, uint8_t mediaType, FatBS32* fatBs);
 }
 
 #endif

@@ -25,21 +25,21 @@
 //     { 0xFFFFFFFF,                  64 }   /* disks greater than 32GB, 32k cluster */
 // };
 
-void fat::create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, FatBS32* fatBs) {
+void fat::create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, uint8_t mediaType, FatBS32* fatBs) {
     memcpy(fatBs->header.BS_JmpBoot, (unsigned char*) "\xEB\x58\x90", 3);
     memcpy(fatBs->header.BS_OEMName, "MSDOS5.0", 8);
-    fatBs->header.BPB_BytesPerSec = 0x200;  // 512
+    fatBs->header.BPB_BytesPerSec = bytesPerSec; // Bytes per sector
     fatBs->header.BPB_SecPerClus = 0x1;
     fatBs->header.BPB_RsvdSecCnt = 0x1;
-    fatBs->header.BPB_NumFATs = 0x2;
+    fatBs->header.BPB_NumFATs = 0x2;             // Fat count
     fatBs->header.BPB_RootEntCnt = 0x0;
     fatBs->header.BPB_TotSec16 = 0x0;
-    fatBs->header.BPB_Media = 0xf0;
+    fatBs->header.BPB_Media = mediaType;
     fatBs->header.BPB_FATSz16 = 0x0;
     fatBs->header.BPB_SecPerTrk = 0x12;      // 18
     fatBs->header.BPB_NumHeads = 0x1;
     fatBs->header.BPB_HiddSec = 0x0;
-    fatBs->header.BPB_TotSec32 = diskTotSec; // 2880
+    fatBs->header.BPB_TotSec32 = diskTotSec;
 
     fatBs->BPB_FATSz32 = fatSizeInSec;
     fatBs->BPB_ExtFlags = 0x0;
