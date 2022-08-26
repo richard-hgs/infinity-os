@@ -67,7 +67,13 @@
  *      ANOTHER BOOT SECTOR USED FOR SOME UNKNOWN REASON
  * 
  * SECTOR 3018 = (BPB_RsvdSecCnt)
- *      File Allocation Table 1 Starts at this sector.
+ *      - File Allocation Table 1 Starts at this sector.
+ *      SECTOR 3018 (0-4 bytes)             : RESERVED 1
+ *      SECTOR 3018 (4-8 bytes)             : RESERVED 2
+ *      SECTOR 3018 (8 byte) - SECTOR 32767 : FAT FILES AND DIRECTORIES ENTRIES
+ * 
+ *      CONTENTS :
+ *          - 
  *     
  * SECTOR 32768 = (BPB_RsvdSecCnt + (BPB_NumFATs * BPB_FATSz32)):
  *      ROOT Fat32Directory entry sector
@@ -237,19 +243,25 @@ typedef struct DskSzToSecPerClus {
  *    - The allocation table on a FAT volume tracks each cluster in that volume, mapping the allocation chains associated with the 
  *      volume's directories and files. Each table entry corresponds to a cluster and is typically in one of four states:
  *      - FREE        - The cluster is unused
- *      -             - The cluster is in an allocation chain associated with a specific file or directory; the table entry references to the next cluster in the chain.
+ *      - CONTENT     - The cluster is in an allocation chain associated with a specific file or directory; the table entry references to the next cluster in the chain.
  *      - EOC         - The cluster is the last cluster in an allocation chain associated with a specific file or directory.
  *      - BAD CLUSTER - The cluster is bad.
  * 
  *    - Each fat entry has 28 bits and not 32 bits. Only the 28 low bits should be used for detecting FREE, EOC and BAD CLUSTERS
  *    
- *    - FREE - Free Cluster:
+ *    - FREE - Free Unused Cluster:
  *      - 0x00000000
  *      - Signals that the cluster is free to be used.
  * 
+ *    - CONTENT - File or Directory:
+ *      - 
+ *      - Indicates that a file or directory is located in this cluster chain entry
+ * 
  *    - EOC - End Of Clusterchain:
- *      - 0x0FFFFFFF
+ *      - 0x0FFFFFF8 - 0x0FFFFFFF
  *      - Signals the end of the clusterchain of the current file being readed.
+ *      - Also, the end-of-file number is actually anything equal to or greater than 0xFFFFFFF8
+ *      - Files that fit in just one cluster will have only 0xFFFFFFFF in the fat at their cluster chain
  * 
  *    - Bad Cluster:
  *      - 0x0FFFFFF7

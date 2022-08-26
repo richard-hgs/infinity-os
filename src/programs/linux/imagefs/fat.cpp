@@ -48,5 +48,4 @@ void fat::create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSe
     fatBs->BPB_FSInfo = 0x1;    // FSInfo structure start sector
     fatBs->BPB_BkBootSec = 0x6; // Backup of the boot sector starts at sector 6
     memset(fatBs->BPB_Reserved, '\0', sizeof(unsigned char) * 12);
-    
 }
