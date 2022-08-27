@@ -3,7 +3,15 @@
 #define _FAT_H_
 
 #include <stdint.h>
+#include <fstream>
 
+// FAT ERRORS
+#define FAT_NO_ERROR                0
+#define FAT_ERROR_READ_BS_HEADER    1
+#define FAT_ERROR_UNSUPORTED_FORMAT 2
+#define FAT_ERROR_READ_BS32         3
+
+// FAT - MEDIA TYPES
 #define FAT_MEDIA_TYPE_FIXED        0xF8
 #define FAT_MEDIA_TYPE_REMOVABLE    0xF0
 
@@ -326,6 +334,9 @@ namespace fat {
      * @param rsvdSecCnt Reserved sectors count before the first FAT entry. Specify reserved area for boot executable code.
      */
     void create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, uint8_t mediaType, FatBS32* fatBs);
+
+    
+    int listEntries(FILE *storage);
 }
 
 #endif

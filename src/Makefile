@@ -39,8 +39,10 @@ debug: disk
 
 disk: all
 	echo $(CURDIR)
-	$(IMAGEFS) c fat32 2880 512 $(BUILD_DIR)fat32.img
+	$(IMAGEFS) r $(BUILD_DIR)fat32Pendrive.img
 	cat $(BUILD_DIR)boot/boot.bin $(BUILD_DIR)kernel/kernel.bin /dev/zero | head -c 1474560 > $(BUILD_DIR)floppy.img
+
+# $(IMAGEFS) c fat32 2880 512 $(BUILD_DIR)fat32.img
 # $(IMAGEFS) c $(BUILD_DIR)floppy.img 200
 # $(IMAGEFS) w $(BUILD_DIR)floppy.img $(BUILD_DIR)boot/stage1.bin
 # $(PRSFS) $(BUILD_DIR)floppy.img $(BUILD_DIR)boot/stage2.bin $(BUILD_DIR)kernel/kernel.bin

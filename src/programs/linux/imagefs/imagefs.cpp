@@ -16,7 +16,8 @@
 enum class EnMode {
     UNDEFINED,
     CREATE,
-    WRITE
+    WRITE,
+    READ
 };
 
 enum class EnFormat {
@@ -177,8 +178,10 @@ int main(int argc, char **argv) {
                 mode = EnMode::WRITE;
             } else if (strcmp(argv[1], "c") == 0) {
                 mode = EnMode::CREATE;
+            } else if (strcmp(argv[1], "r") == 0) {
+                mode = EnMode::READ;
             } else {
-                fprintf(stderr, "\e[31mUnknow <mode> \"%s\" used. Use {c = CREATE, w = WRITE}. Use help to know more.\e[m\n", argv[1]);
+                fprintf(stderr, "\e[31mUnknow <mode> \"%s\" used. Use {c = CREATE, w = WRITE, r = READ}. Use help to know more.\e[m\n", argv[1]);
                 return 1;
             }
         }
@@ -234,10 +237,37 @@ int main(int argc, char **argv) {
 
                 // fprintf(stdout, "fatBS32 - oemName: %s\n", (char*) fatBS32.header.BS_OEMName);
             }
+        } else if (mode == EnMode::READ) {
+            if (argc < 3) {
+                printUsage = true;
+            } else {
+                filePath = argv[2];
+
+                // Join paths together and normalize then
+                std::string fullFilePath = cwd;
+                fullFilePath += "/";
+                fullFilePath += filePath;
+
+                // Normalize the path to remove relative paths
+                fullFilePath = normpath(fullFilePath, "/");
+
+                fprintf(stdout, "Reading format of %s.\n", fullFilePath.c_str());
+
+                FILE *i_file = fopen(fullFilePath.c_str(), "rb");
+                if (i_file) {
+                    int result = fat::listEntries(i_file);
+                    fclose(i_file);
+                    if (result != FAT_NO_ERROR) {
+                        fprintf(stderr, "\e[31mlistEntries failed with exit code %d\e[m\n", result);
+                        return result;
+                    }
+                }
+            }
         }
 
         if (printUsage) {
-            fprintf(stderr, "\e[31mUsage %s <mode> <format> <size> <secsize> <file>\e[m\n", argv[0]);
+            fprintf(stderr, "\e[31mUsage %s <mode = c> <format> <size> <secsize> <file>\e[m\n", argv[0]);
+            fprintf(stderr, "\e[31mUsage %s <mode = r> <file>\e[m\n", argv[0]);
             return 1;
         }
 
