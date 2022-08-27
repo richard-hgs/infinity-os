@@ -14,6 +14,7 @@
 #define FAT_ERROR_READ_FSINFO_INVALID_LEAD_SIGNATURE    5
 #define FAT_ERROR_READ_FSINFO_INVALID_STRUCT_SIGNATURE  6
 #define FAT_ERROR_READ_DIRECTORY                        7
+#define FAT_ERROR_READ_FAT_ENTRY                        8
 
 // FAT - MEDIA TYPES
 #define FAT_MEDIA_TYPE_FIXED        0xF8
@@ -22,6 +23,15 @@
 // FAT - FSINFO - SIGNATURES
 #define FAT_FSINFO_LEAD_SIGNATURE   0x41615252
 #define FAT_FSINFO_STRUCT_SIGNATURE 0x61417272
+
+// FAT - DIRECTORY - ATTRIBUTES
+#define FAT_DIR_ATTR_READ_ONLY 0x01
+#define FAT_DIR_ATTR_HIDDEN    0x02
+#define FAT_DIR_ATTR_SYSTEM    0x04
+#define FAT_DIR_ATTR_VOLUME_ID 0x08
+#define FAT_DIR_ATTR_DIRECTORY 0x10
+#define FAT_DIR_ATTR_ARCHIVE   0x20
+#define FAT_DIR_ATTR_LONG_NAME FAT_DIR_ATTR_READ_ONLY | FAT_DIR_ATTR_HIDDEN | FAT_DIR_ATTR_SYSTEM | FAT_DIR_ATTR_VOLUME_ID
 
 /**
  * @brief Windows FAT Format Map Overview Disassembly
@@ -351,7 +361,22 @@ namespace fat {
      */
     int listEntries(FILE *storage);
 
+    /**
+     * @brief Read the Fat Entry Value for given cluster number
+     * 
+     * @param storage           FAT storage
+     * @param bs32              MBR Boot Sector info
+     * @param clusterNum        Cluster number
+     * @param fatValue          OUT - Reference to var that will save the readed fat value
+     * @return int              0=NO_ERROR, or Error code
+     */
+    int fatVal(FILE *storage, FatBS32_t bs32, uint32_t clusterNum, uint32_t *fatValue);
 
+    /**
+     * @brief Print directory entry info
+     * 
+     * @param fat32Dir Directory entry
+     */
     void printDirEntry(Fat32Directory_t fat32Dir);
 }
 

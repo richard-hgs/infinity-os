@@ -4,6 +4,26 @@
 
 #include "fat.h"
 
+/**
+ * @brief Check if a fat cluster is FREE(unused)
+ */
+#define CLUSTER_IS_FREE(val) val == 0x00000000
+
+/**
+ * @brief Check if fat cluster is the EOC end of cluster chain
+ */
+#define CLUSTER_IS_EOC(val) (val >= 0x0FFFFFF8 && val <= 0x0FFFFFFF)
+
+/**
+ * @brief Check if fat cluster is bad and should not be used
+ */
+#define CLUSTER_IS_BAD(val) val == 0x0FFFFFF7
+
+/**
+ * @brief Check if dir (Fat32Directory) is free
+ */
+#define IS_DIR_FREE(dir) (val.DIR_Name[0] == 0xE5 || val.DIR_Name[0] == 0x00)
+
 /** 
  * @brief This is the table for bs32 drives. NOTE that this table includes
  * entries for disk sizes smaller than 512 MB even though typically
@@ -56,6 +76,7 @@ int fat::listEntries(FILE *storage) {
     FatBSHeader_t bsHeader;
     Fat32FsInfo_t fsInfo32;
     Fat32Directory_t dirEntry32;
+    uint32_t tmpInt;
     
     // Read the header
     if (fread(&bsHeader, 1, sizeof(bsHeader), storage) != sizeof(bsHeader)) {
@@ -112,6 +133,9 @@ int fat::listEntries(FILE *storage) {
 
         // Print dir entry
         printDirEntry(dirEntry32);
+
+        fatVal(storage, bs32, 2, &tmpInt);
+        fprintf(stdout, "FAT value: 0x%08X\n", tmpInt);
     }
 
 
@@ -179,10 +203,53 @@ int fat::listEntries(FILE *storage) {
     return FAT_NO_ERROR;
 }
 
+int fat::fatVal(FILE *storage, FatBS32_t bs32, uint32_t clusterNum, uint32_t *fatValue) {
+    uint32_t firstSectorOfFatEntries = bs32.header.BPB_RsvdSecCnt; // FAT 32 has 2 reserved fat entries
+
+    // Set file offset at the beginning of the fat entry being readed
+    fseek(storage, firstSectorOfFatEntries * bs32.header.BPB_BytesPerSec + (clusterNum * 4), SEEK_SET);
+
+    // Read
+    if (fread(fatValue, 1, 4, storage)) {
+        return FAT_ERROR_READ_FAT_ENTRY;
+    }
+
+    return FAT_NO_ERROR;
+}
+
 void fat::printDirEntry(Fat32Directory_t fat32Dir) {
+    char dirAttrStr[10];
+
+    switch(fat32Dir.DIR_Attr) {
+        case FAT_DIR_ATTR_READ_ONLY:
+            strcpy(dirAttrStr, "READ_ONLY");
+            break;
+        case FAT_DIR_ATTR_HIDDEN:
+            strcpy(dirAttrStr, "HIDDEN");
+            break;
+        case FAT_DIR_ATTR_SYSTEM:
+            strcpy(dirAttrStr, "SYSTEM");
+            break;
+        case FAT_DIR_ATTR_VOLUME_ID:
+            strcpy(dirAttrStr, "VOLUME_ID");
+            break;
+        case FAT_DIR_ATTR_DIRECTORY:
+            strcpy(dirAttrStr, "DIRECTORY");
+            break;
+        case FAT_DIR_ATTR_ARCHIVE:
+            strcpy(dirAttrStr, "ARCHIVE");
+            break;
+        case FAT_DIR_ATTR_LONG_NAME:
+            strcpy(dirAttrStr, "LONG_NAME");
+            break;
+        default:
+            strcpy(dirAttrStr, "UNDEFINED");
+            break;
+    }
+
     fprintf(stdout, "DIRECTORY - 32:\n");
     fprintf(stdout, "  - DIR_Name         : %.*s\n", 11, fat32Dir.DIR_Name);
-    fprintf(stdout, "  - DIR_Attr         : 0x%02X\n", fat32Dir.DIR_Attr);
+    fprintf(stdout, "  - DIR_Attr         : 0x%02X - %s\n", fat32Dir.DIR_Attr, dirAttrStr);
     fprintf(stdout, "  - DIR_NTRes        : 0x%02X\n", fat32Dir.DIR_NTRes);
     fprintf(stdout, "  - DIR_CrtTimeTenth : %d\n", fat32Dir.DIR_CrtTimeTenth);
     fprintf(stdout, "  - DIR_CrtTime      : %d\n", fat32Dir.DIR_CrtTime);
@@ -195,21 +262,3 @@ void fat::printDirEntry(Fat32Directory_t fat32Dir) {
     fprintf(stdout, "  - DIR_FileSize     : %d\n", fat32Dir.DIR_FileSize);
     fprintf(stdout, "  - DIR_FstClusFull  : %d\n", (fat32Dir.DIR_FstClusHI << 16) | fat32Dir.DIR_FstClusLO);
 }
-
-/*
-typedef struct Fat32Directory {         // | OFFSET | SIZE | DESCRIPTION
-    unsigned char DIR_Name[11];         // |    0   |  11  | Short file name (SFN) of the object.
-    uint8_t DIR_Attr;                   // |   11   |   1  | File attribute in combination of following flags. Upper 2 bits are reserved and must be zero. (0x01: ATTR_READ_ONLY (Read-only)), (0x02: ATTR_HIDDEN (Hidden)), (0x04: ATTR_SYSTEM (System)), (0x08: ATTR_VOLUME_ID (Volume label)), (0x10: ATTR_DIRECTORY (Directory)), (0x20: ATTR_ARCHIVE (Archive)), (0x0F: ATTR_LONG_FILE_NAME (LFN entry))
-    uint8_t DIR_NTRes;                  // |   12   |   1  | Optional flags that indicates case information of the SFN. (0x08: Every alphabet in the body is low-case.), (0x10: Every alphabet in the extensiton is low-case.)
-    uint8_t DIR_CrtTimeTenth;           // |   13   |   1  | Optional sub-second information corresponds to DIR_CrtTime. The time resolution of DIR_CrtTime is 2 seconds, so that this field gives a count of sub-second and its valid value range is from 0 to 199 in unit of 10 miliseconds. If not supported, set zero and do not change afterwards.
-    uint16_t DIR_CrtTime;               // |   14   |   2  | Optional file creation time. If not supported, set zero and do not change afterwards.
-    uint16_t DIR_CrtDate;               // |   16   |   2  | Optional file creation date. If not supported, set zero and do not change afterwards.
-    uint16_t DIR_LstAccDate;            // |   18   |   2  | Optional last accesse date. There is no time information about last accesse time, so that the resolution of last accesse time is 1 day. If not supported, set zero and do not change afterwards.
-    uint16_t DIR_FstClusHI;             // |   20   |   2  | Upeer part of cluster number. Always zero on the FAT12/16 volume.
-    uint16_t DIR_WrtTime;               // |   22   |   2  | Last time when any change is made to the file (typically on closeing).
-    uint16_t DIR_WrtDate;               // |   24   |   2  | Last data when any change is made to the file (typically on closeing).
-    uint16_t DIR_FstClusLO;             // |   26   |   2  | Lower part of cluster number. Always zero if the file size is zero.
-    uint32_t DIR_FileSize;              // |   28   |   4  | Size of the file in unit of byte. Not used when it is a directroy and the value must be always zero.
-                                        //  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
-} __attribute__((packed)) Fat32Directory_t;
-*/
