@@ -6,14 +6,22 @@
 #include <fstream>
 
 // FAT ERRORS
-#define FAT_NO_ERROR                0
-#define FAT_ERROR_READ_BS_HEADER    1
-#define FAT_ERROR_UNSUPORTED_FORMAT 2
-#define FAT_ERROR_READ_BS32         3
+#define FAT_NO_ERROR                                    0
+#define FAT_ERROR_READ_BS_HEADER                        1
+#define FAT_ERROR_UNSUPORTED_FORMAT                     2
+#define FAT_ERROR_READ_BS32                             3
+#define FAT_ERROR_READ_FSINFO                           4
+#define FAT_ERROR_READ_FSINFO_INVALID_LEAD_SIGNATURE    5
+#define FAT_ERROR_READ_FSINFO_INVALID_STRUCT_SIGNATURE  6
+#define FAT_ERROR_READ_DIRECTORY                        7
 
 // FAT - MEDIA TYPES
 #define FAT_MEDIA_TYPE_FIXED        0xF8
 #define FAT_MEDIA_TYPE_REMOVABLE    0xF0
+
+// FAT - FSINFO - SIGNATURES
+#define FAT_FSINFO_LEAD_SIGNATURE   0x41615252
+#define FAT_FSINFO_STRUCT_SIGNATURE 0x61417272
 
 /**
  * @brief Windows FAT Format Map Overview Disassembly
@@ -335,8 +343,16 @@ namespace fat {
      */
     void create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, uint8_t mediaType, FatBS32* fatBs);
 
-    
+    /**
+     * @brief List all entries of a given FAT storage
+     * 
+     * @param storage   FAT storage
+     * @return int      0=NO_ERROR, or Error code
+     */
     int listEntries(FILE *storage);
+
+
+    void printDirEntry(Fat32Directory_t fat32Dir);
 }
 
 #endif
