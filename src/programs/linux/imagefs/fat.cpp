@@ -261,4 +261,6 @@ void fat::printDirEntry(Fat32Directory_t fat32Dir) {
     fprintf(stdout, "  - DIR_FstClusLO    : %d\n", fat32Dir.DIR_FstClusLO);
     fprintf(stdout, "  - DIR_FileSize     : %d\n", fat32Dir.DIR_FileSize);
     fprintf(stdout, "  - DIR_FstClusFull  : %d\n", (fat32Dir.DIR_FstClusHI << 16) | fat32Dir.DIR_FstClusLO);
+
+    // Removed 
 }
