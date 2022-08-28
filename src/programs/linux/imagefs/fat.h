@@ -32,7 +32,7 @@
 #define FAT_DIR_ATTR_DIRECTORY 0x10
 #define FAT_DIR_ATTR_ARCHIVE   0x20
 #define FAT_DIR_ATTR_LONG_NAME FAT_DIR_ATTR_READ_ONLY | FAT_DIR_ATTR_HIDDEN | FAT_DIR_ATTR_SYSTEM | FAT_DIR_ATTR_VOLUME_ID
-
+#define FAT_DIR_ATTR_LONG_NAME_MASK FAT_DIR_ATTR_READ_ONLY | FAT_DIR_ATTR_HIDDEN | FAT_DIR_ATTR_SYSTEM | FAT_DIR_ATTR_VOLUME_ID | FAT_DIR_ATTR_DIRECTORY | FAT_DIR_ATTR_ARCHIVE
 /**
  * @brief Windows FAT Format Map Overview Disassembly
  *  - FOR A PENDRIVE OF 8 GB OF SIZE:
@@ -223,6 +223,17 @@ typedef struct Fat32Directory {         // | OFFSET | SIZE | DESCRIPTION
                                         //  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 } __attribute__((packed)) Fat32Directory_t;
 
+typedef struct Fat32LongDirectory {     // OFFSET | SIZE | DESCRIPTION
+    uint8_t LDIR_Ord;                   //    0   |   1  | The order of this entry in the sequence of long dir entries associated with the short dir entry at the end of the long dir set. If masked with 0x40 (LAST_LONG_ENTRY), this indicates the entry is the last long dir entry in a set of long dir entries. All valid sets of long dir entries must begin with an entry having this mask.
+    unsigned char LDIR_Name1[10];       //    1   |  10  | Characters 1-5 of the long-name sub-component in this dir entry.
+    uint8_t LDIR_Attr;                  //   11   |   1  | Attributes - must be ATTR_LONG_NAME
+    uint8_t LDIR_Type;                  //   12   |   1  | If zero, indicates a directory entry that is a sub-component of a long name. NOTE: Other values reserved for future extensions. Non-zero implies other dirent types.
+    uint8_t LDIR_Chksum;                //   13   |   1  | Checksum of name in the short dir entry at the end of the long dir set.
+    unsigned char LDIR_Name2[12];       //   14   |  12  | Characters 6-11 of the long-name sub-component in this dir entry.
+    uint16_t LDIR_FstClusLO;            //   26   |   2  | Must be ZERO. This is an artifact of the FAT "first cluster" and must be zero for compatibility with existing disk utilities. It's meaningless in the context of a long dir entry.
+    unsigned char LDIR_Name3[4];        //   28   |   4  | Characters 12-13 of the long-name sub-component in this dir entry.
+} __attribute__((packed)) Fat32LongDirectory_t;
+
 // Structure that holds the fat type definitions
 typedef struct DskSzToSecPerClus {
     unsigned int DiskSize; // BPB_TotSec32
@@ -362,6 +373,15 @@ namespace fat {
     int listEntries(FILE *storage);
 
     /**
+     * @brief Read the next directory entry of the current directory DATA region
+     * 
+     * @param storage   FAT storage
+     * @param fat32Dir  OUT - Reference that will receive the readed dir
+     * @return int      0=NO_ERROR, or Error code
+     */
+    int readNextDirEntry(FILE *storage, Fat32Directory_t *fat32Dir);
+
+    /**
      * @brief Read the Fat Entry Value for given cluster number
      * 
      * @param storage           FAT storage
@@ -378,6 +398,21 @@ namespace fat {
      * @param fat32Dir Directory entry
      */
     void printDirEntry(Fat32Directory_t fat32Dir);
+
+    /**
+     * @brief Print long directory entry info
+     * 
+     * @param fat32LongDir Long Directory entry
+     */
+    void printLongDirEntry(Fat32LongDirectory_t fat32LongDir);
+
+    /**
+     * @brief Cast dirAttr to string representation
+     * 
+     * @param dirAttr    Attribute to be converted
+     * @param dirAttrStr OUT - Reference that will hold the attribute string value
+     */
+    void dirAttrToStr(uint8_t dirAttr, char *dirAttrStr);
 }
 
 #endif

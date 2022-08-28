@@ -22,7 +22,7 @@
 /**
  * @brief Check if dir (Fat32Directory) is free
  */
-#define IS_DIR_FREE(dir) (val.DIR_Name[0] == 0xE5 || val.DIR_Name[0] == 0x00)
+#define IS_DIR_FREE(dir) (dir.DIR_Name[0] == 0xE5 || dir.DIR_Name[0] == 0x00)
 
 /** 
  * @brief This is the table for bs32 drives. NOTE that this table includes
@@ -123,19 +123,29 @@ int fat::listEntries(FILE *storage) {
         // Root directory sector location in data sectors
         uint32_t firstSectorOfCluster = ((bs32.BPB_RootClus - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
 
-        // Set file offset at the beginning of the Root dir sectors
-        fseek(storage, firstSectorOfCluster * bs32.header.BPB_BytesPerSec, SEEK_SET);
+        for (int i=0; i<10; i++) {
+            // Set file offset at the beginning of the Root dir sectors
+            fseek(storage, (i * 32) + (firstSectorOfCluster * bs32.header.BPB_BytesPerSec), SEEK_SET);
 
-        // Read the first root directory entry
-        if (fread(&dirEntry32, 1, sizeof(Fat32Directory_t), storage) != sizeof(Fat32Directory_t)) {
-            return FAT_ERROR_READ_DIRECTORY;
+            // Read the first root directory entry
+            readNextDirEntry(storage, &dirEntry32);
+
+            switch(dirEntry32.DIR_Attr) {
+                case FAT_DIR_ATTR_LONG_NAME:
+                case FAT_DIR_ATTR_LONG_NAME_MASK:
+                    printLongDirEntry(*(Fat32LongDirectory_t*) &dirEntry32);
+                break;
+                default:
+                    // Print dir entry
+                    printDirEntry(dirEntry32);
+                break;
+            }
+            
+
+
+            // fatVal(storage, bs32, 2, &tmpInt);
+            // fprintf(stdout, "FAT value: 0x%08X\n\n", tmpInt);
         }
-
-        // Print dir entry
-        printDirEntry(dirEntry32);
-
-        fatVal(storage, bs32, 2, &tmpInt);
-        fprintf(stdout, "FAT value: 0x%08X\n", tmpInt);
     }
 
 
@@ -203,6 +213,15 @@ int fat::listEntries(FILE *storage) {
     return FAT_NO_ERROR;
 }
 
+int fat::readNextDirEntry(FILE *storage, Fat32Directory_t *fat32Dir) {
+    printf("file seek: 0x%02X\n", ftell(storage));
+    if (fread(fat32Dir, 1, sizeof(Fat32Directory_t), storage) != sizeof(Fat32Directory_t)) {
+        return FAT_ERROR_READ_DIRECTORY;
+    }
+
+    return FAT_NO_ERROR;
+}
+
 int fat::fatVal(FILE *storage, FatBS32_t bs32, uint32_t clusterNum, uint32_t *fatValue) {
     uint32_t firstSectorOfFatEntries = bs32.header.BPB_RsvdSecCnt; // FAT 32 has 2 reserved fat entries
 
@@ -220,7 +239,42 @@ int fat::fatVal(FILE *storage, FatBS32_t bs32, uint32_t clusterNum, uint32_t *fa
 void fat::printDirEntry(Fat32Directory_t fat32Dir) {
     char dirAttrStr[10];
 
-    switch(fat32Dir.DIR_Attr) {
+    dirAttrToStr(fat32Dir.DIR_Attr, dirAttrStr);
+
+    fprintf(stdout, "DIRECTORY - 32:\n");
+    fprintf(stdout, "  - DIR_Name         : %.*s\n", 11, fat32Dir.DIR_Name);
+    fprintf(stdout, "  - DIR_Attr         : 0x%02X - %s\n", fat32Dir.DIR_Attr, dirAttrStr);
+    fprintf(stdout, "  - DIR_NTRes        : 0x%02X\n", fat32Dir.DIR_NTRes);
+    fprintf(stdout, "  - DIR_CrtTimeTenth : %d\n", fat32Dir.DIR_CrtTimeTenth);
+    fprintf(stdout, "  - DIR_CrtTime      : %d\n", fat32Dir.DIR_CrtTime);
+    fprintf(stdout, "  - DIR_CrtDate      : %d\n", fat32Dir.DIR_CrtDate);
+    fprintf(stdout, "  - DIR_LstAccDate   : %d\n", fat32Dir.DIR_LstAccDate);
+    fprintf(stdout, "  - DIR_FstClusHI    : %d\n", fat32Dir.DIR_FstClusHI);
+    fprintf(stdout, "  - DIR_WrtTime      : %d\n", fat32Dir.DIR_WrtTime);
+    fprintf(stdout, "  - DIR_WrtDate      : %d\n", fat32Dir.DIR_WrtDate);
+    fprintf(stdout, "  - DIR_FstClusLO    : %d\n", fat32Dir.DIR_FstClusLO);
+    fprintf(stdout, "  - DIR_FileSize     : %d\n", fat32Dir.DIR_FileSize);
+    fprintf(stdout, "  - DIR_FstClusFull  : %d%d\n", fat32Dir.DIR_FstClusHI, fat32Dir.DIR_FstClusLO);
+}
+
+void fat::printLongDirEntry(Fat32LongDirectory_t fat32LongDir) {
+    char dirAttrStr[10];
+
+    dirAttrToStr(fat32LongDir.LDIR_Attr, dirAttrStr);
+
+    fprintf(stdout, "LONG DIRECTORY - 32:\n");
+    fprintf(stdout, "  - LDIR_Ord         : %d\n", fat32LongDir.LDIR_Ord);
+    fprintf(stdout, "  - LDIR_Name1       : %.*s\n", 10, fat32LongDir.LDIR_Name1);
+    fprintf(stdout, "  - LDIR_Attr        : 0x%02X - %s\n", fat32LongDir.LDIR_Attr, dirAttrStr);
+    fprintf(stdout, "  - LDIR_Type        : %d\n", fat32LongDir.LDIR_Type);
+    fprintf(stdout, "  - LDIR_Chksum      : 0x%02X\n", fat32LongDir.LDIR_Chksum);
+    fprintf(stdout, "  - LDIR_Name2       : %.*s\n", 12, fat32LongDir.LDIR_Name2);
+    fprintf(stdout, "  - LDIR_FstClusLO   : %d\n", fat32LongDir.LDIR_FstClusLO);
+    fprintf(stdout, "  - LDIR_Name3       : %.*s\n", 4, fat32LongDir.LDIR_Name3);
+}
+
+void fat::dirAttrToStr(uint8_t dirAttr, char *dirAttrStr) {
+    switch(dirAttr) {
         case FAT_DIR_ATTR_READ_ONLY:
             strcpy(dirAttrStr, "READ_ONLY");
             break;
@@ -246,21 +300,4 @@ void fat::printDirEntry(Fat32Directory_t fat32Dir) {
             strcpy(dirAttrStr, "UNDEFINED");
             break;
     }
-
-    fprintf(stdout, "DIRECTORY - 32:\n");
-    fprintf(stdout, "  - DIR_Name         : %.*s\n", 11, fat32Dir.DIR_Name);
-    fprintf(stdout, "  - DIR_Attr         : 0x%02X - %s\n", fat32Dir.DIR_Attr, dirAttrStr);
-    fprintf(stdout, "  - DIR_NTRes        : 0x%02X\n", fat32Dir.DIR_NTRes);
-    fprintf(stdout, "  - DIR_CrtTimeTenth : %d\n", fat32Dir.DIR_CrtTimeTenth);
-    fprintf(stdout, "  - DIR_CrtTime      : %d\n", fat32Dir.DIR_CrtTime);
-    fprintf(stdout, "  - DIR_CrtDate      : %d\n", fat32Dir.DIR_CrtDate);
-    fprintf(stdout, "  - DIR_LstAccDate   : %d\n", fat32Dir.DIR_LstAccDate);
-    fprintf(stdout, "  - DIR_FstClusHI    : %d\n", fat32Dir.DIR_FstClusHI);
-    fprintf(stdout, "  - DIR_WrtTime      : %d\n", fat32Dir.DIR_WrtTime);
-    fprintf(stdout, "  - DIR_WrtDate      : %d\n", fat32Dir.DIR_WrtDate);
-    fprintf(stdout, "  - DIR_FstClusLO    : %d\n", fat32Dir.DIR_FstClusLO);
-    fprintf(stdout, "  - DIR_FileSize     : %d\n", fat32Dir.DIR_FileSize);
-    fprintf(stdout, "  - DIR_FstClusFull  : %d\n", (fat32Dir.DIR_FstClusHI << 16) | fat32Dir.DIR_FstClusLO);
-
-    // Removed 
 }
