@@ -33,6 +33,10 @@
 #define FAT_DIR_ATTR_ARCHIVE   0x20
 #define FAT_DIR_ATTR_LONG_NAME FAT_DIR_ATTR_READ_ONLY | FAT_DIR_ATTR_HIDDEN | FAT_DIR_ATTR_SYSTEM | FAT_DIR_ATTR_VOLUME_ID
 #define FAT_DIR_ATTR_LONG_NAME_MASK FAT_DIR_ATTR_READ_ONLY | FAT_DIR_ATTR_HIDDEN | FAT_DIR_ATTR_SYSTEM | FAT_DIR_ATTR_VOLUME_ID | FAT_DIR_ATTR_DIRECTORY | FAT_DIR_ATTR_ARCHIVE
+
+// FAT - LONG DIRECTORY
+#define FAT_LDIR_LAST_LONG_ENTRY_MASK 0x40
+
 /**
  * @brief Windows FAT Format Map Overview Disassembly
  *  - FOR A PENDRIVE OF 8 GB OF SIZE:
@@ -224,7 +228,7 @@ typedef struct Fat32Directory {         // | OFFSET | SIZE | DESCRIPTION
 } __attribute__((packed)) Fat32Directory_t;
 
 typedef struct Fat32LongDirectory {     // OFFSET | SIZE | DESCRIPTION
-    uint8_t LDIR_Ord;                   //    0   |   1  | The order of this entry in the sequence of long dir entries associated with the short dir entry at the end of the long dir set. If masked with 0x40 (LAST_LONG_ENTRY), this indicates the entry is the last long dir entry in a set of long dir entries. All valid sets of long dir entries must begin with an entry having this mask.
+    uint8_t LDIR_Ord;                   //    0   |   1  | If it's a directory long name it uses Little Endian order. The order of this entry in the sequence of long dir entries associated with the short dir entry at the end of the long dir set. If masked with 0x40 (LAST_LONG_ENTRY), this indicates the entry is the last long dir entry in a set of long dir entries. All valid sets of long dir entries must begin with an entry having this mask.
     unsigned char LDIR_Name1[10];       //    1   |  10  | Characters 1-5 of the long-name sub-component in this dir entry.
     uint8_t LDIR_Attr;                  //   11   |   1  | Attributes - must be ATTR_LONG_NAME
     uint8_t LDIR_Type;                  //   12   |   1  | If zero, indicates a directory entry that is a sub-component of a long name. NOTE: Other values reserved for future extensions. Non-zero implies other dirent types.
@@ -413,6 +417,17 @@ namespace fat {
      * @param dirAttrStr OUT - Reference that will hold the attribute string value
      */
     void dirAttrToStr(uint8_t dirAttr, char *dirAttrStr);
+
+    /**
+     * @brief Copy long name to output buffer reference of fullName at the given outOffset of fullName
+     * 
+     * @param longName  Long name to be copied
+     * @param lsize     Long name size
+     * @param outOffset Output offset where to start writting the chars
+     * @param fullName  Output buffer reference that will store the full name
+     * @return Amount of chars copied
+     */
+    int longNameStrCpy(unsigned char *longName, int lsize, int outOffset, char *fullName);
 }
 
 #endif

@@ -46,6 +46,24 @@
 //     { 0xFFFFFFFF,                  64 }   /* disks greater than 32GB, 32k cluster */
 // };
 
+/**
+ * @brief Returns an unsigned byte checksum computed on an unsigned byte array.
+ *        The array must be 11 bytes long and is assumed to contain a name stored 
+ *        in the format of a MS-DOS directory entry.
+ * 
+ * @param sfn 
+ * @return unsigned char Sum - An 8-bit unsigned checksum of the array pointed to by sfn
+ */
+uint8_t checksum(uint8_t *sfn) {
+	uint8_t crc = 0;
+	uint8_t count = 11;
+	do {
+		crc = ((crc & 1) << 7) + (crc >> 1) + *sfn++;
+	} while (--count);
+	
+	return crc;
+}
+
 void fat::create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, uint8_t mediaType, FatBS32* fatBs) {
     memcpy(fatBs->header.BS_JmpBoot, (unsigned char*) "\xEB\x58\x90", 3);
     memcpy(fatBs->header.BS_OEMName, "MSDOS5.0", 8);
@@ -76,7 +94,10 @@ int fat::listEntries(FILE *storage) {
     FatBSHeader_t bsHeader;
     Fat32FsInfo_t fsInfo32;
     Fat32Directory_t dirEntry32;
+    Fat32LongDirectory_t lngDirEntry32;
+    int i;
     uint32_t tmpInt;
+    char tmpStr[256];
     
     // Read the header
     if (fread(&bsHeader, 1, sizeof(bsHeader), storage) != sizeof(bsHeader)) {
@@ -123,7 +144,8 @@ int fat::listEntries(FILE *storage) {
         // Root directory sector location in data sectors
         uint32_t firstSectorOfCluster = ((bs32.BPB_RootClus - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
 
-        for (int i=0; i<10; i++) {
+        tmpInt = 0;
+        for (i=0; i<10; i++) {
             // Set file offset at the beginning of the Root dir sectors
             fseek(storage, (i * 32) + (firstSectorOfCluster * bs32.header.BPB_BytesPerSec), SEEK_SET);
 
@@ -132,8 +154,11 @@ int fat::listEntries(FILE *storage) {
 
             switch(dirEntry32.DIR_Attr) {
                 case FAT_DIR_ATTR_LONG_NAME:
-                case FAT_DIR_ATTR_LONG_NAME_MASK:
-                    printLongDirEntry(*(Fat32LongDirectory_t*) &dirEntry32);
+                    lngDirEntry32 = *(Fat32LongDirectory_t*) &dirEntry32;
+                    // tmpInt += longNameStrCpy(lngDirEntry32.LDIR_Name1, 10, tmpInt, tmpStr);
+                    // tmpInt += longNameStrCpy(lngDirEntry32.LDIR_Name2, 12, tmpInt, tmpStr);
+                    // tmpInt += longNameStrCpy(lngDirEntry32.LDIR_Name3, 4, tmpInt, tmpStr);
+                    printLongDirEntry(lngDirEntry32);
                 break;
                 default:
                     // Print dir entry
@@ -146,6 +171,9 @@ int fat::listEntries(FILE *storage) {
             // fatVal(storage, bs32, 2, &tmpInt);
             // fprintf(stdout, "FAT value: 0x%08X\n\n", tmpInt);
         }
+
+        // tmpStr[tmpInt++] = '\0';
+        // fprintf(stdout, "FullName: %s\n", tmpStr);
     }
 
 
@@ -237,7 +265,7 @@ int fat::fatVal(FILE *storage, FatBS32_t bs32, uint32_t clusterNum, uint32_t *fa
 }
 
 void fat::printDirEntry(Fat32Directory_t fat32Dir) {
-    char dirAttrStr[10];
+    char dirAttrStr[80] = {0};
 
     dirAttrToStr(fat32Dir.DIR_Attr, dirAttrStr);
 
@@ -255,49 +283,131 @@ void fat::printDirEntry(Fat32Directory_t fat32Dir) {
     fprintf(stdout, "  - DIR_FstClusLO    : %d\n", fat32Dir.DIR_FstClusLO);
     fprintf(stdout, "  - DIR_FileSize     : %d\n", fat32Dir.DIR_FileSize);
     fprintf(stdout, "  - DIR_FstClusFull  : %d%d\n", fat32Dir.DIR_FstClusHI, fat32Dir.DIR_FstClusLO);
+    fprintf(stdout, "  - DIR_Name_Checksum: 0x%02X\n", checksum(fat32Dir.DIR_Name));
 }
 
 void fat::printLongDirEntry(Fat32LongDirectory_t fat32LongDir) {
-    char dirAttrStr[10];
+    char dirAttrStr[80] = {0};
+    char tmpStr[256];
+    int tmpInt;
 
     dirAttrToStr(fat32LongDir.LDIR_Attr, dirAttrStr);
 
     fprintf(stdout, "LONG DIRECTORY - 32:\n");
-    fprintf(stdout, "  - LDIR_Ord         : %d\n", fat32LongDir.LDIR_Ord);
-    fprintf(stdout, "  - LDIR_Name1       : %.*s\n", 10, fat32LongDir.LDIR_Name1);
+    fprintf(stdout, "  - LDIR_Ord         : %d%s\n", fat32LongDir.LDIR_Ord, (fat32LongDir.LDIR_Ord & 0x40) == 0x40 ? " - LAST LONG ENTRY" : "");
+    tmpInt = longNameStrCpy(fat32LongDir.LDIR_Name1, 10, 0, tmpStr);
+    tmpStr[tmpInt] = '\0';
+    if (tmpInt < 5) {
+        // End of string reached
+        tmpInt = 0;
+    }
+ 
+    fprintf(stdout, "length: %d\n", tmpInt);
+    fprintf(stdout, "  - LDIR_Name1       : %s\n", tmpStr);
     fprintf(stdout, "  - LDIR_Attr        : 0x%02X - %s\n", fat32LongDir.LDIR_Attr, dirAttrStr);
     fprintf(stdout, "  - LDIR_Type        : %d\n", fat32LongDir.LDIR_Type);
     fprintf(stdout, "  - LDIR_Chksum      : 0x%02X\n", fat32LongDir.LDIR_Chksum);
-    fprintf(stdout, "  - LDIR_Name2       : %.*s\n", 12, fat32LongDir.LDIR_Name2);
+    if (tmpInt > 0) {
+        tmpInt = longNameStrCpy(fat32LongDir.LDIR_Name2, 12, 0, tmpStr);
+        tmpStr[tmpInt] = '\0';
+        if (tmpInt < 6) {
+            // End of string reached
+            tmpInt = 0;
+        }
+    } else {
+        tmpStr[0] = '\0';
+    }
+    fprintf(stdout, "  - LDIR_Name2       : %s\n", tmpStr);
     fprintf(stdout, "  - LDIR_FstClusLO   : %d\n", fat32LongDir.LDIR_FstClusLO);
-    fprintf(stdout, "  - LDIR_Name3       : %.*s\n", 4, fat32LongDir.LDIR_Name3);
+    if (tmpInt > 0) {
+        tmpInt = longNameStrCpy(fat32LongDir.LDIR_Name3, 4, 0, tmpStr);
+        tmpStr[tmpInt] = '\0';
+        if (tmpInt < 2) {
+            tmpInt = 0;
+        }
+    } else {
+        tmpStr[0] = '\0';
+    }
+    fprintf(stdout, "  - LDIR_Name3       : %s\n", tmpStr);
+
+    tmpInt = longNameStrCpy(fat32LongDir.LDIR_Name1, 10, 0, tmpStr);
+    if (tmpInt >= 5) {
+        tmpInt += longNameStrCpy(fat32LongDir.LDIR_Name2, 12, tmpInt, tmpStr);
+    }
+    if (tmpInt >= 11) {
+        tmpInt += longNameStrCpy(fat32LongDir.LDIR_Name3, 4, tmpInt, tmpStr);
+    }
+    tmpStr[tmpInt] = '\0';
+
+    fprintf(stdout, "  - LDIR_Full_Name   : %s - %d\n", tmpStr, tmpInt);
 }
 
 void fat::dirAttrToStr(uint8_t dirAttr, char *dirAttrStr) {
-    switch(dirAttr) {
-        case FAT_DIR_ATTR_READ_ONLY:
-            strcpy(dirAttrStr, "READ_ONLY");
-            break;
-        case FAT_DIR_ATTR_HIDDEN:
-            strcpy(dirAttrStr, "HIDDEN");
-            break;
-        case FAT_DIR_ATTR_SYSTEM:
-            strcpy(dirAttrStr, "SYSTEM");
-            break;
-        case FAT_DIR_ATTR_VOLUME_ID:
-            strcpy(dirAttrStr, "VOLUME_ID");
-            break;
-        case FAT_DIR_ATTR_DIRECTORY:
-            strcpy(dirAttrStr, "DIRECTORY");
-            break;
-        case FAT_DIR_ATTR_ARCHIVE:
-            strcpy(dirAttrStr, "ARCHIVE");
-            break;
-        case FAT_DIR_ATTR_LONG_NAME:
-            strcpy(dirAttrStr, "LONG_NAME");
-            break;
-        default:
-            strcpy(dirAttrStr, "UNDEFINED");
-            break;
+    if ((dirAttr | FAT_DIR_ATTR_READ_ONLY) == dirAttr) {
+        if (strlen(dirAttrStr) > 0) {
+            strcat(dirAttrStr, " | ");
+        }
+        strcat(dirAttrStr, "READ_ONLY");
     }
+    if ((dirAttr | FAT_DIR_ATTR_HIDDEN) == dirAttr) {
+        if (strlen(dirAttrStr) > 0) {
+            strcat(dirAttrStr, " | ");
+        }
+        strcat(dirAttrStr, "HIDDEN");
+    }
+    if ((dirAttr | FAT_DIR_ATTR_SYSTEM) == dirAttr) {
+        if (strlen(dirAttrStr) > 0) {
+            strcat(dirAttrStr, " | ");
+        }
+        strcat(dirAttrStr, "SYSTEM");
+    }
+    if ((dirAttr | FAT_DIR_ATTR_VOLUME_ID) == dirAttr) {
+        if (strlen(dirAttrStr) > 0) {
+            strcat(dirAttrStr, " | ");
+        }
+        strcat(dirAttrStr, "VOLUME_ID");
+    }
+    if ((dirAttr | FAT_DIR_ATTR_DIRECTORY) == dirAttr) {
+        if (strlen(dirAttrStr) > 0) {
+            strcat(dirAttrStr, " | ");
+        }
+        strcat(dirAttrStr, "DIRECTORY");
+    }
+    if ((dirAttr | FAT_DIR_ATTR_ARCHIVE) == dirAttr) {
+        if (strlen(dirAttrStr) > 0) {
+            strcat(dirAttrStr, " | ");
+        }
+        strcat(dirAttrStr, "ARCHIVE");
+    }
+    if ((dirAttr | FAT_DIR_ATTR_LONG_NAME) == dirAttr) {
+        if (strlen(dirAttrStr) > 0) {
+            strcat(dirAttrStr, " | ");
+        }
+        strcat(dirAttrStr, "LONG_NAME");
+    }
+
+    if (strlen(dirAttrStr) == 0) {
+        strcat(dirAttrStr, "UNDEFINED");
+    }
+}
+
+int fat::longNameStrCpy(unsigned char *longName, int lsize, int outOffset, char *fullName) {
+    int i;
+    int count = 0;
+    fullName += outOffset;
+    for (i=0; i<lsize; i++) {
+        if (i == 0 && *longName == 0) {
+            *fullName++ = 0;
+            break;
+        } else if (i % 2 == 0) { // Ignore long name dot chars
+            *fullName++ = (char) *longName;
+            if (*longName == 0) {
+                break;
+            } else {
+                count++;
+            }
+        }
+        longName++;
+    }
+    return count;
 }
