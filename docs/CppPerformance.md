@@ -1,3 +1,11 @@
+## CPP LANGUAGE DEFINITIONS
+    - Little Endian:
+        Least Significant bytes
+        Value (0x4F 0x52) will be stored as (0x52 0x4F)
+    - Big Endian:
+        Most Significant bytes
+        Value (0x4F 0x52) will be stored as (0x4F 0x52)
+
 ## PERFORMANCE ANALYSIS OF CPP LANGUAGE IMPLEMENTATIONS
 
 ### const_cast:

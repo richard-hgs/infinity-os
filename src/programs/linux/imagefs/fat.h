@@ -36,6 +36,8 @@
 
 // FAT - LONG DIRECTORY
 #define FAT_LDIR_LAST_LONG_ENTRY_MASK 0x40
+#define FAT_LDIR_LAST_AND_UNUSED 0x00
+#define FAT_LDIR_UNUSED 0xE5
 
 /**
  * @brief Windows FAT Format Map Overview Disassembly
@@ -428,6 +430,9 @@ namespace fat {
      * @return Amount of chars copied
      */
     int longNameStrCpy(unsigned char *longName, int lsize, int outOffset, char *fullName);
+
+
+    int longNameStrCpy(Fat32LongDirectory_t fat32LongDir, int outOffset, char *fullName);
 }
 
 #endif

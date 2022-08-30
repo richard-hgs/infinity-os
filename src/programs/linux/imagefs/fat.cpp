@@ -22,7 +22,7 @@
 /**
  * @brief Check if dir (Fat32Directory) is free
  */
-#define IS_DIR_FREE(dir) (dir.DIR_Name[0] == 0xE5 || dir.DIR_Name[0] == 0x00)
+#define IS_DIR_FREE(dir) (dir.DIR_Name[0] == FAT_LDIR_UNUSED || dir.DIR_Name[0] == FAT_LDIR_LAST_AND_UNUSED)
 
 /** 
  * @brief This is the table for bs32 drives. NOTE that this table includes
@@ -95,8 +95,11 @@ int fat::listEntries(FILE *storage) {
     Fat32FsInfo_t fsInfo32;
     Fat32Directory_t dirEntry32;
     Fat32LongDirectory_t lngDirEntry32;
+    Fat32LongDirectory_t lngDirEntries32[19];
     int i;
     uint32_t tmpInt;
+    uint32_t tmpInt2;
+    uint8_t mChecksum;
     char tmpStr[256];
     
     // Read the header
@@ -144,10 +147,14 @@ int fat::listEntries(FILE *storage) {
         // Root directory sector location in data sectors
         uint32_t firstSectorOfCluster = ((bs32.BPB_RootClus - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
 
+        mChecksum = 0;
         tmpInt = 0;
-        for (i=0; i<10; i++) {
+        for (i=0; i<30; i++) {
+            // Offset relative to FAT storage
+            uint32_t offset = (i * 32) + (firstSectorOfCluster * bs32.header.BPB_BytesPerSec);
+
             // Set file offset at the beginning of the Root dir sectors
-            fseek(storage, (i * 32) + (firstSectorOfCluster * bs32.header.BPB_BytesPerSec), SEEK_SET);
+            fseek(storage, offset, SEEK_SET);
 
             // Read the first root directory entry
             readNextDirEntry(storage, &dirEntry32);
@@ -155,14 +162,39 @@ int fat::listEntries(FILE *storage) {
             switch(dirEntry32.DIR_Attr) {
                 case FAT_DIR_ATTR_LONG_NAME:
                     lngDirEntry32 = *(Fat32LongDirectory_t*) &dirEntry32;
-                    // tmpInt += longNameStrCpy(lngDirEntry32.LDIR_Name1, 10, tmpInt, tmpStr);
-                    // tmpInt += longNameStrCpy(lngDirEntry32.LDIR_Name2, 12, tmpInt, tmpStr);
-                    // tmpInt += longNameStrCpy(lngDirEntry32.LDIR_Name3, 4, tmpInt, tmpStr);
-                    printLongDirEntry(lngDirEntry32);
+                    if (lngDirEntry32.LDIR_Ord != FAT_LDIR_LAST_AND_UNUSED && lngDirEntry32.LDIR_Ord != FAT_LDIR_UNUSED) {
+                        // If file is active and wasn't deleted
+                        if (mChecksum != lngDirEntry32.LDIR_Chksum) { // It is a new long name reset tmpStr that will holds the Full name of the next directory entry.
+                            fprintf(stdout, "  - checksum: 0x%02X - 0x%02X\n", mChecksum, lngDirEntry32.LDIR_Chksum);
+                            tmpInt = 0;
+                            mChecksum = lngDirEntry32.LDIR_Chksum;
+                        }
+                        lngDirEntries32[tmpInt++] = lngDirEntry32;
+                    }
+
+                    // printLongDirEntry(lngDirEntry32);
                 break;
                 default:
                     // Print dir entry
-                    printDirEntry(dirEntry32);
+                    // printDirEntry(dirEntry32);
+                    
+                    // If it is an active dir entry that wasn't deleted
+                    if (!IS_DIR_FREE(dirEntry32)) {
+                        // Check if long name checksum matches with dir short name
+                        if (mChecksum == checksum(dirEntry32.DIR_Name)) {
+                            // Read long name entries in desc order
+                            tmpInt2 = 0;
+                            while(tmpInt--) {
+                                lngDirEntry32 = lngDirEntries32[tmpInt];
+                                tmpInt2 = longNameStrCpy(lngDirEntry32, tmpInt2, tmpStr);
+                            }
+                            fprintf(stdout, "  - DIR_FullName: %.*s\n", tmpInt, tmpStr);
+                        } else {
+                            fprintf(stdout, "  - DIR_ShortName: %.*s\n", 11, dirEntry32.DIR_Name);
+                        }
+                    }
+                    tmpInt = 0;
+                    mChecksum = 0;
                 break;
             }
             
@@ -242,7 +274,7 @@ int fat::listEntries(FILE *storage) {
 }
 
 int fat::readNextDirEntry(FILE *storage, Fat32Directory_t *fat32Dir) {
-    printf("file seek: 0x%02X\n", ftell(storage));
+    // printf("file seek: 0x%02X\n", ftell(storage));
     if (fread(fat32Dir, 1, sizeof(Fat32Directory_t), storage) != sizeof(Fat32Directory_t)) {
         return FAT_ERROR_READ_DIRECTORY;
     }
@@ -329,16 +361,7 @@ void fat::printLongDirEntry(Fat32LongDirectory_t fat32LongDir) {
         tmpStr[0] = '\0';
     }
     fprintf(stdout, "  - LDIR_Name3       : %s\n", tmpStr);
-
-    tmpInt = longNameStrCpy(fat32LongDir.LDIR_Name1, 10, 0, tmpStr);
-    if (tmpInt >= 5) {
-        tmpInt += longNameStrCpy(fat32LongDir.LDIR_Name2, 12, tmpInt, tmpStr);
-    }
-    if (tmpInt >= 11) {
-        tmpInt += longNameStrCpy(fat32LongDir.LDIR_Name3, 4, tmpInt, tmpStr);
-    }
-    tmpStr[tmpInt] = '\0';
-
+    tmpInt = longNameStrCpy(fat32LongDir, 0, tmpStr);
     fprintf(stdout, "  - LDIR_Full_Name   : %s - %d\n", tmpStr, tmpInt);
 }
 
@@ -410,4 +433,17 @@ int fat::longNameStrCpy(unsigned char *longName, int lsize, int outOffset, char 
         longName++;
     }
     return count;
+}
+
+int fat::longNameStrCpy(Fat32LongDirectory_t fat32LongDir, int outOffset, char *fullName) {
+    int tmpInt = longNameStrCpy(fat32LongDir.LDIR_Name1, 10, outOffset, fullName);
+    if (tmpInt >= 5) {
+        tmpInt += longNameStrCpy(fat32LongDir.LDIR_Name2, 12, outOffset + tmpInt, fullName);
+    }
+    if (tmpInt >= 11) {
+        tmpInt += longNameStrCpy(fat32LongDir.LDIR_Name3, 4, outOffset + tmpInt, fullName);
+    }
+    fullName[outOffset + tmpInt] = '\0';
+
+    return outOffset + tmpInt;
 }
