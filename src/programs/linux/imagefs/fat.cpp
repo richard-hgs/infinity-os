@@ -89,7 +89,7 @@ void fat::create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSe
     memset(fatBs->BPB_Reserved, '\0', sizeof(unsigned char) * 12);
 }
 
-int fat::listEntries(FILE *storage) {
+int fat::listEntries(FILE *storage, char* path) {
     FatBS32_t bs32;
     FatBSHeader_t bsHeader;
     Fat32FsInfo_t fsInfo32;
@@ -101,7 +101,8 @@ int fat::listEntries(FILE *storage) {
     uint32_t tmpInt2;
     uint8_t mChecksum;
     char tmpStr[256];
-    
+    char tmpStr2[256];
+
     // Read the header
     if (fread(&bsHeader, 1, sizeof(bsHeader), storage) != sizeof(bsHeader)) {
         return FAT_ERROR_READ_BS_HEADER;
@@ -162,10 +163,10 @@ int fat::listEntries(FILE *storage) {
             switch(dirEntry32.DIR_Attr) {
                 case FAT_DIR_ATTR_LONG_NAME:
                     lngDirEntry32 = *(Fat32LongDirectory_t*) &dirEntry32;
-                    if (lngDirEntry32.LDIR_Ord != FAT_LDIR_LAST_AND_UNUSED && lngDirEntry32.LDIR_Ord != FAT_LDIR_UNUSED) {
+                    if (lngDirEntry32.LDIR_Ord != FAT_LDIR_UNUSED) {
                         // If file is active and wasn't deleted
                         if (mChecksum != lngDirEntry32.LDIR_Chksum) { // It is a new long name reset tmpStr that will holds the Full name of the next directory entry.
-                            fprintf(stdout, "  - checksum: 0x%02X - 0x%02X\n", mChecksum, lngDirEntry32.LDIR_Chksum);
+                            // fprintf(stdout, "  - checksum: 0x%02X - 0x%02X\n", mChecksum, lngDirEntry32.LDIR_Chksum);
                             tmpInt = 0;
                             mChecksum = lngDirEntry32.LDIR_Chksum;
                         }
@@ -177,11 +178,12 @@ int fat::listEntries(FILE *storage) {
                 default:
                     // Print dir entry
                     // printDirEntry(dirEntry32);
-                    
-                    // If it is an active dir entry that wasn't deleted
-                    if (!IS_DIR_FREE(dirEntry32)) {
-                        // Check if long name checksum matches with dir short name
-                        if (mChecksum == checksum(dirEntry32.DIR_Name)) {
+                    if (dirEntry32.DIR_Name[0] == FAT_LDIR_LAST_AND_UNUSED) {
+                        fprintf(stdout, "End Of DIR(/)\n");
+                        break;
+                    } else if (dirEntry32.DIR_Name[0] != FAT_LDIR_UNUSED) {         // If it is an active dir entry
+                        
+                        if (mChecksum == checksum(dirEntry32.DIR_Name)) {           // Check if long name checksum matches with dir short name
                             // Read long name entries in desc order
                             tmpInt2 = 0;
                             while(tmpInt--) {
@@ -192,20 +194,16 @@ int fat::listEntries(FILE *storage) {
                         } else {
                             fprintf(stdout, "  - DIR_ShortName: %.*s\n", 11, dirEntry32.DIR_Name);
                         }
+
+                        if (dirEntry32.DIR_Attr == FAT_DIR_ATTR_DIRECTORY) { // Is a directory
+
+                        }
                     }
                     tmpInt = 0;
                     mChecksum = 0;
                 break;
             }
-            
-
-
-            // fatVal(storage, bs32, 2, &tmpInt);
-            // fprintf(stdout, "FAT value: 0x%08X\n\n", tmpInt);
         }
-
-        // tmpStr[tmpInt++] = '\0';
-        // fprintf(stdout, "FullName: %s\n", tmpStr);
     }
 
 

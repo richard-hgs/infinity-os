@@ -371,12 +371,13 @@ namespace fat {
     void create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, uint8_t mediaType, FatBS32* fatBs);
 
     /**
-     * @brief List all entries of a given FAT storage
+     * @brief List all entries of a given FAT storage that is inside a storage path
      * 
      * @param storage   FAT storage
+     * @param path      Path to list files
      * @return int      0=NO_ERROR, or Error code
      */
-    int listEntries(FILE *storage);
+    int listEntries(FILE *storage, char* path);
 
     /**
      * @brief Read the next directory entry of the current directory DATA region
@@ -432,6 +433,14 @@ namespace fat {
     int longNameStrCpy(unsigned char *longName, int lsize, int outOffset, char *fullName);
 
 
+    /**
+     * @brief Copy fat32LongDir long name to output buffer reference of fullName at the give outOFfset of fullName
+     * 
+     * @param fat32LongDir  fat32LongDir name to be copied
+     * @param outOffset     Output offset where to start writting the chars
+     * @param fullName      Output buffer reference that will store the full name
+     * @return int          
+     */
     int longNameStrCpy(Fat32LongDirectory_t fat32LongDir, int outOffset, char *fullName);
 }
 
