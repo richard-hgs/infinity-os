@@ -168,9 +168,9 @@ int fat::listEntries(FILE *storage, char* path) {
         //     }
         // }
 
-        fat::fatVal(storage, bs32, 0, &fatValue);
+        // fat::fatVal(storage, bs32, 2, &fatValue);
 
-        fprintf(stdout, "fatValue: 0x%04X\n", fatValue);
+        // fprintf(stdout, "fatValue: 0x%04X\n", fatValue);
 
         mChecksum = 0;
         tmpInt = 0;
@@ -184,19 +184,20 @@ int fat::listEntries(FILE *storage, char* path) {
             // Read the first root directory entry
             readNextDirEntry(storage, &dirEntry32);
 
-            if(dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME) {
-                lngDirEntry32 = *(Fat32LongDirectory_t*) &dirEntry32;
-                if (lngDirEntry32.LDIR_Ord != FAT_LDIR_UNUSED) {
-                    // If file is active and wasn't deleted
-                    if (mChecksum != lngDirEntry32.LDIR_Chksum) { // It is a new long name reset tmpStr that will holds the Full name of the next directory entry.
-                        // fprintf(stdout, "  - checksum: 0x%02X - 0x%02X\n", mChecksum, lngDirEntry32.LDIR_Chksum);
-                        tmpInt = 0;
-                        mChecksum = lngDirEntry32.LDIR_Chksum;
+            // fprintf(stdout, "attrEquals: %d\n", (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME));
+            if (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME) {
+                    lngDirEntry32 = *(Fat32LongDirectory_t*) &dirEntry32;
+                    if (lngDirEntry32.LDIR_Ord != FAT_LDIR_LAST_AND_UNUSED && lngDirEntry32.LDIR_Ord != FAT_LDIR_UNUSED) {
+                        // If file is active and wasn't deleted
+                        if (mChecksum != lngDirEntry32.LDIR_Chksum) { // It is a new long name reset tmpStr that will holds the Full name of the next directory entry.
+                            // fprintf(stdout, "  - checksum: 0x%02X - 0x%02X\n", mChecksum, lngDirEntry32.LDIR_Chksum);
+                            tmpInt = 0;
+                            mChecksum = lngDirEntry32.LDIR_Chksum;
+                        }
+                        lngDirEntries32[tmpInt++] = lngDirEntry32;
                     }
-                    lngDirEntries32[tmpInt++] = lngDirEntry32;
-                }
 
-                // printLongDirEntry(lngDirEntry32);
+                    // printLongDirEntry(lngDirEntry32);
             } else {
                 // Print dir entry
                 // printDirEntry(dirEntry32);
