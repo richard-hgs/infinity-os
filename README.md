@@ -75,4 +75,7 @@
           - ✅ Hello World Print;
       - ✅ IMAGEFS - Format Storage Devices Using a File System Architecture;
           - ⬜ FAT32 - File system format implemented;
+              - ✅ LIST - List all archives inside a absolute folder path;
+              - ⬜ READ - Read file content;
+              - ⬜ CREATE - Create directories;
           - ⬜ CREATE - Creates a .img for a file system format;
