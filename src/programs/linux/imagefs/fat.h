@@ -6,15 +6,16 @@
 #include <fstream>
 
 // FAT ERRORS
-#define FAT_NO_ERROR                                    0
-#define FAT_ERROR_READ_BS_HEADER                        1
-#define FAT_ERROR_UNSUPORTED_FORMAT                     2
-#define FAT_ERROR_READ_BS32                             3
-#define FAT_ERROR_READ_FSINFO                           4
-#define FAT_ERROR_READ_FSINFO_INVALID_LEAD_SIGNATURE    5
-#define FAT_ERROR_READ_FSINFO_INVALID_STRUCT_SIGNATURE  6
-#define FAT_ERROR_READ_DIRECTORY                        7
-#define FAT_ERROR_READ_FAT_ENTRY                        8
+#define FAT_NO_ERROR                                    0   // Success, means that no error happend while executing the operation.
+#define FAT_ERROR_READ_BS_HEADER                        1   // Error, could not read MBR boot sector header.
+#define FAT_ERROR_UNSUPORTED_FORMAT                     2   // Error, FAT12 or FAT16 format is not supported.
+#define FAT_ERROR_READ_BS32                             3   // Error, could not read the remaining information of MBR boot sector.
+#define FAT_ERROR_READ_FSINFO                           4   // Error, could not read FSINFO from storage.
+#define FAT_ERROR_READ_FSINFO_INVALID_LEAD_SIGNATURE    5   // Error, FSINFO has invalid FSI_LeadSig signature.
+#define FAT_ERROR_READ_FSINFO_INVALID_STRUCT_SIGNATURE  6   // Error, FSINFO has invalid FSI_StrucSig signature.
+#define FAT_ERROR_READ_DIRECTORY                        7   // Error, could not read next directory entry from data sectors from storage.
+#define FAT_ERROR_READ_FAT_ENTRY                        8   // Error, could not read FAT table[cluster_index] value.
+#define FAT_ERROR_LIST_PATH_NOT_FOUND                   9   // Error, could not list entries for given path, the path don't exists in storage.
 
 // FAT - MEDIA TYPES
 #define FAT_MEDIA_TYPE_FIXED        0xF8

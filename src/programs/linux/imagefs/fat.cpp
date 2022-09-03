@@ -7,7 +7,7 @@
 /**
  * @brief Check if a fat cluster is FREE(unused)
  */
-#define CLUSTER_IS_FREE(val) val == 0x00000000
+#define CLUSTER_IS_FREE(val) (val == 0x00000000)
 
 /**
  * @brief Check if fat cluster is the EOC end of cluster chain
@@ -17,7 +17,7 @@
 /**
  * @brief Check if fat cluster is bad and should not be used
  */
-#define CLUSTER_IS_BAD(val) val == 0x0FFFFFF7
+#define CLUSTER_IS_BAD(val) (val == 0x0FFFFFF7)
 
 /**
  * @brief Check if dir (Fat32Directory) is free
@@ -64,6 +64,10 @@ uint8_t checksum(uint8_t *sfn) {
 	return crc;
 }
 
+int max(int val1, int val2) {
+    return val1 > val2 ? val1 : val2;
+}
+
 void fat::create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, uint8_t mediaType, FatBS32* fatBs) {
     memcpy(fatBs->header.BS_JmpBoot, (unsigned char*) "\xEB\x58\x90", 3);
     memcpy(fatBs->header.BS_OEMName, "MSDOS5.0", 8);
@@ -97,14 +101,18 @@ int fat::listEntries(FILE *storage, char* path) {
     Fat32LongDirectory_t lngDirEntry32;
     Fat32LongDirectory_t lngDirEntries32[19];
     int pathLength = strlen(path);
+    int pathCharOffset;
+    int clusterNum = 2;
+    int dirEntryIndex;
+    int errCode;
     uint32_t fatValue = 0;
-    int i;
-    uint32_t tmpInt;
-    uint32_t tmpInt2;
+    uint32_t lngDirEntries32Len;
+    uint32_t tmpInt = 0;
     uint8_t mChecksum;
     char tmpStr[256];
-    char tmpStr2[256];
+    char pathPart[256];
     char c;
+    uint8_t printDirs = 0;  // 0 = Don't print dirs, 1 = Print dirs
 
     // Read the header
     if (fread(&bsHeader, 1, sizeof(bsHeader), storage) != sizeof(bsHeader)) {
@@ -151,134 +159,204 @@ int fat::listEntries(FILE *storage, char* path) {
         // Root directory sector location in data sectors
         uint32_t firstSectorOfCluster = ((bs32.BPB_RootClus - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
 
+        fprintf(stdout, "Listing path \"%s\" entries: \n", path);
+
+        if (strcmp(path, "/") == 0) {
+            printDirs = 1;
+        }
+
         // Split path names
-        // pathLength += 1;
-        // tmpInt2 = 0;
-        // while(pathLength--) {
-        //     c = *path++;
-        //     if (c == '/' && tmpInt2 == 0) {
-        //         continue;
-        //     } else if (c == '/' || pathLength == 0) {
-        //         fprintf(stdout, "PathPart: %.*s\n", tmpInt2, tmpStr);
-                
-        //         tmpInt2 = 0;
-        //     } else {
-        //         *(tmpStr + tmpInt2) = c;
-        //         tmpInt2++;
-        //     }
-        // }
+        pathLength += 1;
+        pathCharOffset = 0;
+        while(pathLength-- || printDirs) {
+            if (printDirs == 0) {
+                c = *path++;
+            }
+            if (c == '/' && pathCharOffset == 0) {
+                // Ignore first path if it equals "/" root path
+                continue;
+            } else if (c == '/' || pathLength == 0 || printDirs == 1) {
+                // Path found read directory three until all parts of path reached then list entries in the specified path
+                *(pathPart + pathCharOffset) = 0; // Add NULL char to pathPart string end.
+                // fprintf(stdout, "PathPart: %s - isLast: %d\n", pathPart, pathLength == 0);
 
-        // fat::fatVal(storage, bs32, 2, &fatValue);
-
-        // fprintf(stdout, "fatValue: 0x%04X\n", fatValue);
-
-        mChecksum = 0;
-        tmpInt = 0;
-        for (i=0; i<30; i++) {
-            // Offset relative to FAT storage
-            uint32_t offset = (i * 32) + (firstSectorOfCluster * bs32.header.BPB_BytesPerSec);
-
-            // Set file offset at the beginning of the Root dir sectors
-            fseek(storage, offset, SEEK_SET);
-
-            // Read the first root directory entry
-            readNextDirEntry(storage, &dirEntry32);
-
-            // fprintf(stdout, "attrEquals: %d\n", (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME));
-            if (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME) {
-                    lngDirEntry32 = *(Fat32LongDirectory_t*) &dirEntry32;
-                    if (lngDirEntry32.LDIR_Ord != FAT_LDIR_LAST_AND_UNUSED && lngDirEntry32.LDIR_Ord != FAT_LDIR_UNUSED) {
-                        // If file is active and wasn't deleted
-                        if (mChecksum != lngDirEntry32.LDIR_Chksum) { // It is a new long name reset tmpStr that will holds the Full name of the next directory entry.
-                            // fprintf(stdout, "  - checksum: 0x%02X - 0x%02X\n", mChecksum, lngDirEntry32.LDIR_Chksum);
-                            tmpInt = 0;
-                            mChecksum = lngDirEntry32.LDIR_Chksum;
-                        }
-                        lngDirEntries32[tmpInt++] = lngDirEntry32;
-                    }
-
-                    // printLongDirEntry(lngDirEntry32);
-            } else {
-                // Print dir entry
-                // printDirEntry(dirEntry32);
-                if (dirEntry32.DIR_Name[0] == FAT_LDIR_LAST_AND_UNUSED) {
-                    fprintf(stdout, "End Of DIR(/)\n");
-                    break;
-                } else if (dirEntry32.DIR_Name[0] != FAT_LDIR_UNUSED) {         // If it is an active dir entry
-                    
-                    if (mChecksum == checksum(dirEntry32.DIR_Name)) {           // Check if long name checksum matches with dir short name
-                        // Read long name entries in desc order
-                        tmpInt2 = 0;
-                        while(tmpInt--) {
-                            lngDirEntry32 = lngDirEntries32[tmpInt];
-                            tmpInt2 = longNameStrCpy(lngDirEntry32, tmpInt2, tmpStr);
-                        }
-                        fprintf(stdout, "  - DIR_FullName: %.*s\n", tmpInt, tmpStr);
-                    } else {
-                        fprintf(stdout, "  - DIR_ShortName: %.*s\n", 11, dirEntry32.DIR_Name);
-                    }
-
-                    if (dirEntry32.DIR_Attr == FAT_DIR_ATTR_DIRECTORY) { // Is a directory
-
-                    }
+                // Get current cluster fat value
+                errCode = fat::fatVal(storage, bs32, clusterNum, &fatValue);
+                if (errCode) {
+                    return errCode;
                 }
-                tmpInt = 0;
+
+                // fprintf(stdout, "--- FAT VALUE: 0x%08X\n", fatValue);
+
+                if (CLUSTER_IS_BAD(fatValue)) {
+                    // Current cluster is bad
+                } else if (CLUSTER_IS_FREE(fatValue)) {
+                    // Current cluster is free
+                }
+                
+                // Read directory entries for current cluster number to find the pathPart directory name
                 mChecksum = 0;
+                lngDirEntries32Len = 0;
+                dirEntryIndex = 0;
+                do {
+                    // Offset relative to FAT storage
+                    uint32_t offset = (dirEntryIndex * 32) + (firstSectorOfCluster * bs32.header.BPB_BytesPerSec);
+
+                    // Set file offset at the beginning of the Root dir sectors
+                    fseek(storage, offset, SEEK_SET);
+
+                    // Read the first root directory entry
+                    readNextDirEntry(storage, &dirEntry32);
+
+                    // fprintf(stdout, "attrEquals: %d\n", (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME));
+                    if (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME) {
+                            lngDirEntry32 = *(Fat32LongDirectory_t*) &dirEntry32;
+                            if (lngDirEntry32.LDIR_Ord != FAT_LDIR_LAST_AND_UNUSED && lngDirEntry32.LDIR_Ord != FAT_LDIR_UNUSED) {
+                                // If file is active and wasn't deleted
+                                if (mChecksum != lngDirEntry32.LDIR_Chksum) { // It is a new long name reset tmpStr that will holds the Full name of the next directory entry.
+                                    // fprintf(stdout, "  - checksum: 0x%02X - 0x%02X\n", mChecksum, lngDirEntry32.LDIR_Chksum);
+                                    lngDirEntries32Len = 0;
+                                    mChecksum = lngDirEntry32.LDIR_Chksum;
+                                }
+                                lngDirEntries32[lngDirEntries32Len++] = lngDirEntry32;
+                            }
+
+                            // printLongDirEntry(lngDirEntry32);
+                    } else {
+                        // Print dir entry
+                        // printDirEntry(dirEntry32);
+                        if (dirEntry32.DIR_Name[0] == FAT_LDIR_LAST_AND_UNUSED) {
+                            // fprintf(stdout, "  - End Of DIR(/)\n");
+                            if (printDirs == 1) {
+                                printDirs = 2;
+                            }
+                            break;
+                        } else if (dirEntry32.DIR_Name[0] != FAT_LDIR_UNUSED) {         // If it is an active dir entry
+                            
+                            if (mChecksum == checksum(dirEntry32.DIR_Name)) {           // Check if long name checksum matches with dir short name
+                                // Read long name entries in desc order
+                                tmpInt = 0;
+                                while(lngDirEntries32Len--) {
+                                    lngDirEntry32 = lngDirEntries32[lngDirEntries32Len];
+                                    tmpInt = longNameStrCpy(lngDirEntry32, tmpInt, tmpStr);
+                                }
+                                if (printDirs == 1) {
+                                    fprintf(stdout, "  - DIR_FullName: %.*s\n", tmpInt, tmpStr);
+                                }
+
+                                if ((dirEntry32.DIR_Attr & FAT_DIR_ATTR_DIRECTORY) == FAT_DIR_ATTR_DIRECTORY) { // Is a directory
+                                    if (strncmp(tmpStr, pathPart, tmpInt) == 0) {
+                                        // Path folder name found
+                                        // fprintf(stdout, "  - PathFound: %.*s\n", tmpInt, tmpStr);
+                                        if (pathLength == 0) {
+                                            // Is last path print next folder entries
+                                            printDirs = 1;
+                                        }
+                                        firstSectorOfCluster = dirEntry32.DIR_FstClusHI;
+                                        firstSectorOfCluster = (firstSectorOfCluster << 16) | dirEntry32.DIR_FstClusLO;
+                                        clusterNum = firstSectorOfCluster;
+                                        // fprintf(stdout, "  - clusterNum: %d\n", firstSectorOfCluster);
+                                        firstSectorOfCluster = ((firstSectorOfCluster - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                if (printDirs == 1) {
+                                    fprintf(stdout, "  - DIR_ShortName: %.*s\n", 11, dirEntry32.DIR_Name);
+                                }
+
+                                if ((dirEntry32.DIR_Attr & FAT_DIR_ATTR_DIRECTORY) == FAT_DIR_ATTR_DIRECTORY) { // Is a directory
+                                    if (strncmp(tmpStr, pathPart, 11) == 0) {
+                                        // Path folder name found
+                                        // fprintf(stdout, "  - PathFound: %.*s\n", 11, dirEntry32.DIR_Name);
+                                        if (pathLength == 0) {
+                                            // Is last path print next folder entries
+                                            printDirs = 1;
+                                        }
+                                        firstSectorOfCluster = dirEntry32.DIR_FstClusHI;
+                                        firstSectorOfCluster = (firstSectorOfCluster << 16) | dirEntry32.DIR_FstClusLO;
+                                        clusterNum = firstSectorOfCluster;
+                                        // fprintf(stdout, "  - clusterNum: %d\n", firstSectorOfCluster);
+                                        firstSectorOfCluster = ((firstSectorOfCluster - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
+                                    }
+                                }
+                            }
+                        }
+                        lngDirEntries32Len = 0;
+                        mChecksum = 0;
+                    }
+                } while(dirEntryIndex++ || dirEntryIndex);
+
+                if (printDirs == 2) {
+                    break;
+                }
+
+                if (printDirs == 0 && pathLength == 0 && CLUSTER_IS_EOC(fatValue)) {
+                    // End of cluster reached
+                    // Path not found return error
+                    return FAT_ERROR_LIST_PATH_NOT_FOUND;
+                }
+
+                pathCharOffset = 0;
+            } else {
+                // Append chars until split char reached
+                *(pathPart + pathCharOffset) = c;
+                pathCharOffset++;
             }
         }
     }
 
 
     // ------------------- PRINT INFORMATIONS -------------------
-    fprintf(stdout, "BS - HEADER:\n");
-    fprintf(stdout, "  - BS_JmpBoot      : 0x%02X 0x%02X 0x%02X\n", bs32.header.BS_JmpBoot[0], bs32.header.BS_JmpBoot[1], bs32.header.BS_JmpBoot[2]);
-    fprintf(stdout, "  - BS_OEMName      : %.*s\n", 8, bs32.header.BS_OEMName);
-    fprintf(stdout, "  - BPB_BytesPerSec : %d\n", bs32.header.BPB_BytesPerSec);
-    fprintf(stdout, "  - BPB_SecPerClus  : %d\n", bs32.header.BPB_SecPerClus);
-    fprintf(stdout, "  - BPB_RsvdSecCnt  : %d\n", bs32.header.BPB_RsvdSecCnt);
-    fprintf(stdout, "  - BPB_NumFATs     : %d\n", bs32.header.BPB_NumFATs);
-    fprintf(stdout, "  - BPB_RootEntCnt  : %d\n", bs32.header.BPB_RootEntCnt);
-    fprintf(stdout, "  - BPB_TotSec16    : %d\n", bs32.header.BPB_TotSec16);
-    fprintf(stdout, "  - BPB_Media       : %d\n", bs32.header.BPB_Media);
-    fprintf(stdout, "  - BPB_FATSz16     : %d\n", bs32.header.BPB_FATSz16);
-    fprintf(stdout, "  - BPB_SecPerTrk   : %d\n", bs32.header.BPB_SecPerTrk);
-    fprintf(stdout, "  - BPB_NumHeads    : %d\n", bs32.header.BPB_NumHeads);
-    fprintf(stdout, "  - BPB_HiddSec     : %d\n", bs32.header.BPB_HiddSec);
-    fprintf(stdout, "  - BPB_TotSec32    : %d\n", bs32.header.BPB_TotSec32);
+    // fprintf(stdout, "BS - HEADER:\n");
+    // fprintf(stdout, "  - BS_JmpBoot      : 0x%02X 0x%02X 0x%02X\n", bs32.header.BS_JmpBoot[0], bs32.header.BS_JmpBoot[1], bs32.header.BS_JmpBoot[2]);
+    // fprintf(stdout, "  - BS_OEMName      : %.*s\n", 8, bs32.header.BS_OEMName);
+    // fprintf(stdout, "  - BPB_BytesPerSec : %d\n", bs32.header.BPB_BytesPerSec);
+    // fprintf(stdout, "  - BPB_SecPerClus  : %d\n", bs32.header.BPB_SecPerClus);
+    // fprintf(stdout, "  - BPB_RsvdSecCnt  : %d\n", bs32.header.BPB_RsvdSecCnt);
+    // fprintf(stdout, "  - BPB_NumFATs     : %d\n", bs32.header.BPB_NumFATs);
+    // fprintf(stdout, "  - BPB_RootEntCnt  : %d\n", bs32.header.BPB_RootEntCnt);
+    // fprintf(stdout, "  - BPB_TotSec16    : %d\n", bs32.header.BPB_TotSec16);
+    // fprintf(stdout, "  - BPB_Media       : %d\n", bs32.header.BPB_Media);
+    // fprintf(stdout, "  - BPB_FATSz16     : %d\n", bs32.header.BPB_FATSz16);
+    // fprintf(stdout, "  - BPB_SecPerTrk   : %d\n", bs32.header.BPB_SecPerTrk);
+    // fprintf(stdout, "  - BPB_NumHeads    : %d\n", bs32.header.BPB_NumHeads);
+    // fprintf(stdout, "  - BPB_HiddSec     : %d\n", bs32.header.BPB_HiddSec);
+    // fprintf(stdout, "  - BPB_TotSec32    : %d\n", bs32.header.BPB_TotSec32);
 
-    fprintf(stdout, "\nBS - BS32:\n");
-    fprintf(stdout, "  - BPB_FATSz32   : %d\n", bs32.BPB_FATSz32);
-    fprintf(stdout, "  - BPB_ExtFlags  : 0x%02X\n", bs32.BPB_ExtFlags);
-    fprintf(stdout, "  - BPB_FSVer     : 0x%02X\n", bs32.BPB_FSVer);
-    fprintf(stdout, "  - BPB_RootClus  : %d\n", bs32.BPB_RootClus);
-    fprintf(stdout, "  - BPB_FSInfo    : %d\n", bs32.BPB_FSInfo);
-    fprintf(stdout, "  - BPB_BkBootSec : %d\n", bs32.BPB_BkBootSec);
-    fprintf(stdout, "  - BPB_Reserved  : 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n",
-       bs32.BPB_Reserved[0], bs32.BPB_Reserved[1], bs32.BPB_Reserved[2], bs32.BPB_Reserved[3],
-       bs32.BPB_Reserved[4], bs32.BPB_Reserved[5], bs32.BPB_Reserved[6], bs32.BPB_Reserved[7],
-       bs32.BPB_Reserved[8], bs32.BPB_Reserved[9], bs32.BPB_Reserved[10], bs32.BPB_Reserved[11]
-    );
-    fprintf(stdout, "  - BS_DrvNum     : %d\n", bs32.BS_DrvNum);
-    fprintf(stdout, "  - BS_Reserved1  : %d\n", bs32.BS_Reserved1);
-    fprintf(stdout, "  - BS_BootSig    : 0x%02X\n", bs32.BS_BootSig);
-    fprintf(stdout, "  - BS_VolID      : 0x%04X\n", bs32.BS_VolID);
-    fprintf(stdout, "  - BS_VolLab     : %.*s\n", 11, bs32.BS_VolLab);
-    fprintf(stdout, "  - BS_FilSysType : %.*s\n", 8, bs32.BS_FilSysType);
-    fprintf(stdout, "  - BS_BootCode32 : ***\n");
-    fprintf(stdout, "  - BS_BootSign   : 0x%04X\n", bs32.BS_BootSign);
+    // fprintf(stdout, "\nBS - BS32:\n");
+    // fprintf(stdout, "  - BPB_FATSz32   : %d\n", bs32.BPB_FATSz32);
+    // fprintf(stdout, "  - BPB_ExtFlags  : 0x%02X\n", bs32.BPB_ExtFlags);
+    // fprintf(stdout, "  - BPB_FSVer     : 0x%02X\n", bs32.BPB_FSVer);
+    // fprintf(stdout, "  - BPB_RootClus  : %d\n", bs32.BPB_RootClus);
+    // fprintf(stdout, "  - BPB_FSInfo    : %d\n", bs32.BPB_FSInfo);
+    // fprintf(stdout, "  - BPB_BkBootSec : %d\n", bs32.BPB_BkBootSec);
+    // fprintf(stdout, "  - BPB_Reserved  : 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n",
+    //    bs32.BPB_Reserved[0], bs32.BPB_Reserved[1], bs32.BPB_Reserved[2], bs32.BPB_Reserved[3],
+    //    bs32.BPB_Reserved[4], bs32.BPB_Reserved[5], bs32.BPB_Reserved[6], bs32.BPB_Reserved[7],
+    //    bs32.BPB_Reserved[8], bs32.BPB_Reserved[9], bs32.BPB_Reserved[10], bs32.BPB_Reserved[11]
+    // );
+    // fprintf(stdout, "  - BS_DrvNum     : %d\n", bs32.BS_DrvNum);
+    // fprintf(stdout, "  - BS_Reserved1  : %d\n", bs32.BS_Reserved1);
+    // fprintf(stdout, "  - BS_BootSig    : 0x%02X\n", bs32.BS_BootSig);
+    // fprintf(stdout, "  - BS_VolID      : 0x%04X\n", bs32.BS_VolID);
+    // fprintf(stdout, "  - BS_VolLab     : %.*s\n", 11, bs32.BS_VolLab);
+    // fprintf(stdout, "  - BS_FilSysType : %.*s\n", 8, bs32.BS_FilSysType);
+    // fprintf(stdout, "  - BS_BootCode32 : ***\n");
+    // fprintf(stdout, "  - BS_BootSign   : 0x%04X\n", bs32.BS_BootSign);
 
-    fprintf(stdout, "\nFSINFO - 32:\n");
-    fprintf(stdout, "  - FSI_LeadSig    : 0x%08X\n", fsInfo32.FSI_LeadSig);
-    fprintf(stdout, "  - FSI_Reserved1  : ***\n");
-    fprintf(stdout, "  - FSI_StrucSig   : 0x%08X\n", fsInfo32.FSI_StrucSig);
-    fprintf(stdout, "  - FSI_Free_Count : %d\n", fsInfo32.FSI_Free_Count);
-    fprintf(stdout, "  - FSI_Nxt_Free   : %d\n", fsInfo32.FSI_Nxt_Free);
-    fprintf(stdout, "  - FSI_Reserved2  : 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n", 
-        fsInfo32.FSI_Reserved2[0], fsInfo32.FSI_Reserved2[1], fsInfo32.FSI_Reserved2[2], fsInfo32.FSI_Reserved2[3], 
-        fsInfo32.FSI_Reserved2[4], fsInfo32.FSI_Reserved2[5], fsInfo32.FSI_Reserved2[6], fsInfo32.FSI_Reserved2[7], 
-        fsInfo32.FSI_Reserved2[8],fsInfo32.FSI_Reserved2[9], fsInfo32.FSI_Reserved2[10], fsInfo32.FSI_Reserved2[11]
-    );
-    fprintf(stdout, "  - FSI_TrailSig   : 0x%08X\n", fsInfo32.FSI_TrailSig);
+    // fprintf(stdout, "\nFSINFO - 32:\n");
+    // fprintf(stdout, "  - FSI_LeadSig    : 0x%08X\n", fsInfo32.FSI_LeadSig);
+    // fprintf(stdout, "  - FSI_Reserved1  : ***\n");
+    // fprintf(stdout, "  - FSI_StrucSig   : 0x%08X\n", fsInfo32.FSI_StrucSig);
+    // fprintf(stdout, "  - FSI_Free_Count : %d\n", fsInfo32.FSI_Free_Count);
+    // fprintf(stdout, "  - FSI_Nxt_Free   : %d\n", fsInfo32.FSI_Nxt_Free);
+    // fprintf(stdout, "  - FSI_Reserved2  : 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n", 
+    //     fsInfo32.FSI_Reserved2[0], fsInfo32.FSI_Reserved2[1], fsInfo32.FSI_Reserved2[2], fsInfo32.FSI_Reserved2[3], 
+    //     fsInfo32.FSI_Reserved2[4], fsInfo32.FSI_Reserved2[5], fsInfo32.FSI_Reserved2[6], fsInfo32.FSI_Reserved2[7], 
+    //     fsInfo32.FSI_Reserved2[8],fsInfo32.FSI_Reserved2[9], fsInfo32.FSI_Reserved2[10], fsInfo32.FSI_Reserved2[11]
+    // );
+    // fprintf(stdout, "  - FSI_TrailSig   : 0x%08X\n", fsInfo32.FSI_TrailSig);
 
     /*
         uint32_t FSI_LeadSig;               // 0x41615252. This is a lead signature used to validate that this is in fact an FSInfo sector.
@@ -309,7 +387,7 @@ int fat::fatVal(FILE *storage, FatBS32_t bs32, uint32_t clusterNum, uint32_t *fa
     fseek(storage, firstSectorOfFatEntries * bs32.header.BPB_BytesPerSec + (clusterNum * 4), SEEK_SET);
 
     // Read
-    if (fread(fatValue, 1, 4, storage)) {
+    if (fread(fatValue, 1, 4, storage) != 4) {
         return FAT_ERROR_READ_FAT_ENTRY;
     }
 
