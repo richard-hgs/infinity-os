@@ -369,7 +369,7 @@ namespace fat {
      * 
      * @param rsvdSecCnt Reserved sectors count before the first FAT entry. Specify reserved area for boot executable code.
      */
-    void create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, uint8_t mediaType, FatBS32* fatBs);
+    void create(uint32_t diskTotSec, uint16_t bytesPerSec, uint32_t fatSizeInSec, uint8_t mediaType, FatBS32 *fatBs);
 
     /**
      * @brief List all entries of a given FAT storage that is inside a storage path
@@ -378,7 +378,37 @@ namespace fat {
      * @param path      Path to list files
      * @return int      0=NO_ERROR, or Error code
      */
-    int listEntries(FILE *storage, char* path);
+    int listEntries(FILE *storage, char *path);
+
+    /**
+     * @brief List all entries of a given FAT storage that is inside a storage path
+     * 
+     * @param storage   FAT storage
+     * @param path      File path location
+     * @return int      0=NO_ERROR, or Error code
+     */
+    int readFileEntry(FILE *storage, char *path);
+
+    /**
+     * @brief Return the directory entry that correspond to the given path
+     * 
+     * @param storage   FAT storage
+     * @param path      Dir path
+     * @param dirEntry  OUT - NULL=Dir not found, or reference to the dir entry
+     * @return int      0=NO_ERROR, or Error code
+     */
+    int findDirEntry(FILE *storage, char *path, Fat32Directory_t *dirEntry);
+
+    /**
+     * @brief Read the MBR, FSINFO and BOOTSECTOR from FAT storage
+     * 
+     * @param storage    FAT storage
+     * @param bs32Header OUT - Boot Sector Header
+     * @param bs32       OUT - Boot Sector + Header
+     * @param fsInfo32   OUT - FSINFO fat
+     * @return int       0=NO_ERROR, or Error code
+     */
+    int readBaseFatInfo(FILE *storage, FatBSHeader_t *bsHeader, FatBS32_t *bs32, Fat32FsInfo_t *fsInfo32);
 
     /**
      * @brief Read the next directory entry of the current directory DATA region

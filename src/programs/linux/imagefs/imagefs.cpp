@@ -255,7 +255,7 @@ int main(int argc, char **argv) {
 
                 FILE *i_file = fopen(fullFilePath.c_str(), "rb");
                 if (i_file) {
-                    int result = fat::listEntries(i_file, "/Media/ScreenRecording");
+                    int result = fat::listEntries(i_file, "/");
                     fclose(i_file);
                     if (result != FAT_NO_ERROR) {
                         fprintf(stderr, "\e[31mlistEntries failed with exit code %d\e[m\n", result);

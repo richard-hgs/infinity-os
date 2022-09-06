@@ -109,203 +109,223 @@ int fat::listEntries(FILE *storage, char* path) {
     uint32_t lngDirEntries32Len;
     uint32_t tmpInt = 0;
     uint8_t mChecksum;
+    uint8_t printDirs = 0;  // 0 = Don't print dirs, 1 = Print dirs
+    uint8_t dirNameLength;
     char tmpStr[256];
     char pathPart[256];
+    char *dirName = 0;
     char c;
-    uint8_t printDirs = 0;  // 0 = Don't print dirs, 1 = Print dirs
 
+    errCode = readBaseFatInfo(storage, &bsHeader, &bs32, &fsInfo32);
+    if (errCode) {
+        // Error while reading fat structure
+        return errCode;
+    }
+    
+    // Amount of sectors used by the fat entries
+    uint32_t fatSizeSectors = bs32.header.BPB_NumFATs * bs32.BPB_FATSz32;
+    // Amount of sectors used by the root dir
+    uint32_t rootDirSectors = ((bs32.header.BPB_RootEntCnt * 32) + (bs32.header.BPB_BytesPerSec - 1)) / bs32.header.BPB_BytesPerSec;
+    // Sector where the data sectors starts
+    uint32_t firstDataSector = bs32.header.BPB_RsvdSecCnt + fatSizeSectors + rootDirSectors;
+    // Root directory sector location in data sectors
+    uint32_t firstSectorOfCluster = ((bs32.BPB_RootClus - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
+
+    fprintf(stdout, "Listing path \"%s\" entries: \n", path);
+
+    if (strcmp(path, "/") == 0) {
+        printDirs = 1;
+    }
+
+    // Split path names
+    pathLength += 1;
+    pathCharOffset = 0;
+    c = 0;
+    while(pathLength-- || printDirs) {
+        if (printDirs == 0) {
+            c = *path++;
+        }
+        if (c == '/' && pathCharOffset == 0) {
+            // Ignore first path if it equals "/" root path
+            continue;
+        } else if (c == '/' || pathLength == 0 || printDirs == 1) {
+            // Path found read directory three until all parts of path reached then list entries in the specified path
+            *(pathPart + pathCharOffset) = 0; // Add NULL char to pathPart string end.
+            // fprintf(stdout, "PathPart: %s - isLast: %d\n", pathPart, pathLength == 0);
+
+            // Get current cluster fat value
+            errCode = fat::fatVal(storage, bs32, clusterNum, &fatValue);
+            if (errCode) {
+                return errCode;
+            }
+
+            // fprintf(stdout, "--- FAT VALUE: 0x%08X\n", fatValue);
+
+            if (CLUSTER_IS_BAD(fatValue)) {
+                // Current cluster is bad
+            } else if (CLUSTER_IS_FREE(fatValue)) {
+                // Current cluster is free
+            }
+            
+            // Read directory entries for current cluster number to find the pathPart directory name
+            mChecksum = 0;
+            lngDirEntries32Len = 0;
+            dirEntryIndex = 0;
+            do {
+                // Offset relative to FAT storage
+                uint32_t offset = (dirEntryIndex * 32) + (firstSectorOfCluster * bs32.header.BPB_BytesPerSec);
+
+                // Set file offset at the beginning of the Root dir sectors
+                fseek(storage, offset, SEEK_SET);
+
+                // Read the first root directory entry
+                readNextDirEntry(storage, &dirEntry32);
+
+                // fprintf(stdout, "attrEquals: %d\n", (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME));
+                if (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME) {
+                        lngDirEntry32 = *(Fat32LongDirectory_t*) &dirEntry32;
+                        if (lngDirEntry32.LDIR_Ord != FAT_LDIR_LAST_AND_UNUSED && lngDirEntry32.LDIR_Ord != FAT_LDIR_UNUSED) {
+                            // If file is active and wasn't deleted
+                            if (mChecksum != lngDirEntry32.LDIR_Chksum) { // It is a new long name reset tmpStr that will holds the Full name of the next directory entry.
+                                // fprintf(stdout, "  - checksum: 0x%02X - 0x%02X\n", mChecksum, lngDirEntry32.LDIR_Chksum);
+                                lngDirEntries32Len = 0;
+                                mChecksum = lngDirEntry32.LDIR_Chksum;
+                            }
+                            lngDirEntries32[lngDirEntries32Len++] = lngDirEntry32;
+                        }
+
+                        // printLongDirEntry(lngDirEntry32);
+                } else {
+                    // Print dir entry
+                    // printDirEntry(dirEntry32);
+                    if (dirEntry32.DIR_Name[0] == FAT_LDIR_LAST_AND_UNUSED) {
+                        // fprintf(stdout, "  - End Of DIR(/)\n");
+                        if (printDirs == 1) {
+                            printDirs = 2;
+                        }
+                        break;
+                    } else if (dirEntry32.DIR_Name[0] != FAT_LDIR_UNUSED) {         // If it is an active dir entry
+                        
+                        if (mChecksum == checksum(dirEntry32.DIR_Name)) {           // Check if long name checksum matches with dir short name
+                            // Read long name entries in desc order
+                            tmpInt = 0;
+                            while(lngDirEntries32Len--) {
+                                lngDirEntry32 = lngDirEntries32[lngDirEntries32Len];
+                                tmpInt = longNameStrCpy(lngDirEntry32, tmpInt, tmpStr);
+                            }
+
+                            dirName = tmpStr;
+                            dirNameLength = tmpInt;
+                        } else {
+                            // Read dir name entries
+                            dirName = (char*) dirEntry32.DIR_Name;
+                            dirNameLength = 11;
+                        }
+
+                        if (printDirs == 1) {
+                            fprintf(stdout, "   %.*s\n", dirNameLength, dirName);
+                        }
+
+                        if ((dirEntry32.DIR_Attr & FAT_DIR_ATTR_DIRECTORY) == FAT_DIR_ATTR_DIRECTORY) { // Is a directory
+                            if (strncmp(dirName, pathPart, dirNameLength) == 0) {
+                                // Path folder name found
+                                // fprintf(stdout, "  - PathFound: %.*s\n", 11, dirEntry32.DIR_Name);
+                                if (pathLength == 0) {
+                                    // Is last path print next folder entries
+                                    printDirs = 1;
+                                }
+                                firstSectorOfCluster = dirEntry32.DIR_FstClusHI;
+                                firstSectorOfCluster = (firstSectorOfCluster << 16) | dirEntry32.DIR_FstClusLO;
+                                clusterNum = firstSectorOfCluster;
+                                // fprintf(stdout, "  - clusterNum: %d\n", firstSectorOfCluster);
+                                firstSectorOfCluster = ((firstSectorOfCluster - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
+
+                                // Exit directory loop since we already found the directory we are looking for
+                                break;
+                            }
+                        }
+                    }
+                    lngDirEntries32Len = 0;
+                    mChecksum = 0;
+                }
+            } while(dirEntryIndex++ || dirEntryIndex);
+
+            if (printDirs == 2) {
+                break;
+            }
+
+            if (printDirs == 0 && pathLength == 0 && CLUSTER_IS_EOC(fatValue)) {
+                // End of cluster reached
+                // Path not found return error
+                return FAT_ERROR_LIST_PATH_NOT_FOUND;
+            }
+
+            pathCharOffset = 0;
+        } else {
+            // Append chars until split char reached
+            *(pathPart + pathCharOffset) = c;
+            pathCharOffset++;
+        }
+    }
+
+    return FAT_NO_ERROR;
+}
+
+int fat::readFileEntry(FILE *storage, char* path) {
+    return FAT_NO_ERROR;
+}
+
+int fat::findDirEntry(FILE *storage, char* path, Fat32Directory_t* dirEntry) {
+    FatBS32_t bs32;
+    FatBSHeader_t bsHeader;
+    Fat32FsInfo_t fsInfo32;
+    int result = FAT_NO_ERROR;
+
+    if (!(result = readBaseFatInfo(storage, &bsHeader, &bs32, &fsInfo32))) {
+        // Read succeeded
+
+    }
+
+    return result;
+}
+
+int fat::readBaseFatInfo(FILE *storage, FatBSHeader_t *bsHeader, FatBS32_t* bs32, Fat32FsInfo_t* fsInfo32) {
     // Read the header
-    if (fread(&bsHeader, 1, sizeof(bsHeader), storage) != sizeof(bsHeader)) {
+    if (fread(bsHeader, 1, sizeof(FatBSHeader_t), storage) != sizeof(FatBSHeader_t)) {
         return FAT_ERROR_READ_BS_HEADER;
     }
 
-    bs32.header = bsHeader;
+    bs32->header = *bsHeader;
 
     // Determine FAT type 12/16 or 32 bits
-    if (bsHeader.BPB_FATSz16 > 0) {
+    if (bsHeader->BPB_FATSz16 > 0) {
         // Fat 12/16 unsuported
         return FAT_ERROR_UNSUPORTED_FORMAT;
     } else {
         // Fat 32 supported
         // Set offset to end of header and continue reading bs32 struct
-        if (fread((void*) (((size_t) &bs32) + sizeof(bsHeader)), 1, sizeof(bs32) - sizeof(bsHeader), storage) != sizeof(bs32) - sizeof(bsHeader)) {
+        if (fread((void*) (((size_t) bs32) + sizeof(FatBSHeader_t)), 1, sizeof(FatBS32_t) - sizeof(FatBSHeader_t), storage) != sizeof(FatBS32_t) - sizeof(FatBSHeader_t)) {
             return FAT_ERROR_READ_BS32;
         }
 
         // Set file offset at the beginning of the BPB_FSInfo sector
-        fseek(storage, bs32.BPB_FSInfo * bs32.header.BPB_BytesPerSec, SEEK_SET);
+        fseek(storage, bs32->BPB_FSInfo * bs32->header.BPB_BytesPerSec, SEEK_SET);
 
         // Read FSInfo struct
-        if (fread(&fsInfo32, 1, sizeof(fsInfo32), storage) != sizeof(fsInfo32)) {
+        if (fread(fsInfo32, 1, sizeof(Fat32FsInfo_t), storage) != sizeof(Fat32FsInfo_t)) {
             return FAT_ERROR_READ_FSINFO;
         }
 
         // Validate FSInfo
-        if (fsInfo32.FSI_LeadSig != FAT_FSINFO_LEAD_SIGNATURE) {
+        if (fsInfo32->FSI_LeadSig != FAT_FSINFO_LEAD_SIGNATURE) {
             // Invalid lead signature
             return FAT_ERROR_READ_FSINFO_INVALID_LEAD_SIGNATURE;
         }
-        if (fsInfo32.FSI_StrucSig != FAT_FSINFO_STRUCT_SIGNATURE) {
+        if (fsInfo32->FSI_StrucSig != FAT_FSINFO_STRUCT_SIGNATURE) {
             // Invalid struct signature
             return FAT_ERROR_READ_FSINFO_INVALID_STRUCT_SIGNATURE;
         }
-
-        // Amount of sectors used by the fat entries
-        uint32_t fatSizeSectors = bs32.header.BPB_NumFATs * bs32.BPB_FATSz32;
-        // Amount of sectors used by the root dir
-        uint32_t rootDirSectors = ((bs32.header.BPB_RootEntCnt * 32) + (bs32.header.BPB_BytesPerSec - 1)) / bs32.header.BPB_BytesPerSec;
-        // Sector where the data sectors starts
-        uint32_t firstDataSector = bs32.header.BPB_RsvdSecCnt + fatSizeSectors + rootDirSectors;
-        // Root directory sector location in data sectors
-        uint32_t firstSectorOfCluster = ((bs32.BPB_RootClus - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
-
-        fprintf(stdout, "Listing path \"%s\" entries: \n", path);
-
-        if (strcmp(path, "/") == 0) {
-            printDirs = 1;
-        }
-
-        // Split path names
-        pathLength += 1;
-        pathCharOffset = 0;
-        while(pathLength-- || printDirs) {
-            if (printDirs == 0) {
-                c = *path++;
-            }
-            if (c == '/' && pathCharOffset == 0) {
-                // Ignore first path if it equals "/" root path
-                continue;
-            } else if (c == '/' || pathLength == 0 || printDirs == 1) {
-                // Path found read directory three until all parts of path reached then list entries in the specified path
-                *(pathPart + pathCharOffset) = 0; // Add NULL char to pathPart string end.
-                // fprintf(stdout, "PathPart: %s - isLast: %d\n", pathPart, pathLength == 0);
-
-                // Get current cluster fat value
-                errCode = fat::fatVal(storage, bs32, clusterNum, &fatValue);
-                if (errCode) {
-                    return errCode;
-                }
-
-                // fprintf(stdout, "--- FAT VALUE: 0x%08X\n", fatValue);
-
-                if (CLUSTER_IS_BAD(fatValue)) {
-                    // Current cluster is bad
-                } else if (CLUSTER_IS_FREE(fatValue)) {
-                    // Current cluster is free
-                }
-                
-                // Read directory entries for current cluster number to find the pathPart directory name
-                mChecksum = 0;
-                lngDirEntries32Len = 0;
-                dirEntryIndex = 0;
-                do {
-                    // Offset relative to FAT storage
-                    uint32_t offset = (dirEntryIndex * 32) + (firstSectorOfCluster * bs32.header.BPB_BytesPerSec);
-
-                    // Set file offset at the beginning of the Root dir sectors
-                    fseek(storage, offset, SEEK_SET);
-
-                    // Read the first root directory entry
-                    readNextDirEntry(storage, &dirEntry32);
-
-                    // fprintf(stdout, "attrEquals: %d\n", (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME));
-                    if (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME) {
-                            lngDirEntry32 = *(Fat32LongDirectory_t*) &dirEntry32;
-                            if (lngDirEntry32.LDIR_Ord != FAT_LDIR_LAST_AND_UNUSED && lngDirEntry32.LDIR_Ord != FAT_LDIR_UNUSED) {
-                                // If file is active and wasn't deleted
-                                if (mChecksum != lngDirEntry32.LDIR_Chksum) { // It is a new long name reset tmpStr that will holds the Full name of the next directory entry.
-                                    // fprintf(stdout, "  - checksum: 0x%02X - 0x%02X\n", mChecksum, lngDirEntry32.LDIR_Chksum);
-                                    lngDirEntries32Len = 0;
-                                    mChecksum = lngDirEntry32.LDIR_Chksum;
-                                }
-                                lngDirEntries32[lngDirEntries32Len++] = lngDirEntry32;
-                            }
-
-                            // printLongDirEntry(lngDirEntry32);
-                    } else {
-                        // Print dir entry
-                        // printDirEntry(dirEntry32);
-                        if (dirEntry32.DIR_Name[0] == FAT_LDIR_LAST_AND_UNUSED) {
-                            // fprintf(stdout, "  - End Of DIR(/)\n");
-                            if (printDirs == 1) {
-                                printDirs = 2;
-                            }
-                            break;
-                        } else if (dirEntry32.DIR_Name[0] != FAT_LDIR_UNUSED) {         // If it is an active dir entry
-                            
-                            if (mChecksum == checksum(dirEntry32.DIR_Name)) {           // Check if long name checksum matches with dir short name
-                                // Read long name entries in desc order
-                                tmpInt = 0;
-                                while(lngDirEntries32Len--) {
-                                    lngDirEntry32 = lngDirEntries32[lngDirEntries32Len];
-                                    tmpInt = longNameStrCpy(lngDirEntry32, tmpInt, tmpStr);
-                                }
-                                if (printDirs == 1) {
-                                    fprintf(stdout, "  - DIR_FullName: %.*s\n", tmpInt, tmpStr);
-                                }
-
-                                if ((dirEntry32.DIR_Attr & FAT_DIR_ATTR_DIRECTORY) == FAT_DIR_ATTR_DIRECTORY) { // Is a directory
-                                    if (strncmp(tmpStr, pathPart, tmpInt) == 0) {
-                                        // Path folder name found
-                                        // fprintf(stdout, "  - PathFound: %.*s\n", tmpInt, tmpStr);
-                                        if (pathLength == 0) {
-                                            // Is last path print next folder entries
-                                            printDirs = 1;
-                                        }
-                                        firstSectorOfCluster = dirEntry32.DIR_FstClusHI;
-                                        firstSectorOfCluster = (firstSectorOfCluster << 16) | dirEntry32.DIR_FstClusLO;
-                                        clusterNum = firstSectorOfCluster;
-                                        // fprintf(stdout, "  - clusterNum: %d\n", firstSectorOfCluster);
-                                        firstSectorOfCluster = ((firstSectorOfCluster - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
-                                        break;
-                                    }
-                                }
-                            } else {
-                                if (printDirs == 1) {
-                                    fprintf(stdout, "  - DIR_ShortName: %.*s\n", 11, dirEntry32.DIR_Name);
-                                }
-
-                                if ((dirEntry32.DIR_Attr & FAT_DIR_ATTR_DIRECTORY) == FAT_DIR_ATTR_DIRECTORY) { // Is a directory
-                                    if (strncmp(tmpStr, pathPart, 11) == 0) {
-                                        // Path folder name found
-                                        // fprintf(stdout, "  - PathFound: %.*s\n", 11, dirEntry32.DIR_Name);
-                                        if (pathLength == 0) {
-                                            // Is last path print next folder entries
-                                            printDirs = 1;
-                                        }
-                                        firstSectorOfCluster = dirEntry32.DIR_FstClusHI;
-                                        firstSectorOfCluster = (firstSectorOfCluster << 16) | dirEntry32.DIR_FstClusLO;
-                                        clusterNum = firstSectorOfCluster;
-                                        // fprintf(stdout, "  - clusterNum: %d\n", firstSectorOfCluster);
-                                        firstSectorOfCluster = ((firstSectorOfCluster - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
-                                    }
-                                }
-                            }
-                        }
-                        lngDirEntries32Len = 0;
-                        mChecksum = 0;
-                    }
-                } while(dirEntryIndex++ || dirEntryIndex);
-
-                if (printDirs == 2) {
-                    break;
-                }
-
-                if (printDirs == 0 && pathLength == 0 && CLUSTER_IS_EOC(fatValue)) {
-                    // End of cluster reached
-                    // Path not found return error
-                    return FAT_ERROR_LIST_PATH_NOT_FOUND;
-                }
-
-                pathCharOffset = 0;
-            } else {
-                // Append chars until split char reached
-                *(pathPart + pathCharOffset) = c;
-                pathCharOffset++;
-            }
-        }
     }
-
 
     // ------------------- PRINT INFORMATIONS -------------------
     // fprintf(stdout, "BS - HEADER:\n");
@@ -357,16 +377,6 @@ int fat::listEntries(FILE *storage, char* path) {
     //     fsInfo32.FSI_Reserved2[8],fsInfo32.FSI_Reserved2[9], fsInfo32.FSI_Reserved2[10], fsInfo32.FSI_Reserved2[11]
     // );
     // fprintf(stdout, "  - FSI_TrailSig   : 0x%08X\n", fsInfo32.FSI_TrailSig);
-
-    /*
-        uint32_t FSI_LeadSig;               // 0x41615252. This is a lead signature used to validate that this is in fact an FSInfo sector.
-        unsigned char FSI_Reserved1[480];   // Reserved. This field should be always initialized to zero.
-        uint32_t FSI_StrucSig;              // 0x61417272. Another signature that is more localized in the sector to the location of the fields that are used.
-        uint32_t FSI_Free_Count;            // This field indicates the last known free cluster count on the volume. If the value is 0xFFFFFFFF, it is actually unknown. This is not necessarily correct, so that the FAT driver needs to make sure it is valid for the volume.
-        uint32_t FSI_Nxt_Free;              // This field gives a hint for the FAT driver, the cluster number at which the driver should start looking for free clusters. Because a FAT32 FAT is large, it can be rather time consuming if there are a lot of allocated clusters at the start of the FAT and the driver starts looking for a free cluster starting at the first cluster. Typically this value is set to the last cluster number that the driver allocated. If the value is 0xFFFFFFFF, there is no hint and the driver should start looking at cluster 2. This may not be correct, so that the FAT driver needs to make sure it is valid for the volume.
-        unsigned char FSI_Reserved2[12];    // Reserved. This field should be always initialized to zero.
-        uint32_t FSI_TrailSig;              // 0xAA550000. This trail signature is used to validate that this is in fact an FSInfo sector.
-    */
 
     return FAT_NO_ERROR;
 }
