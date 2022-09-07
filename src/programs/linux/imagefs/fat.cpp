@@ -24,6 +24,37 @@
  */
 #define IS_DIR_FREE(dir) (dir.DIR_Name[0] == FAT_LDIR_UNUSED || dir.DIR_Name[0] == FAT_LDIR_LAST_AND_UNUSED)
 
+/**
+ * @brief Amount of sectors used by FAT - File allocation table entries
+ */
+#define FAT_SEC_SIZE(bs32) (bs32.header.BPB_NumFATs * bs32.BPB_FATSz32)
+
+/**
+ * @brief Amount of sectors used by FAT - Root Directory
+ */
+#define ROOT_DIR_SEC_SIZE(bs32) (((bs32.header.BPB_RootEntCnt * 32) + (bs32.header.BPB_BytesPerSec - 1)) / bs32.header.BPB_BytesPerSec)
+
+/**
+ * @brief The first sector where FAT - Data and Dir entries starts
+ */
+#define FIRST_DATA_SEC(bs32) (bs32.header.BPB_RsvdSecCnt + FAT_SEC_SIZE(bs32) + ROOT_DIR_SEC_SIZE(bs32))
+
+/**
+ * @brief The first data sector that references the first FAT cluster entry
+ * 
+ * OBS: Since this is an exaustive math function it's recomended to store the FIRST_SEC_OF_CLUSTER
+ *      and perform the calc manually inside exaustive conditions like loops.
+ */
+#define FIRST_SEC_OF_CLUSTER(bs32) (((bs32.BPB_RootClus - 2) * bs32.header.BPB_SecPerClus) + FIRST_DATA_SEC(bs32))
+
+/**
+ * @brief The offset in bytes in the storage device where this specific dir entry index is located
+ * 
+ * OBS: Since this is an exaustive math function it's recomended to store the FIRST_SEC_OF_CLUSTER
+ *      and perform the calc manually inside exaustive conditions like loops.
+ */
+#define DIR_ENTRY_BIN_OFFSET(bs32, index) ((index * 32) + (FIRST_SEC_OF_CLUSTER(bs32) * bs32.header.BPB_BytesPerSec))
+
 /** 
  * @brief This is the table for bs32 drives. NOTE that this table includes
  * entries for disk sizes smaller than 512 MB even though typically
@@ -105,6 +136,8 @@ int fat::listEntries(FILE *storage, char* path) {
     int clusterNum = 2;
     int dirEntryIndex;
     int errCode;
+    uint32_t firstDataSector;
+    uint32_t firstSectorOfCluster;
     uint32_t fatValue = 0;
     uint32_t lngDirEntries32Len;
     uint32_t tmpInt = 0;
@@ -122,14 +155,10 @@ int fat::listEntries(FILE *storage, char* path) {
         return errCode;
     }
     
-    // Amount of sectors used by the fat entries
-    uint32_t fatSizeSectors = bs32.header.BPB_NumFATs * bs32.BPB_FATSz32;
-    // Amount of sectors used by the root dir
-    uint32_t rootDirSectors = ((bs32.header.BPB_RootEntCnt * 32) + (bs32.header.BPB_BytesPerSec - 1)) / bs32.header.BPB_BytesPerSec;
     // Sector where the data sectors starts
-    uint32_t firstDataSector = bs32.header.BPB_RsvdSecCnt + fatSizeSectors + rootDirSectors;
+    firstDataSector = FIRST_DATA_SEC(bs32);
     // Root directory sector location in data sectors
-    uint32_t firstSectorOfCluster = ((bs32.BPB_RootClus - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
+    firstSectorOfCluster = FIRST_SEC_OF_CLUSTER(bs32);
 
     fprintf(stdout, "Listing path \"%s\" entries: \n", path);
 
