@@ -247,6 +247,12 @@ typedef struct DskSzToSecPerClus {
     uint8_t SecPerClusVal; // BPB_SecPerClus
 } DskSzToSecPerClus_t;
 
+// Structure that holds fat dir entry with its fullName(concatenation of all long names or short name).
+typedef struct Fat32DirFull {
+    Fat32Directory_t* dirEntry;
+    char dirName[256];
+} Fat32DirFull_t;
+
 /**
  * @brief FAT - File Allocation Table
  * 

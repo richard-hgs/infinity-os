@@ -308,10 +308,36 @@ int fat::findDirEntry(FILE *storage, char* path, Fat32Directory_t* dirEntry) {
     FatBS32_t bs32;
     FatBSHeader_t bsHeader;
     Fat32FsInfo_t fsInfo32;
+    // --------------- SPLIT PATH VARS ---------------
+    char pathPart[256];
+    int pathLength = strlen(path);
+    int pathCharOffset;
+    char c;
+    // --------------- SPLIT PATH VARS ---------------
     int result = FAT_NO_ERROR;
 
     if (!(result = readBaseFatInfo(storage, &bsHeader, &bs32, &fsInfo32))) {
         // Read succeeded
+
+        // Split path names
+        pathLength += 1;
+        pathCharOffset = 0;
+        c = 0;
+        if (c == '/' && pathCharOffset == 0) {
+            // Ignore first path if it equals "/" root path
+            continue;
+        } else if (c == '/' || pathLength == 0) {
+            // Path split part found
+
+            // Path found read directory three until all parts of path reached then list entries in the specified path
+            *(pathPart + pathCharOffset) = 0; // Add NULL char to pathPart string end.
+
+
+        } else {
+            // Append chars until split char reached
+            *(pathPart + pathCharOffset) = c;
+            pathCharOffset++;
+        }
 
     }
 
@@ -415,6 +441,18 @@ int fat::readNextDirEntry(FILE *storage, Fat32Directory_t *fat32Dir) {
     if (fread(fat32Dir, 1, sizeof(Fat32Directory_t), storage) != sizeof(Fat32Directory_t)) {
         return FAT_ERROR_READ_DIRECTORY;
     }
+
+    return FAT_NO_ERROR;
+}
+
+int fat::readNextDirEntryFull(FILE *storage, Fat32DirFull_t *fat32Dir) {
+    Fat32LongDirectory_t lngDirEntries32[19];
+
+    do {
+        if (fread(fat32Dir->dirEntry, 1, sizeof(Fat32Directory_t), storage) != sizeof(Fat32Directory_t)) {
+            return FAT_ERROR_READ_DIRECTORY;
+        }
+    } while(fat32Dir->dirEntry.DIR_Attr == FAT_DIR_ATTR_LONG_NAME);
 
     return FAT_NO_ERROR;
 }
