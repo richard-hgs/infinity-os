@@ -308,13 +308,27 @@ int fat::findDirEntry(FILE *storage, char* path, Fat32Directory_t* dirEntry) {
     FatBS32_t bs32;
     FatBSHeader_t bsHeader;
     Fat32FsInfo_t fsInfo32;
+    int result = FAT_NO_ERROR;
+
+    // --------------- SEARCH DIR PATH ---------------
+    int dirEntryIndex;
+    uint8_t mChecksum;
+    Fat32Directory_t dirEntry32;
+    Fat32LongDirectory_t lngDirEntry32;
+    Fat32LongDirectory_t lngDirEntries32[19];
+    uint32_t lngDirEntries32Len;
+    char tmpStr[256];
+    int clusterNum = 2;
+    // --------------- SEARCH DIR PATH ---------------
+
+
     // --------------- SPLIT PATH VARS ---------------
     char pathPart[256];
     int pathLength = strlen(path);
     int pathCharOffset;
     char c;
     // --------------- SPLIT PATH VARS ---------------
-    int result = FAT_NO_ERROR;
+
 
     if (!(result = readBaseFatInfo(storage, &bsHeader, &bs32, &fsInfo32))) {
         // Read succeeded
@@ -323,22 +337,91 @@ int fat::findDirEntry(FILE *storage, char* path, Fat32Directory_t* dirEntry) {
         pathLength += 1;
         pathCharOffset = 0;
         c = 0;
-        if (c == '/' && pathCharOffset == 0) {
-            // Ignore first path if it equals "/" root path
-            continue;
-        } else if (c == '/' || pathLength == 0) {
-            // Path split part found
+        while(pathLength--) {
+            if (c == '/' && pathCharOffset == 0) {
+                // Ignore first path if it equals "/" root path
+                continue;
+            } else if (c == '/' || pathLength == 0) {
+                // Path split part found
 
-            // Path found read directory three until all parts of path reached then list entries in the specified path
-            *(pathPart + pathCharOffset) = 0; // Add NULL char to pathPart string end.
+                // Path found read directory three until all parts of path reached then list entries in the specified path
+                *(pathPart + pathCharOffset) = 0; // Add NULL char to pathPart string end.
 
+                // Read directory entries for current cluster number to find the pathPart directory name
+                mChecksum = 0;
+                lngDirEntries32Len = 0;
+                dirEntryIndex = 0;
 
-        } else {
-            // Append chars until split char reached
-            *(pathPart + pathCharOffset) = c;
-            pathCharOffset++;
+                do {
+                    // Offset relative to FAT storage
+                    uint32_t offset = (dirEntryIndex * 32) + (firstSectorOfCluster * bs32.header.BPB_BytesPerSec);
+
+                    // Set file offset at the beginning of the Root dir sectors
+                    fseek(storage, offset, SEEK_SET);
+
+                    // Read the first root directory entry
+                    readNextDirEntry(storage, &dirEntry32);
+
+                    if (dirEntry32.DIR_Attr == FAT_DIR_ATTR_LONG_NAME) {
+                        lngDirEntry32 = *(Fat32LongDirectory_t*) &dirEntry32;
+                        if (lngDirEntry32.LDIR_Ord != FAT_LDIR_LAST_AND_UNUSED && lngDirEntry32.LDIR_Ord != FAT_LDIR_UNUSED) {
+                            // If file is active and wasn't deleted
+                            if (mChecksum != lngDirEntry32.LDIR_Chksum) { // It is a new long name reset tmpStr that will holds the Full name of the next directory entry.
+                                // fprintf(stdout, "  - checksum: 0x%02X - 0x%02X\n", mChecksum, lngDirEntry32.LDIR_Chksum);
+                                lngDirEntries32Len = 0;
+                                mChecksum = lngDirEntry32.LDIR_Chksum;
+                            }
+                            lngDirEntries32[lngDirEntries32Len++] = lngDirEntry32;
+                        }
+
+                        // printLongDirEntry(lngDirEntry32);
+                    } else {
+                        if (dirEntry32.DIR_Name[0] == FAT_LDIR_LAST_AND_UNUSED) { // End of dir reached
+                            // fprintf(stdout, "  - End Of DIR(/)\n");
+                            break; // Break the dir loop to keep searching in dir tree
+                        } else if (dirEntry32.DIR_Name[0] != FAT_LDIR_UNUSED) {
+                            if (mChecksum == checksum(dirEntry32.DIR_Name)) {           // Check if long name checksum matches with dir short name
+                                // Read long name entries in desc order
+                                dirNameLength = 0;
+                                while(lngDirEntries32Len--) {
+                                    lngDirEntry32 = lngDirEntries32[lngDirEntries32Len];
+                                    dirNameLength = longNameStrCpy(lngDirEntry32, dirNameLength, tmpStr);
+                                }
+
+                                dirName = tmpStr;
+                            } else {
+                                // Read dir name entries
+                                dirName = (char*) dirEntry32.DIR_Name;
+                                dirNameLength = 11;
+                            }
+
+                            fprintf(stdout, "   %.*s\n", dirNameLength, dirName);
+
+                            if ((dirEntry32.DIR_Attr & FAT_DIR_ATTR_DIRECTORY) == FAT_DIR_ATTR_DIRECTORY) { // Is a directory
+                                if (strncmp(dirName, pathPart, dirNameLength) == 0) {
+                                    // Path folder name found. We need to list the folders inside this new folder until we find the name we are looking for
+                                    // fprintf(stdout, "  - PathFound: %.*s\n", 11, dirEntry32.DIR_Name);
+                                    firstSectorOfCluster = dirEntry32.DIR_FstClusHI;
+                                    firstSectorOfCluster = (firstSectorOfCluster << 16) | dirEntry32.DIR_FstClusLO;
+                                    clusterNum = firstSectorOfCluster;
+                                    // fprintf(stdout, "  - clusterNum: %d\n", firstSectorOfCluster);
+                                    firstSectorOfCluster = ((firstSectorOfCluster - 2) * bs32.header.BPB_SecPerClus) + firstDataSector;
+
+                                    // Exit directory loop since we already found the directory we are looking for
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    dirEntryIndex++;
+                } while(true);
+            } else {
+                // Append chars until split char reached
+                *(pathPart + pathCharOffset) = c;
+                pathCharOffset++;
+            }
         }
-
     }
 
     return result;
