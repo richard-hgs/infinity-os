@@ -16,6 +16,7 @@
 #define FAT_ERROR_READ_DIRECTORY                        7   // Error, could not read next directory entry from data sectors from storage.
 #define FAT_ERROR_READ_FAT_ENTRY                        8   // Error, could not read FAT table[cluster_index] value.
 #define FAT_ERROR_LIST_PATH_NOT_FOUND                   9   // Error, could not list entries for given path, the path don't exists in storage.
+#define FAT_ERROR_GET_ROOT_DIR                         10   // Error, could not get root dir entry.
 
 // FAT - MEDIA TYPES
 #define FAT_MEDIA_TYPE_FIXED        0xF8
@@ -217,16 +218,16 @@ typedef struct Fat32FsInfo {
 typedef struct Fat32Directory {         // | OFFSET | SIZE | DESCRIPTION
     unsigned char DIR_Name[11];         // |    0   |  11  | Short file name (SFN) of the object.
     uint8_t DIR_Attr;                   // |   11   |   1  | File attribute in combination of following flags. Upper 2 bits are reserved and must be zero. (0x01: ATTR_READ_ONLY (Read-only)), (0x02: ATTR_HIDDEN (Hidden)), (0x04: ATTR_SYSTEM (System)), (0x08: ATTR_VOLUME_ID (Volume label)), (0x10: ATTR_DIRECTORY (Directory)), (0x20: ATTR_ARCHIVE (Archive)), (0x0F: ATTR_LONG_FILE_NAME (LFN entry))
-    uint8_t DIR_NTRes;                  // |   12   |   1  | Optional flags that indicates case information of the SFN. (0x08: Every alphabet in the body is low-case.), (0x10: Every alphabet in the extensiton is low-case.)
+    uint8_t DIR_NTRes;                  // |   12   |   1  | Optional flags that indicates case information of the SFN. (0x08: Every alphabet in the body is low-case.), (0x10: Every alphabet in the extension is low-case.)
     uint8_t DIR_CrtTimeTenth;           // |   13   |   1  | Optional sub-second information corresponds to DIR_CrtTime. The time resolution of DIR_CrtTime is 2 seconds, so that this field gives a count of sub-second and its valid value range is from 0 to 199 in unit of 10 miliseconds. If not supported, set zero and do not change afterwards.
     uint16_t DIR_CrtTime;               // |   14   |   2  | Optional file creation time. If not supported, set zero and do not change afterwards.
     uint16_t DIR_CrtDate;               // |   16   |   2  | Optional file creation date. If not supported, set zero and do not change afterwards.
-    uint16_t DIR_LstAccDate;            // |   18   |   2  | Optional last accesse date. There is no time information about last accesse time, so that the resolution of last accesse time is 1 day. If not supported, set zero and do not change afterwards.
+    uint16_t DIR_LstAccDate;            // |   18   |   2  | Optional last accesse date. There is no time information about last access time, so that the resolution of last access time is 1 day. If not supported, set zero and do not change afterwards.
     uint16_t DIR_FstClusHI;             // |   20   |   2  | Upeer part of cluster number. Always zero on the FAT12/16 volume.
     uint16_t DIR_WrtTime;               // |   22   |   2  | Last time when any change is made to the file (typically on closeing).
     uint16_t DIR_WrtDate;               // |   24   |   2  | Last data when any change is made to the file (typically on closeing).
     uint16_t DIR_FstClusLO;             // |   26   |   2  | Lower part of cluster number. Always zero if the file size is zero.
-    uint32_t DIR_FileSize;              // |   28   |   4  | Size of the file in unit of byte. Not used when it is a directroy and the value must be always zero.
+    uint32_t DIR_FileSize;              // |   28   |   4  | Size of the file in unit of byte. Not used when it is a directory and the value must be always zero.
                                         //  ‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾‾
 } __attribute__((packed)) Fat32Directory_t;
 
@@ -252,6 +253,13 @@ typedef struct Fat32DirFull {
     Fat32Directory_t* dirEntry;
     char dirName[256];
 } Fat32DirFull_t;
+
+typedef struct Fat32RootDir {
+    FatBSHeader_t bsHeader;
+    FatBS32_t bs32;
+    Fat32FsInfo_t fsInfo32;
+    Fat32Directory_t dirEntry;
+} Fat32RootDir_t;
 
 /**
  * @brief FAT - File Allocation Table
@@ -479,6 +487,15 @@ namespace fat {
      * @return int          
      */
     int longNameStrCpy(Fat32LongDirectory_t fat32LongDir, int outOffset, char *fullName);
+
+    /**
+     * @brief Get the entry point of the directories in a file
+     * 
+     * @param storage       IN  - Storage
+     * @param rootDirEntry  OUT - Root dir entry information or NULL if not found
+     * @return int          0=FAT_NO_ERROR, or error code
+     */
+    int getRootDir(FILE *storage, Fat32RootDir_t* rootDirEntry);
 }
 
 #endif

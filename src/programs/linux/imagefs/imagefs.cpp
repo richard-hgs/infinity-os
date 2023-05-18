@@ -17,7 +17,8 @@ enum class EnMode {
     UNDEFINED,
     CREATE,
     WRITE,
-    READ
+    READ,
+    LIST
 };
 
 enum class EnFormat {
@@ -168,6 +169,7 @@ int main(int argc, char **argv) {
     int totalSec = 0;
     int bytesPerSec = 0;
     char* filePath = 0;
+    char* imgFilePath = 0;
     char cwd[PATH_MAX];
     
     // Get current working directory path
@@ -180,6 +182,8 @@ int main(int argc, char **argv) {
                 mode = EnMode::CREATE;
             } else if (strcmp(argv[1], "r") == 0) {
                 mode = EnMode::READ;
+            } else if (strcmp(argv[1], "l") == 0) {
+                mode = EnMode::LIST;
             } else {
                 fprintf(stderr, "\e[31mUnknow <mode> \"%s\" used. Use {c = CREATE, w = WRITE, r = READ}. Use help to know more.\e[m\n", argv[1]);
                 return 1;
@@ -237,11 +241,12 @@ int main(int argc, char **argv) {
 
                 // fprintf(stdout, "fatBS32 - oemName: %s\n", (char*) fatBS32.header.BS_OEMName);
             }
-        } else if (mode == EnMode::READ) {
-            if (argc < 3) {
+        } else if (mode == EnMode::LIST) { // List all files under inside a directory path
+            if (argc < 4) {
                 printUsage = true;
             } else {
                 filePath = argv[2];
+                imgFilePath = argv[3];
 
                 // Join paths together and normalize then
                 std::string fullFilePath = cwd;
@@ -255,7 +260,34 @@ int main(int argc, char **argv) {
 
                 FILE *i_file = fopen(fullFilePath.c_str(), "rb");
                 if (i_file) {
-                    int result = fat::listEntries(i_file, "/");
+                    int result = fat::listEntries(i_file, imgFilePath);
+                    fclose(i_file);
+                    if (result != FAT_NO_ERROR) {
+                        fprintf(stderr, "\e[31mlistEntries failed with exit code %d\e[m\n", result);
+                        return result;
+                    }
+                }
+            }
+        } else if (mode == EnMode::READ) { // Read a file contents from a given file path
+            if (argc < 4) {
+                printUsage = true;
+            } else {
+                filePath = argv[2];
+                imgFilePath = argv[3];
+
+                // Join paths together and normalize then
+                std::string fullFilePath = cwd;
+                fullFilePath += "/";
+                fullFilePath += filePath;
+
+                // Normalize the path to remove relative paths
+                fullFilePath = normpath(fullFilePath, "/");
+
+                fprintf(stdout, "Reading format of %s.\n", fullFilePath.c_str());
+
+                FILE *i_file = fopen(fullFilePath.c_str(), "rb");
+                if (i_file) {
+                    int result = fat::readFileEntry(i_file, imgFilePath);
                     fclose(i_file);
                     if (result != FAT_NO_ERROR) {
                         fprintf(stderr, "\e[31mlistEntries failed with exit code %d\e[m\n", result);

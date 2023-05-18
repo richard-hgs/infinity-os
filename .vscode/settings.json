@@ -3,6 +3,7 @@
     "files.associations" : {
         "*.h": "cpp",
         "*.cpp": "cpp",
-        "compare": "cpp"
+        "compare": "cpp",
+        "fstream": "cpp"
     }
 }

@@ -4,6 +4,16 @@
 
 #include "fat.h"
 
+/*
+   PENDRIVE
+   System Volume Information
+   Folder1
+   File1.txt
+   File2 long name text size.txt
+   Media
+   2022-07-31 15-04-47.mkv.sfk
+ */
+
 /**
  * @brief Check if a fat cluster is FREE(unused)
  */
@@ -42,18 +52,20 @@
 /**
  * @brief The first data sector that references the first FAT cluster entry
  * 
- * OBS: Since this is an exaustive math function it's recomended to store the FIRST_SEC_OF_CLUSTER
- *      and perform the calc manually inside exaustive conditions like loops.
+ * OBS: Since this is an exhaustive math function it's recommended to store the FIRST_SEC_OF_CLUSTER
+ *      and perform the calc manually inside exhaustive conditions like loops.
  */
 #define FIRST_SEC_OF_CLUSTER(bs32) (((bs32.BPB_RootClus - 2) * bs32.header.BPB_SecPerClus) + FIRST_DATA_SEC(bs32))
 
 /**
  * @brief The offset in bytes in the storage device where this specific dir entry index is located
  * 
- * OBS: Since this is an exaustive math function it's recomended to store the FIRST_SEC_OF_CLUSTER
- *      and perform the calc manually inside exaustive conditions like loops.
+ * OBS: Since this is an exhaustive math function it's recommended to store the FIRST_SEC_OF_CLUSTER
+ *      and perform the calc manually inside exhaustive conditions like loops.
  */
 #define DIR_ENTRY_BIN_OFFSET(bs32, index) ((index * 32) + (FIRST_SEC_OF_CLUSTER(bs32) * bs32.header.BPB_BytesPerSec))
+
+#define DIR_FIRST_CLUSTER_HI(sector)
 
 /** 
  * @brief This is the table for bs32 drives. NOTE that this table includes
@@ -95,6 +107,15 @@ uint8_t checksum(uint8_t *sfn) {
 	return crc;
 }
 
+/**
+ * @brief Returns an unsigned byte checksum computed on an unsigned byte array.
+ *        The array must be 11 bytes long and is assumed to contain a name stored 
+ *        in the format of a MS-DOS directory entry.
+ * 
+ * @param val1 Int value 1 to compare
+ * @param val2 Int value 2 to compare 
+ * @return the max value against the two numbers
+ */
 int max(int val1, int val2) {
     return val1 > val2 ? val1 : val2;
 }
@@ -301,6 +322,17 @@ int fat::listEntries(FILE *storage, char* path) {
 }
 
 int fat::readFileEntry(FILE *storage, char* path) {
+    // fprintf(stdout, "%.*s\n", dirNameLength, dirName);
+//    Fat32Directory_t rootDir;
+    int result = FAT_NO_ERROR;
+//
+//    fprintf(stdout, "reading file contents: %s\n", path);
+//
+//    result = findDirEntry(storage, path, &rootDir);
+
+    Fat32RootDir_t rootDir;
+    result = getRootDir(storage, &rootDir);
+
     return FAT_NO_ERROR;
 }
 
@@ -319,6 +351,10 @@ int fat::findDirEntry(FILE *storage, char* path, Fat32Directory_t* dirEntry) {
     uint32_t lngDirEntries32Len;
     char tmpStr[256];
     int clusterNum = 2;
+    uint32_t firstDataSector;
+    uint32_t firstSectorOfCluster;
+    uint8_t dirNameLength;
+    char *dirName = 0;
     // --------------- SEARCH DIR PATH ---------------
 
 
@@ -332,6 +368,7 @@ int fat::findDirEntry(FILE *storage, char* path, Fat32Directory_t* dirEntry) {
 
     if (!(result = readBaseFatInfo(storage, &bsHeader, &bs32, &fsInfo32))) {
         // Read succeeded
+        firstSectorOfCluster = FIRST_SEC_OF_CLUSTER(bs32);
 
         // Split path names
         pathLength += 1;
@@ -339,7 +376,6 @@ int fat::findDirEntry(FILE *storage, char* path, Fat32Directory_t* dirEntry) {
         c = 0;
         while(pathLength--) {
             if (c == '/' && pathCharOffset == 0) {
-                // Ignore first path if it equals "/" root path
                 continue;
             } else if (c == '/' || pathLength == 0) {
                 // Path split part found
@@ -427,98 +463,6 @@ int fat::findDirEntry(FILE *storage, char* path, Fat32Directory_t* dirEntry) {
     return result;
 }
 
-int fat::readBaseFatInfo(FILE *storage, FatBSHeader_t *bsHeader, FatBS32_t* bs32, Fat32FsInfo_t* fsInfo32) {
-    // Read the header
-    if (fread(bsHeader, 1, sizeof(FatBSHeader_t), storage) != sizeof(FatBSHeader_t)) {
-        return FAT_ERROR_READ_BS_HEADER;
-    }
-
-    bs32->header = *bsHeader;
-
-    // Determine FAT type 12/16 or 32 bits
-    if (bsHeader->BPB_FATSz16 > 0) {
-        // Fat 12/16 unsuported
-        return FAT_ERROR_UNSUPORTED_FORMAT;
-    } else {
-        // Fat 32 supported
-        // Set offset to end of header and continue reading bs32 struct
-        if (fread((void*) (((size_t) bs32) + sizeof(FatBSHeader_t)), 1, sizeof(FatBS32_t) - sizeof(FatBSHeader_t), storage) != sizeof(FatBS32_t) - sizeof(FatBSHeader_t)) {
-            return FAT_ERROR_READ_BS32;
-        }
-
-        // Set file offset at the beginning of the BPB_FSInfo sector
-        fseek(storage, bs32->BPB_FSInfo * bs32->header.BPB_BytesPerSec, SEEK_SET);
-
-        // Read FSInfo struct
-        if (fread(fsInfo32, 1, sizeof(Fat32FsInfo_t), storage) != sizeof(Fat32FsInfo_t)) {
-            return FAT_ERROR_READ_FSINFO;
-        }
-
-        // Validate FSInfo
-        if (fsInfo32->FSI_LeadSig != FAT_FSINFO_LEAD_SIGNATURE) {
-            // Invalid lead signature
-            return FAT_ERROR_READ_FSINFO_INVALID_LEAD_SIGNATURE;
-        }
-        if (fsInfo32->FSI_StrucSig != FAT_FSINFO_STRUCT_SIGNATURE) {
-            // Invalid struct signature
-            return FAT_ERROR_READ_FSINFO_INVALID_STRUCT_SIGNATURE;
-        }
-    }
-
-    // ------------------- PRINT INFORMATIONS -------------------
-    // fprintf(stdout, "BS - HEADER:\n");
-    // fprintf(stdout, "  - BS_JmpBoot      : 0x%02X 0x%02X 0x%02X\n", bs32.header.BS_JmpBoot[0], bs32.header.BS_JmpBoot[1], bs32.header.BS_JmpBoot[2]);
-    // fprintf(stdout, "  - BS_OEMName      : %.*s\n", 8, bs32.header.BS_OEMName);
-    // fprintf(stdout, "  - BPB_BytesPerSec : %d\n", bs32.header.BPB_BytesPerSec);
-    // fprintf(stdout, "  - BPB_SecPerClus  : %d\n", bs32.header.BPB_SecPerClus);
-    // fprintf(stdout, "  - BPB_RsvdSecCnt  : %d\n", bs32.header.BPB_RsvdSecCnt);
-    // fprintf(stdout, "  - BPB_NumFATs     : %d\n", bs32.header.BPB_NumFATs);
-    // fprintf(stdout, "  - BPB_RootEntCnt  : %d\n", bs32.header.BPB_RootEntCnt);
-    // fprintf(stdout, "  - BPB_TotSec16    : %d\n", bs32.header.BPB_TotSec16);
-    // fprintf(stdout, "  - BPB_Media       : %d\n", bs32.header.BPB_Media);
-    // fprintf(stdout, "  - BPB_FATSz16     : %d\n", bs32.header.BPB_FATSz16);
-    // fprintf(stdout, "  - BPB_SecPerTrk   : %d\n", bs32.header.BPB_SecPerTrk);
-    // fprintf(stdout, "  - BPB_NumHeads    : %d\n", bs32.header.BPB_NumHeads);
-    // fprintf(stdout, "  - BPB_HiddSec     : %d\n", bs32.header.BPB_HiddSec);
-    // fprintf(stdout, "  - BPB_TotSec32    : %d\n", bs32.header.BPB_TotSec32);
-
-    // fprintf(stdout, "\nBS - BS32:\n");
-    // fprintf(stdout, "  - BPB_FATSz32   : %d\n", bs32.BPB_FATSz32);
-    // fprintf(stdout, "  - BPB_ExtFlags  : 0x%02X\n", bs32.BPB_ExtFlags);
-    // fprintf(stdout, "  - BPB_FSVer     : 0x%02X\n", bs32.BPB_FSVer);
-    // fprintf(stdout, "  - BPB_RootClus  : %d\n", bs32.BPB_RootClus);
-    // fprintf(stdout, "  - BPB_FSInfo    : %d\n", bs32.BPB_FSInfo);
-    // fprintf(stdout, "  - BPB_BkBootSec : %d\n", bs32.BPB_BkBootSec);
-    // fprintf(stdout, "  - BPB_Reserved  : 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n",
-    //    bs32.BPB_Reserved[0], bs32.BPB_Reserved[1], bs32.BPB_Reserved[2], bs32.BPB_Reserved[3],
-    //    bs32.BPB_Reserved[4], bs32.BPB_Reserved[5], bs32.BPB_Reserved[6], bs32.BPB_Reserved[7],
-    //    bs32.BPB_Reserved[8], bs32.BPB_Reserved[9], bs32.BPB_Reserved[10], bs32.BPB_Reserved[11]
-    // );
-    // fprintf(stdout, "  - BS_DrvNum     : %d\n", bs32.BS_DrvNum);
-    // fprintf(stdout, "  - BS_Reserved1  : %d\n", bs32.BS_Reserved1);
-    // fprintf(stdout, "  - BS_BootSig    : 0x%02X\n", bs32.BS_BootSig);
-    // fprintf(stdout, "  - BS_VolID      : 0x%04X\n", bs32.BS_VolID);
-    // fprintf(stdout, "  - BS_VolLab     : %.*s\n", 11, bs32.BS_VolLab);
-    // fprintf(stdout, "  - BS_FilSysType : %.*s\n", 8, bs32.BS_FilSysType);
-    // fprintf(stdout, "  - BS_BootCode32 : ***\n");
-    // fprintf(stdout, "  - BS_BootSign   : 0x%04X\n", bs32.BS_BootSign);
-
-    // fprintf(stdout, "\nFSINFO - 32:\n");
-    // fprintf(stdout, "  - FSI_LeadSig    : 0x%08X\n", fsInfo32.FSI_LeadSig);
-    // fprintf(stdout, "  - FSI_Reserved1  : ***\n");
-    // fprintf(stdout, "  - FSI_StrucSig   : 0x%08X\n", fsInfo32.FSI_StrucSig);
-    // fprintf(stdout, "  - FSI_Free_Count : %d\n", fsInfo32.FSI_Free_Count);
-    // fprintf(stdout, "  - FSI_Nxt_Free   : %d\n", fsInfo32.FSI_Nxt_Free);
-    // fprintf(stdout, "  - FSI_Reserved2  : 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n", 
-    //     fsInfo32.FSI_Reserved2[0], fsInfo32.FSI_Reserved2[1], fsInfo32.FSI_Reserved2[2], fsInfo32.FSI_Reserved2[3], 
-    //     fsInfo32.FSI_Reserved2[4], fsInfo32.FSI_Reserved2[5], fsInfo32.FSI_Reserved2[6], fsInfo32.FSI_Reserved2[7], 
-    //     fsInfo32.FSI_Reserved2[8],fsInfo32.FSI_Reserved2[9], fsInfo32.FSI_Reserved2[10], fsInfo32.FSI_Reserved2[11]
-    // );
-    // fprintf(stdout, "  - FSI_TrailSig   : 0x%08X\n", fsInfo32.FSI_TrailSig);
-
-    return FAT_NO_ERROR;
-}
-
 int fat::readNextDirEntry(FILE *storage, Fat32Directory_t *fat32Dir) {
     // printf("file seek: 0x%02X\n", ftell(storage));
     if (fread(fat32Dir, 1, sizeof(Fat32Directory_t), storage) != sizeof(Fat32Directory_t)) {
@@ -528,17 +472,17 @@ int fat::readNextDirEntry(FILE *storage, Fat32Directory_t *fat32Dir) {
     return FAT_NO_ERROR;
 }
 
-int fat::readNextDirEntryFull(FILE *storage, Fat32DirFull_t *fat32Dir) {
-    Fat32LongDirectory_t lngDirEntries32[19];
+// int fat::readNextDirEntryFull(FILE *storage, Fat32DirFull_t *fat32Dir) {
+//     Fat32LongDirectory_t lngDirEntries32[19];
 
-    do {
-        if (fread(fat32Dir->dirEntry, 1, sizeof(Fat32Directory_t), storage) != sizeof(Fat32Directory_t)) {
-            return FAT_ERROR_READ_DIRECTORY;
-        }
-    } while(fat32Dir->dirEntry.DIR_Attr == FAT_DIR_ATTR_LONG_NAME);
+//     do {
+//         if (fread(fat32Dir->dirEntry, 1, sizeof(Fat32Directory_t), storage) != sizeof(Fat32Directory_t)) {
+//             return FAT_ERROR_READ_DIRECTORY;
+//         }
+//     } while(fat32Dir->dirEntry.DIR_Attr == FAT_DIR_ATTR_LONG_NAME);
 
-    return FAT_NO_ERROR;
-}
+//     return FAT_NO_ERROR;
+// }
 
 int fat::fatVal(FILE *storage, FatBS32_t bs32, uint32_t clusterNum, uint32_t *fatValue) {
     uint32_t firstSectorOfFatEntries = bs32.header.BPB_RsvdSecCnt; // FAT 32 has 2 reserved fat entries
@@ -704,4 +648,133 @@ int fat::longNameStrCpy(Fat32LongDirectory_t fat32LongDir, int outOffset, char *
     fullName[outOffset + tmpInt] = '\0';
 
     return outOffset + tmpInt;
+}
+
+// ==========================================================================================
+// ================================== ARCHITECTURE FAT 32 ===================================
+// ==========================================================================================
+
+
+int fat::getRootDir(FILE *storage, Fat32RootDir_t* rootDirEntry) {
+    uint32_t firstSectorOfCluster;
+    int result = FAT_NO_ERROR;
+
+    if (!(result = readBaseFatInfo(storage, &rootDirEntry->bsHeader, &rootDirEntry->bs32, &rootDirEntry->fsInfo32))) {
+        // Read succeeded
+        firstSectorOfCluster = FIRST_SEC_OF_CLUSTER(rootDirEntry->bs32);
+
+        firstSectorOfCluster = 326780;
+
+        // Generate a struct of the root dir to facilitate the navigation
+        rootDirEntry->dirEntry.DIR_Name[0] = '/';
+        rootDirEntry->dirEntry.DIR_Attr = FAT_DIR_ATTR_DIRECTORY;
+        rootDirEntry->dirEntry.DIR_NTRes = 0;
+        rootDirEntry->dirEntry.DIR_CrtTimeTenth = 0;
+        rootDirEntry->dirEntry.DIR_CrtTime = 0;
+        rootDirEntry->dirEntry.DIR_CrtDate = 0;
+        rootDirEntry->dirEntry.DIR_LstAccDate = 0;
+        rootDirEntry->dirEntry.DIR_FstClusHI = 0;
+        rootDirEntry->dirEntry.DIR_WrtTime = 0;
+        rootDirEntry->dirEntry.DIR_WrtDate = 0;
+        rootDirEntry->dirEntry.DIR_FileSize = 0;
+        rootDirEntry->dirEntry.DIR_FstClusHI = (firstSectorOfCluster & 0xFFFF0000) >> 16; // Get high 16 bits of the sector where root dir begins
+        rootDirEntry->dirEntry.DIR_FstClusLO = firstSectorOfCluster & 0xFFFF;             // Get low 16 bits of the sector where root dir begins
+
+        fprintf(stdout, "DIR_FstClusHI: %d\n", rootDirEntry->dirEntry.DIR_FstClusHI);
+        fprintf(stdout, "DIR_FstClusLO: %d\n", rootDirEntry->dirEntry.DIR_FstClusLO);
+    }
+
+    return FAT_ERROR_READ_BS_HEADER;
+}
+
+int fat::readBaseFatInfo(FILE *storage, FatBSHeader_t *bsHeader, FatBS32_t* bs32, Fat32FsInfo_t* fsInfo32) {
+    // Read the header
+    if (fread(bsHeader, 1, sizeof(FatBSHeader_t), storage) != sizeof(FatBSHeader_t)) {
+        return FAT_ERROR_READ_BS_HEADER;
+    }
+
+    bs32->header = *bsHeader;
+
+    // Determine FAT type 12/16 or 32 bits
+    if (bsHeader->BPB_FATSz16 > 0) {
+        // Fat 12/16 unsuported
+        return FAT_ERROR_UNSUPORTED_FORMAT;
+    } else {
+        // Fat 32 supported
+        // Set offset to end of header and continue reading bs32 struct
+        if (fread((void*) (((size_t) bs32) + sizeof(FatBSHeader_t)), 1, sizeof(FatBS32_t) - sizeof(FatBSHeader_t), storage) != sizeof(FatBS32_t) - sizeof(FatBSHeader_t)) {
+            return FAT_ERROR_READ_BS32;
+        }
+
+        // Set file offset at the beginning of the BPB_FSInfo sector
+        fseek(storage, bs32->BPB_FSInfo * bs32->header.BPB_BytesPerSec, SEEK_SET);
+
+        // Read FSInfo struct
+        if (fread(fsInfo32, 1, sizeof(Fat32FsInfo_t), storage) != sizeof(Fat32FsInfo_t)) {
+            return FAT_ERROR_READ_FSINFO;
+        }
+
+        // Validate FSInfo
+        if (fsInfo32->FSI_LeadSig != FAT_FSINFO_LEAD_SIGNATURE) {
+            // Invalid lead signature
+            return FAT_ERROR_READ_FSINFO_INVALID_LEAD_SIGNATURE;
+        }
+        if (fsInfo32->FSI_StrucSig != FAT_FSINFO_STRUCT_SIGNATURE) {
+            // Invalid struct signature
+            return FAT_ERROR_READ_FSINFO_INVALID_STRUCT_SIGNATURE;
+        }
+    }
+
+    // ------------------- PRINT INFORMATIONS -------------------
+    // fprintf(stdout, "BS - HEADER:\n");
+    // fprintf(stdout, "  - BS_JmpBoot      : 0x%02X 0x%02X 0x%02X\n", bs32.header.BS_JmpBoot[0], bs32.header.BS_JmpBoot[1], bs32.header.BS_JmpBoot[2]);
+    // fprintf(stdout, "  - BS_OEMName      : %.*s\n", 8, bs32.header.BS_OEMName);
+    // fprintf(stdout, "  - BPB_BytesPerSec : %d\n", bs32.header.BPB_BytesPerSec);
+    // fprintf(stdout, "  - BPB_SecPerClus  : %d\n", bs32.header.BPB_SecPerClus);
+    // fprintf(stdout, "  - BPB_RsvdSecCnt  : %d\n", bs32.header.BPB_RsvdSecCnt);
+    // fprintf(stdout, "  - BPB_NumFATs     : %d\n", bs32.header.BPB_NumFATs);
+    // fprintf(stdout, "  - BPB_RootEntCnt  : %d\n", bs32.header.BPB_RootEntCnt);
+    // fprintf(stdout, "  - BPB_TotSec16    : %d\n", bs32.header.BPB_TotSec16);
+    // fprintf(stdout, "  - BPB_Media       : %d\n", bs32.header.BPB_Media);
+    // fprintf(stdout, "  - BPB_FATSz16     : %d\n", bs32.header.BPB_FATSz16);
+    // fprintf(stdout, "  - BPB_SecPerTrk   : %d\n", bs32.header.BPB_SecPerTrk);
+    // fprintf(stdout, "  - BPB_NumHeads    : %d\n", bs32.header.BPB_NumHeads);
+    // fprintf(stdout, "  - BPB_HiddSec     : %d\n", bs32.header.BPB_HiddSec);
+    // fprintf(stdout, "  - BPB_TotSec32    : %d\n", bs32.header.BPB_TotSec32);
+
+    // fprintf(stdout, "\nBS - BS32:\n");
+    // fprintf(stdout, "  - BPB_FATSz32   : %d\n", bs32.BPB_FATSz32);
+    // fprintf(stdout, "  - BPB_ExtFlags  : 0x%02X\n", bs32.BPB_ExtFlags);
+    // fprintf(stdout, "  - BPB_FSVer     : 0x%02X\n", bs32.BPB_FSVer);
+    // fprintf(stdout, "  - BPB_RootClus  : %d\n", bs32.BPB_RootClus);
+    // fprintf(stdout, "  - BPB_FSInfo    : %d\n", bs32.BPB_FSInfo);
+    // fprintf(stdout, "  - BPB_BkBootSec : %d\n", bs32.BPB_BkBootSec);
+    // fprintf(stdout, "  - BPB_Reserved  : 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n",
+    //    bs32.BPB_Reserved[0], bs32.BPB_Reserved[1], bs32.BPB_Reserved[2], bs32.BPB_Reserved[3],
+    //    bs32.BPB_Reserved[4], bs32.BPB_Reserved[5], bs32.BPB_Reserved[6], bs32.BPB_Reserved[7],
+    //    bs32.BPB_Reserved[8], bs32.BPB_Reserved[9], bs32.BPB_Reserved[10], bs32.BPB_Reserved[11]
+    // );
+    // fprintf(stdout, "  - BS_DrvNum     : %d\n", bs32.BS_DrvNum);
+    // fprintf(stdout, "  - BS_Reserved1  : %d\n", bs32.BS_Reserved1);
+    // fprintf(stdout, "  - BS_BootSig    : 0x%02X\n", bs32.BS_BootSig);
+    // fprintf(stdout, "  - BS_VolID      : 0x%04X\n", bs32.BS_VolID);
+    // fprintf(stdout, "  - BS_VolLab     : %.*s\n", 11, bs32.BS_VolLab);
+    // fprintf(stdout, "  - BS_FilSysType : %.*s\n", 8, bs32.BS_FilSysType);
+    // fprintf(stdout, "  - BS_BootCode32 : ***\n");
+    // fprintf(stdout, "  - BS_BootSign   : 0x%04X\n", bs32.BS_BootSign);
+
+    // fprintf(stdout, "\nFSINFO - 32:\n");
+    // fprintf(stdout, "  - FSI_LeadSig    : 0x%08X\n", fsInfo32.FSI_LeadSig);
+    // fprintf(stdout, "  - FSI_Reserved1  : ***\n");
+    // fprintf(stdout, "  - FSI_StrucSig   : 0x%08X\n", fsInfo32.FSI_StrucSig);
+    // fprintf(stdout, "  - FSI_Free_Count : %d\n", fsInfo32.FSI_Free_Count);
+    // fprintf(stdout, "  - FSI_Nxt_Free   : %d\n", fsInfo32.FSI_Nxt_Free);
+    // fprintf(stdout, "  - FSI_Reserved2  : 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X 0x%02X\n", 
+    //     fsInfo32.FSI_Reserved2[0], fsInfo32.FSI_Reserved2[1], fsInfo32.FSI_Reserved2[2], fsInfo32.FSI_Reserved2[3], 
+    //     fsInfo32.FSI_Reserved2[4], fsInfo32.FSI_Reserved2[5], fsInfo32.FSI_Reserved2[6], fsInfo32.FSI_Reserved2[7], 
+    //     fsInfo32.FSI_Reserved2[8],fsInfo32.FSI_Reserved2[9], fsInfo32.FSI_Reserved2[10], fsInfo32.FSI_Reserved2[11]
+    // );
+    // fprintf(stdout, "  - FSI_TrailSig   : 0x%08X\n", fsInfo32.FSI_TrailSig);
+
+    return FAT_NO_ERROR;
 }

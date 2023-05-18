@@ -20,7 +20,7 @@ PROJECT_VERSION=1.0
 
 CDROM_IMG=$(SRCDIR)/boot32-barebones.iso
 
-.PHONY: all run debug disk clean distclean dist
+.PHONY: all run debug disk fattest clean distclean dist
 all:
 	cd $(SRCDIR)/libs && $(MAKE)
 	cd $(SRCDIR)/boot && $(MAKE)
@@ -29,6 +29,7 @@ all:
 # cd $(SRCDIR)/tools/imagefs && $(MAKE)
 # cd $(SRCDIR)/tools/prsfs && $(MAKE)
 # cd $(SRCDIR)/tools/imgwrite && $(MAKE)
+
 
 run: disk
 	qemu-system-i386 -fda $(BUILD_DIR)floppy.img -boot a -soundhw pcspk
@@ -39,7 +40,7 @@ debug: disk
 
 disk: all
 	echo $(CURDIR)
-	$(IMAGEFS) r $(BUILD_DIR)fat32Pendrive.img
+	$(IMAGEFS) r $(BUILD_DIR)fat32Pendrive.img /File1.txt
 	cat $(BUILD_DIR)boot/boot.bin $(BUILD_DIR)kernel/kernel.bin /dev/zero | head -c 1474560 > $(BUILD_DIR)floppy.img
 
 # $(IMAGEFS) c fat32 2880 512 $(BUILD_DIR)fat32.img
@@ -71,3 +72,8 @@ distclean: clean
 dist: distclean
 	cd .. && tar -cv --exclude=.git $(SRCDIR)/$(PROJECT_NAME) \
 | xz -9 > $(PROJECT_NAME)-$(PROJECT_VERSION).tar.xz
+
+fattest:
+	cd $(SRCDIR)/programs/linux/imagefs && $(MAKE)
+	echo $(CURDIR)
+	$(IMAGEFS) r $(BUILD_DIR)fat32Pendrive.img /File1.txt
